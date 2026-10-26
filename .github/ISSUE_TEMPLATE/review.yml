@@ -1,0 +1,33 @@
+name: Review
+description: A change you propose to Team 16 after the demo
+title: "[Review] "
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Story or screen
+      description: Where did you notice it? The user story or the page of the application.
+      placeholder: MH-04, the booking page
+    validations:
+      required: true
+  - type: textarea
+    id: saw
+    attributes:
+      label: What you saw
+      description: What you noticed, for example a bug, a missing feature or a confusing design.
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What should change
+      description: The change you propose.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Why it matters, for example the story, the user or the risk.
+    validations:
+      required: true
