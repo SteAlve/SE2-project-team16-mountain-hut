@@ -1,0 +1,40 @@
+name: Bug
+description: Something does not work as the story says
+title: "[Bug] "
+body:
+  - type: input
+    id: story
+    attributes:
+      label: Story
+      description: The user story that describes the behaviour, if any.
+      placeholder: MH-01
+  - type: input
+    id: branch
+    attributes:
+      label: Where did you see it?
+      description: The branch (dev, qa, main) or the Pull Request.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Add the error message, the response of the API or a screenshot.
+    validations:
+      required: true
