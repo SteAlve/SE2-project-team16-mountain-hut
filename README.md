@@ -24,7 +24,7 @@ server/              the API: Node.js and Express
 LICENCE              the text of the EUPL-1.2
 ```
 
-The code is organised in layers, in `server/src` and in `client/src`. Every layer folder has an `example.js` (or `example.jsx`) whose header says what the layer contains and what it must not contain. In the server it also has a small example on the Mountain Hut stories. ESLint enforces who may import whom, so `npm run lint` fails on a layer that reaches too far. The examples are deleted as the real files take their place.
+The code is organised in layers, in `server/src` and in `client/src`: see [docs/architecture.md](docs/architecture.md). Every layer folder has an `example.js` (or `example.jsx`) whose header says what the layer contains and what it must not contain. In the server it also has a small example on the Mountain Hut stories. ESLint enforces who may import whom, so `npm run lint` fails on a layer that reaches too far. The examples are deleted as the real files take their place.
 
 The database is set up in its own task: until then `server/src/dao/db.js` is a placeholder, and its header says what the rest of the code expects from it.
 
