@@ -26,8 +26,6 @@ LICENCE              the text of the EUPL-1.2
 
 The code is organised in layers, in `server/src` and in `client/src`: see [docs/architecture.md](docs/architecture.md). Every layer folder has an `example.js` (or `example.jsx`) whose header says what the layer contains and what it must not contain. In the server it also has a small example on the Mountain Hut stories. ESLint enforces who may import whom, so `npm run lint` fails on a layer that reaches too far. The examples are deleted as the real files take their place.
 
-The database is set up in its own task: until then `server/src/dao/db.js` is a placeholder, and its header says what the rest of the code expects from it.
-
 ## Requirements
 
 - **Node.js 22** (`nvm use` reads `.nvmrc`)
@@ -214,6 +212,18 @@ feature/*
     ▼
   main
 ```
+
+## Pipelines
+
+The workflows are in [`.github/workflows`](.github/workflows).
+
+| Workflow | When it runs | What it does |
+|---|---|---|
+| `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the branch flow |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
+| `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `deploy.yml` also builds the client |
+
+To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
 
 ## Commit convention
 
