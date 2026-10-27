@@ -80,7 +80,7 @@
     "/api/bookings": {
       "post": {
         "summary": "Book a table",
-        "description": "Creates a booking for an authenticated hiker if the requested slot has enough free seats and is at least two hours away.",
+        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away.",
         "operationId": "createBooking",
         "security": [
           {
@@ -176,15 +176,27 @@
             }
           },
           "422": {
-            "description": "The meal starts less than two hours from now, so booking is closed.",
+            "description": "A rule of the hut fails: the slot does not exist or is not offered on that date, or the meal starts less than two hours from now, so booking is closed.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
-                "example": {
-                  "error": "UnprocessableError",
-                  "message": "Bookings close two hours before the meal"
+                "examples": {
+                  "slotNotOffered": {
+                    "summary": "The slot does not exist on that date",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 does not exist on 2026-10-28"
+                    }
+                  },
+                  "bookingClosed": {
+                    "summary": "Booking is closed",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings close two hours before the meal"
+                    }
+                  }
                 }
               }
             }
