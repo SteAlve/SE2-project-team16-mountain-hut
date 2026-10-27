@@ -7,8 +7,8 @@ Mockup for the login frontend ([MH-55](https://polito-se2-26-16.youtrack.cloud/i
 | Figma page | What it holds |
 |---|---|
 | **Brand · QUOTA** | Name, logo, palette, typography, motifs and usage rules |
-| **MH-45 Login & sign-up** | The 7 screens below |
-| **Components** | Logo, trail blaze, button, text field, alert, navbars, brand panel, and the colour variables |
+| **MH-45 Login & sign-up** | The 7 desktop screens and the 10 phone screens below |
+| **Components** | Logo, trail blaze, button, text field, alert, navbars, brand panel, phone browser bar and top bar, and the colour variables |
 
 ## The brand in one paragraph
 
@@ -26,7 +26,33 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 | 6 | Sign up, errors | ![Sign up errors](06-signup-errors.png) |
 | 7 | Navbar for each role, and a hiker on a staff page | ![Navbar per role](07-navbar-per-role.png) |
 
-Login and sign-up are split screens: the **brand panel** on the left (hut name, altitude, today's meal and free seats on a contour map), the form on the right. The "Today" strip in the panel is sample data until MH-4 and MH-11 exist.
+Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
+
+The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* for employees and the manager. Pages of later stories are added to the navbar with their story.
+
+## On a phone
+
+The same website opened in a phone browser, not a separate app: the React pages are the same, and the CSS rearranges them. The screens are in Figma (section *On a phone* of the MH-45 page); [phone.html](phone.html) shows them in a browser with their notes.
+
+- **Breakpoint: 992 px** (react-bootstrap `lg`). Below it the page is one column and the navbar collapses into a menu button (`Navbar expand="lg"`). Between 576 and 991 px (tablets) the form keeps a maximum width of 440 px, centred.
+- **Login:** the brand panel becomes a dark header with the logo, "No account? Sign up", the hut name and the altitude; the form slides over it as a white sheet.
+- **Sign up:** the header shrinks to the logo and the hut name. Fields that sit side by side on desktop (first and last name, the two passwords) are stacked.
+- **Fields:** 16 px text, so iPhones do not zoom in when a field is tapped. Email uses `type="email"`, phone `type="tel"`, so the phone shows the right keyboard.
+- **Menu:** shows who is logged in, the pages of that role (current page highlighted) and Log out. Tapping a link or outside the menu closes it.
+- Texts, fields, rules and messages are the same as on desktop.
+
+| # | Screen | Image |
+|---|---|---|
+| 1 | Login | ![Login on a phone](phone/01-login.png) |
+| 2 | Login, fields left empty | ![Empty fields on a phone](phone/02-login-empty-fields.png) |
+| 3 | Login, wrong email or password (focus back on the password) | ![Wrong credentials on a phone](phone/03-login-wrong-credentials.png) |
+| 4 | Login needed first, while logging in | ![Login required on a phone](phone/04-login-required.png) |
+| 5 | Sign up (full page, it scrolls) | ![Sign up on a phone](phone/05-signup.png) |
+| 6 | Sign up, errors (the page scrolls to the first error) | ![Sign up errors on a phone](phone/06-signup-errors.png) |
+| 7 | Menu, hiker | ![Hiker menu](phone/07-menu-hiker.png) |
+| 8 | Menu, employee | ![Employee menu](phone/08-menu-employee.png) |
+| 9 | Menu, manager | ![Manager menu](phone/09-menu-manager.png) |
+| 10 | Staff only | ![Staff only on a phone](phone/10-staff-only.png) |
 
 ## Behaviour
 
