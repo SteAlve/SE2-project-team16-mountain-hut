@@ -60,7 +60,7 @@ Every layer folder has an `example.js` with a short note on what goes there and 
 
 ### Example: a request, start to finish: `POST /api/bookings`
 
-This shows how the layers work together.
+This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
 
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in hiker).
 2. The controller validates the body with the DTO (invalid input: `400`) and calls the use case with the user and the data.
@@ -106,12 +106,12 @@ The code is in `client/src`.
 | `hooks/` | State, loading and errors, the steps behind a button | `api/`, `lib/` |
 | `components/` | Reusable pieces that draw their props | `lib/` |
 | `api/` | The only place that calls the server: one function per endpoint, on top of `request.js` | nothing |
-| `lib/` | Pure formatting helpers (the seats of a party as `2 + 2 + 2`) | nothing |
+| `lib/` | Pure formatting helpers (the time of a slot as `12:00–13:00`) | nothing |
 | `App.jsx`, `main.jsx` | The router with one route per page; the mount of the app | everything |
 
 As in the backend, ESLint enforces the table (`client/eslint.config.js`). It also forbids `fetch` anywhere but `api/`.
 
-**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/slots?date=...`; the answer contains the bookable slots and their free seats, and comes back as plain data; a component draws it, using `lib/` to write the seats as `2 + 2 + 2`. The page needs no login, so no route guard is involved.
+**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/slots?date=...`; the answer contains the bookable slots and their free seats, and comes back as plain data; a component draws each slot, using `lib/` to write its time as `12:00–13:00`. The page needs no login, so no route guard is involved.
 
 ### Why it is built this way
 
