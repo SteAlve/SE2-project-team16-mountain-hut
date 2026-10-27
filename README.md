@@ -50,12 +50,26 @@ npm run dev               # http://localhost:5173, it forwards /api to the serve
 
 In `server`, `npm run dev` restarts the server when a file changes.
 
+### Database
+
+The server uses PostgreSQL 16. Configure `DATABASE_URL` before running the server:
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/mountain_hut"
+cd server
+npm start
+```
+
+Server tests connect through the separate `TEST_DATABASE_URL` environment variable.
+
 ## Tests
 
 | What | Where | How |
 |---|---|---|
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
+
+For server tests that use PostgreSQL, set `TEST_DATABASE_URL` to a separate test database before running `npm test`. Do not point it at a database containing data you need to keep.
 
 The E2E tests start the server and the client by themselves. The first time, install everything and the browser:
 
