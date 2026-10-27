@@ -1,0 +1,21 @@
+# QA
+#
+# Runs when qa is updated, and checks the merged result again: lint, tests, build and the
+# end-to-end tests. The checks are the ones of ci.yml.
+
+name: QA
+
+on:
+  push:
+    branches:
+      - qa
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Verify qa
+    uses: ./.github/workflows/ci.yml
+    with:
+      e2e: true
