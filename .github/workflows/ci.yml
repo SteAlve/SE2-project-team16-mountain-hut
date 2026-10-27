@@ -1,0 +1,163 @@
+# Continuous Integration
+#
+# Runs on every Pull Request into dev, qa and main, so a change is checked before it merges.
+# integration.yml, qa.yml and deploy.yml call it after a push, to check the merged result again.
+#
+# The names of the jobs are the names of the checks that the rulesets require.
+#   Server: lint and tests   always
+#   Client: lint and build   always
+#   E2E tests                Pull Requests into qa and main, and when the caller asks for it
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - qa
+      - main
+  workflow_call:
+    inputs:
+      e2e:
+        description: Also run the end-to-end tests
+        type: boolean
+        default: false
+
+# The jobs only read the repository.
+permissions:
+  contents: read
+
+# A new push to a Pull Request cancels the run that is still going for the same Pull Request.
+# After a push there is no Pull Request, so the group is unique and nothing is cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: "Server: lint and tests"
+    runs-on: ubuntu-latest
+    # PLACEHOLDER: to be filled in by the database task.
+    #
+    # The tests that use PostgreSQL need a database, which GitHub starts before the steps of this job.
+    # When they exist, add here the service and the variable that the tests read. The values are
+    # examples: use the ones of the database task, and the same version of PostgreSQL as in Docker.
+    #
+    #   services:
+    #     postgres:
+    #       image: postgres:16
+    #       env:
+    #         POSTGRES_USER: postgres
+    #         POSTGRES_PASSWORD: postgres
+    #         POSTGRES_DB: mountain_hut_test
+    #       ports:
+    #         - 5432:5432
+    #       options: >-
+    #         --health-cmd pg_isready
+    #         --health-interval 5s
+    #         --health-timeout 5s
+    #         --health-retries 10
+    #   env:
+    #     TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/mountain_hut_test
+    #
+    # The password is not a secret: the container exists only while the job runs.
+    # Do not rename the job: its name is the check that the rulesets require.
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # The Node.js version is the one of .nvmrc, the same that everybody uses locally.
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      # PLACEHOLDER: to be filled in by the database task.
+      # If the tests do not create the tables themselves, add here a step that runs the migrations
+      # (for example `npm run db:migrate`, with the database variable in its `env`).
+
+      - name: Run tests
+        run: npm test
+
+  client:
+    name: "Client: lint and build"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: E2E tests
+    # inputs is empty when the workflow starts from a Pull Request, so only the base branch counts there.
+    if: inputs.e2e || github.base_ref == 'qa' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    # PLACEHOLDER: to be filled in by the database task.
+    # The E2E tests need the same `services: postgres` block as the server job, with a database of their own
+    # (for example mountain_hut_e2e) and the variable that the E2E tests read (for example E2E_DATABASE_URL).
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+            e2e/package-lock.json
+
+      # The tests start the server and the client themselves, so both need their dependencies.
+      - name: Install dependencies
+        run: |
+          npm ci --prefix server
+          npm ci --prefix client
+          npm ci --prefix e2e
+
+      - name: Install the browser
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the E2E tests
+        working-directory: e2e
+        run: npm run e2e
+
+      # If a test fails, keep the report to see what went wrong.
+      - name: Upload the E2E report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
