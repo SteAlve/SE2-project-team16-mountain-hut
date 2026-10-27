@@ -52,7 +52,9 @@ The code is in `server/src`.
 
 **The rule: source-code dependencies point inward, towards the core.** A use case does not import the dao: `app.js` hands it over as a parameter, and likewise for the clock, the mailer, the password hasher, the controllers, the middleware and the routers. ESLint fails on any other import (`server/eslint.config.js`). The diagram above shows who *calls* whom at runtime; the table shows who may *import* whom.
 
-`dao/db.js` exports `get`, `all`, `run` and `inTransaction`, and every dao and use case assumes that shape.
+`dao/db.js` is the only module that imports the PostgreSQL driver. It reads `DATABASE_URL` at runtime and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
+
+The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`.
 
 Every layer folder has an `example.js` with a short note on what goes there and a small example. They are deleted when the real files exist.
 
