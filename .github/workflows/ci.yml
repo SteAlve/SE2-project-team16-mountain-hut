@@ -45,15 +45,15 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: mountain_hut_test
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mountain_hut_test
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mountain_hut_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
     # Do not rename this job: its name is a check required by the branch rulesets.
     defaults:
       run:
@@ -118,14 +118,14 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: mountain_hut_e2e
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mountain_hut_e2e
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_e2e
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
