@@ -61,6 +61,12 @@ npm start
 ```
 
 Server tests connect through the separate `TEST_DATABASE_URL` environment variable.
+Apply the database schema before starting the server:
+
+```powershell
+cd server
+npm run db:migrate
+```
 
 ## Tests
 
@@ -69,7 +75,17 @@ Server tests connect through the separate `TEST_DATABASE_URL` environment variab
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
 
-For server tests that use PostgreSQL, set `TEST_DATABASE_URL` to a separate test database before running `npm test`. Do not point it at a database containing data you need to keep.
+For server tests that use PostgreSQL, set `NODE_ENV=test` and `TEST_DATABASE_URL` to a separate test database, then apply the schema and run the tests:
+
+```powershell
+$env:NODE_ENV = "test"
+$env:TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/mountain_hut_test"
+cd server
+npm run db:migrate
+npm test
+```
+
+Do not point `TEST_DATABASE_URL` at a database containing data you need to keep.
 
 The E2E tests start the server and the client by themselves. The first time, install everything and the browser:
 
