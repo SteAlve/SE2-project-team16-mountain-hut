@@ -1,0 +1,21 @@
+# Integration
+#
+# Runs when dev is updated, and checks the merged result again: lint, tests and build.
+# The checks are the ones of ci.yml.
+
+name: Integration
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Verify dev
+    uses: ./.github/workflows/ci.yml
+    with:
+      e2e: false

@@ -208,14 +208,14 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint of server and client, the server tests and the build of the client |
-| `integration.yml` | push to `dev` | The same checks on the integrated `dev` |
-| `qa.yml` | push to `qa` | The same checks plus the end-to-end tests with Playwright |
-| `deploy.yml` | push to `main` | The checks one last time, then builds what will be delivered |
-| `docker.yml` | push to `main` | Builds the Docker image from the verified commit and publishes it |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server, the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
+| `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
+| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa` |
+| `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
+| `docker.yml` | called by `deploy.yml`, after its checks | Builds the Docker image from the verified commit and publishes it |
 
-**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml` (lint, test and build): nothing merges while they are red.
+**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
-**Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged, and the new ones run for the first time in the pipeline of `qa`, together with the end-to-end tests.
+**Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
-**How Docker fits.** The image is built and published by its own workflow, only from `main`, from the commit that passed the checks, so what is delivered is what was tested. The image is published to a container registry.
+**How Docker fits.** The image is built and published by its own workflow, called only on `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry.
