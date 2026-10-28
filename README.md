@@ -29,14 +29,26 @@ The code is organised in layers, in `server/src` and in `client/src`: see [docs/
 ## Requirements
 
 - **Node.js 22** (`nvm use` reads `.nvmrc`)
+- **PostgreSQL 16**, running on your computer
 
 ## Getting started
+
+Set up the server once (the configuration and the database are explained below):
+
+```bash
+cd server
+npm install
+cp .env.example .env      # PowerShell: Copy-Item .env.example .env
+# edit .env: put the URL of your PostgreSQL in DATABASE_URL and TEST_DATABASE_URL
+npm run db:create         # creates the empty database
+npm run db:migrate        # creates the tables
+npm run db:seed           # creates the demo staff accounts
+```
 
 Start the server:
 
 ```bash
 cd server
-npm install
 npm start                 # http://localhost:3001
 ```
 
@@ -50,23 +62,47 @@ npm run dev               # http://localhost:5173, it forwards /api to the serve
 
 In `server`, `npm run dev` restarts the server when a file changes.
 
+### Configuration
+
+The server reads all its settings in one place, `server/src/config.js`. A setting comes from the environment (for example the run configuration of your IDE, CI or Docker) or from `server/.env`. If both give it, the environment wins.
+
+`server/.env` is personal and is never committed. Copy [`server/.env.example`](server/.env.example) to `server/.env` and edit it.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DATABASE_URL` | none, required | The PostgreSQL database of the server and of the `db:*` scripts, for example `postgresql://postgres:postgres@localhost:5432/mountain_hut`. |
+| `TEST_DATABASE_URL` | none, required for the tests that use the database | The database of the server tests. It must be a different database: the tests delete data. |
+| `PORT` | `3001` | The port of the server. |
+| `SESSION_TTL_HOURS` | `24` | How long a login session lasts. |
+| `COOKIE_SECURE` | `false` | Set to `true` when the site is served over HTTPS, so the session cookie is sent only on HTTPS. |
+
+When `NODE_ENV` is `test` (vitest sets it by itself) the server code uses `TEST_DATABASE_URL` instead of `DATABASE_URL`, so a test never touches your data.
+
 ### Database
 
-The server uses PostgreSQL 16. Configure `DATABASE_URL` before running the server:
+The tables are created by the SQL files in `server/migrations`, applied in the order of their names (`000_...`, `001_...`). A file already applied is skipped, so changing it does not change a database that already has it: start again with `npm run db:reset`, or add a new file.
 
-```powershell
-$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/mountain_hut"
-cd server
-npm start
-```
+Run these commands in `server`. They use the database of `DATABASE_URL`:
 
-Server tests connect through the separate `TEST_DATABASE_URL` environment variable.
-Apply the database schema before starting the server:
+| Command | What it does |
+|---|---|
+| `npm run db:create` | Creates the empty database, if it does not exist. The user of the URL needs the permission to create databases. |
+| `npm run db:migrate` | Applies the migrations not applied yet. Safe to run again. |
+| `npm run db:seed` | Creates the demo staff accounts below. Safe to run again. |
+| `npm run db:drop` | Deletes every table and all the data, and leaves the database empty. It refuses to run when `NODE_ENV` is `production`. |
+| `npm run db:reset` | `db:drop` and then `db:migrate`: the tables are created again from the migrations. Run `db:seed` after it. |
 
-```powershell
-cd server
-npm run db:migrate
-```
+#### Demo accounts
+
+`db:seed` creates one warden (the interface calls it Manager) and two employees. All three have the password `quota-demo-2026`. Hikers sign up from the application.
+
+| Role | Email |
+|---|---|
+| Warden | `emily.parker@quota.example` |
+| Employee | `james.taylor@quota.example` |
+| Employee | `oliver.wilson@quota.example` |
+
+This password is public: use the seed only for development and demos, never on a real deployment.
 
 ## Tests
 
@@ -75,19 +111,19 @@ npm run db:migrate
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
 
-For server tests that use PostgreSQL, set `NODE_ENV=test` and `TEST_DATABASE_URL` to a separate test database, then apply the schema and run the tests:
+The server tests that use PostgreSQL connect to `TEST_DATABASE_URL`, so set it in `server/.env`. Create that database once, and then run the tests: the tests apply the migrations by themselves, so there is no need for `db:migrate`.
 
 ```powershell
-$env:NODE_ENV = "test"
-$env:TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/mountain_hut_test"
 cd server
-npm run db:migrate
+$env:NODE_ENV = "test"; npm run db:create; Remove-Item Env:NODE_ENV   # once; in bash: NODE_ENV=test npm run db:create
 npm test
 ```
 
+To start the test database again from zero: `NODE_ENV=test npm run db:reset` (PowerShell: set `$env:NODE_ENV` as above).
+
 Do not point `TEST_DATABASE_URL` at a database containing data you need to keep.
 
-The E2E tests start the server and the client by themselves. The first time, install everything and the browser:
+The E2E tests start the server and the client by themselves. The server uses `E2E_DATABASE_URL` when it is set, and `DATABASE_URL` otherwise. The first time, install everything and the browser:
 
 ```bash
 cd server && npm install && cd ..
