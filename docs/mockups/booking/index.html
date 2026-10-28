@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MH-39 Book a table mockup (QUOTA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  /* QUOTA tokens: same names and values as the Figma variables (page "Components"). */
+  :root {
+    --ink: #10201A; --pine: #1D4A3A; --pine-hover: #163A2D; --pine-deep: #0E2019; --moss-soft: #E3ECE6;
+    --snow: #FFFFFF; --mist: #EEF2EF; --stone: #66736D; --line: #D8DFDA; --input-border: #C3CCC6;
+    --blaze: #E0352B; --error: #B42318; --error-soft: #FEF3F2; --info: #175CD3; --info-soft: #EFF8FF;
+    --on-dark: #F3F6F4; --on-dark-muted: #9DB3A9; --muted: #9AA5A0;
+    --f-display: "Barlow Condensed", sans-serif; --f-body: "Barlow", sans-serif; --f-mono: "IBM Plex Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DDE4E0; font-family: var(--f-body); color: var(--ink); }
+  .sheet { padding: 48px; display: grid; gap: 56px; justify-content: start; }
+  .intro { max-width: 1280px; }
+  .intro h1 { font-family: var(--f-display); font-size: 44px; margin: 0 0 8px; }
+  .intro p { color: var(--stone); font-size: 15px; line-height: 1.55; margin: 0 0 10px; }
+  .intro table { border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  .intro td { padding: 6px 14px 6px 0; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .intro td:first-child { font-family: var(--f-mono); font-size: 12px; color: var(--pine); white-space: nowrap; }
+  .group-h { font-family: var(--f-display); font-size: 36px; margin: 0; }
+  .shot { display: grid; gap: 10px; }
+  .shot-title { display: flex; gap: 12px; align-items: baseline; }
+  .shot-title .n { font-family: var(--f-mono); color: var(--pine); font-weight: 500; }
+  .shot-title h2 { font-family: var(--f-display); font-size: 26px; margin: 0; }
+  .shot ul { margin: 0; padding-left: 18px; color: var(--stone); font-size: 15px; line-height: 1.5; }
+
+  .screen { width: 1280px; height: 800px; background: var(--mist); border-radius: 14px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(16,32,26,.12); }
+
+  /* navbar */
+  .nav { height: 68px; flex: none; background: var(--snow); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 40px; padding: 0 32px; position: relative; z-index: 3; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: .08em; line-height: 1; }
+  .links { display: flex; gap: 6px; flex: 1; }
+  .links a { font-weight: 500; font-size: 15px; color: var(--stone); text-decoration: none; padding: 7px 12px; border-radius: 8px; }
+  .links a.on { background: var(--moss-soft); color: var(--pine); font-weight: 600; }
+  .user { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--moss-soft); color: var(--pine); display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+  .who b { display: block; font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .who span { font-family: var(--f-mono); font-size: 11px; color: var(--stone); letter-spacing: .06em; text-transform: uppercase; }
+  .logout { font-weight: 600; font-size: 15px; padding: 8px 14px; }
+
+  /* page */
+  .page { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 40px; padding: 32px 64px 40px; min-height: 0; }
+  .eyebrow { font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--pine); }
+  h1.title { font-family: var(--f-display); font-weight: 700; font-size: 48px; line-height: 1; margin: 6px 0 6px; }
+  .sub { color: var(--stone); font-size: 16px; margin: 0 0 22px; }
+  .step { margin-bottom: 24px; }
+  .step-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-weight: 600; font-size: 16px; }
+  .step-h .num { width: 26px; height: 26px; border-radius: 50%; background: var(--pine); color: var(--snow); display: grid; place-items: center; font-family: var(--f-mono); font-size: 12px; font-weight: 500; }
+  .step-h .num.todo { background: transparent; border: 1.5px solid var(--input-border); color: var(--stone); }
+  .step-h .clock { margin-left: auto; font-family: var(--f-mono); font-size: 12px; color: var(--stone); background: var(--snow); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+
+  /* date strip: only days that have slots can be picked */
+  .days { display: flex; gap: 10px; }
+  .day { width: 86px; padding: 10px 0 9px; background: var(--snow); border: 1px solid var(--line); border-radius: 12px; text-align: center; position: relative; flex: none; }
+  .day .wd { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--stone); }
+  .day .d { font-family: var(--f-display); font-weight: 700; font-size: 32px; line-height: 1.05; }
+  .day .mo { font-family: var(--f-mono); font-size: 11px; color: var(--stone); }
+  .day.sel { background: var(--pine); border-color: var(--pine); color: var(--snow); }
+  .day.sel .wd, .day.sel .mo { color: #B9CCC3; }
+  .day.off { background: transparent; border-style: dashed; color: #A9B3AE; }
+  .day.off .mo, .day.off .wd { color: #A9B3AE; }
+  .day .today { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--blaze); }
+
+  /* people stepper */
+  .people { display: flex; align-items: center; gap: 16px; }
+  .stepper { display: flex; align-items: center; background: var(--snow); border: 1px solid var(--input-border); border-radius: 12px; overflow: hidden; }
+  .stepper button { width: 48px; height: 50px; border: 0; background: transparent; font-size: 22px; color: var(--pine); font-family: var(--f-body); }
+  .stepper button.dim { color: #B7C0BB; }
+  .stepper .val { width: 64px; text-align: center; font-family: var(--f-display); font-weight: 700; font-size: 28px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); line-height: 50px; }
+  .people .hint { font-size: 14px; color: var(--stone); }
+
+  /* time slots: a slot is a start and end time (MH-02, issue #9); a day can have several */
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .slot { background: var(--snow); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; position: relative; }
+  .slot .time { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1; }
+  .slot .free { font-size: 14px; color: var(--pine); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .slot .free::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pine); }
+  .slot.sel { border: 2px solid var(--pine); padding: 13px 15px; box-shadow: 0 0 0 4px var(--moss-soft); }
+  .slot.sel::after { content: "✓"; position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; border-radius: 50%; background: var(--pine); color: var(--snow); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .slot.dis { background: transparent; border-style: dashed; }
+  .slot.dis .time { color: var(--muted); }
+  .slot.dis .free { color: var(--stone); font-weight: 400; }
+  .slot.dis .free::before { background: transparent; border: 1.5px solid var(--muted); width: 5px; height: 5px; }
+
+  /* summary */
+  .summary { background: var(--snow); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; align-self: start; box-shadow: 0 2px 6px rgba(16,32,26,.05); }
+  .summary h3 { font-family: var(--f-display); font-weight: 700; font-size: 26px; margin: 0; }
+  .rows { display: grid; }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 15px; }
+  .row span { color: var(--stone); }
+  .row b { font-weight: 600; text-align: right; }
+  .row b.mono { font-family: var(--f-mono); font-weight: 500; font-size: 14px; }
+  .row b.muted { color: var(--muted); font-weight: 500; }
+  .note { display: flex; gap: 10px; align-items: flex-start; background: var(--mist); border-radius: 10px; padding: 12px; font-size: 14px; color: var(--stone); line-height: 1.45; }
+  .blaze { display: inline-flex; flex: none; margin-top: 6px; border-radius: 2px; overflow: hidden; }
+  .blaze i { width: 9px; height: 5px; background: var(--blaze); } .blaze i:nth-child(2) { background: var(--snow); outline: 1px solid var(--line); outline-offset: -1px; }
+  .btn { font-family: var(--f-body); font-weight: 600; font-size: 17px; border-radius: 10px; padding: 13px 20px; border: 0; text-align: center; }
+  .btn.primary { background: var(--pine); color: var(--snow); }
+  .btn.primary[disabled] { background: #A9B9B1; }
+  .btn.outline { background: var(--snow); color: var(--ink); border: 1px solid var(--input-border); }
+  .summary .btn { width: 100%; }
+  .summary .after { font-size: 13px; color: var(--stone); text-align: center; margin-top: -6px; }
+
+  /* alerts */
+  .alert { display: flex; border-radius: 10px; overflow: hidden; font-weight: 500; font-size: 14px; line-height: 1.45; }
+  .alert::before { content: ""; width: 4px; flex: none; }
+  .alert span { padding: 12px 14px; }
+  .alert.error { background: var(--error-soft); color: var(--error); } .alert.error::before { background: var(--error); }
+
+  /* review dialog */
+  .scrim { position: absolute; inset: 68px 0 0 0; background: rgba(14,32,25,.55); display: grid; place-items: center; z-index: 2; }
+  .dialog { width: 540px; background: var(--snow); border-radius: 18px; padding: 28px; display: grid; gap: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+  .dialog h3 { font-family: var(--f-display); font-weight: 700; font-size: 34px; margin: 0; line-height: 1; }
+  /* one booking = one party: split seats sit in one bar, not in separate table cards */
+  .party { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; background: var(--mist); }
+  .party .head { display: flex; justify-content: space-between; align-items: center; }
+  .party .head b { font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+  .party .chip { font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: var(--moss-soft); color: var(--pine); }
+  .party .seats { display: flex; align-items: center; gap: 10px; }
+  .party .seats span { display: flex; gap: 5px; }
+  .party .seats i { width: 14px; height: 14px; border-radius: 50%; background: var(--pine); }
+  .party .seats hr { width: 1.5px; height: 18px; margin: 0; border: 0; background: var(--input-border); }
+  .party small { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .dialog .why { font-size: 14px; color: var(--stone); margin: 0; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* booked */
+  .done { flex: 1; display: grid; place-items: center; }
+  .ticket { width: 620px; background: var(--snow); border-radius: 18px; box-shadow: 0 12px 40px rgba(16,32,26,.12); overflow: hidden; }
+  .ticket .head { background: var(--pine-deep); color: var(--on-dark); padding: 28px 32px 24px; display: grid; gap: 8px; }
+  .ticket .head .ok { width: 44px; height: 44px; border-radius: 50%; background: var(--pine); display: grid; place-items: center; font-size: 22px; color: var(--snow); border: 2px solid #3E6B5A; }
+  .ticket .head h3 { font-family: var(--f-display); font-weight: 800; font-size: 48px; margin: 0; line-height: 1; }
+  .ticket .head p { margin: 0; color: var(--on-dark-muted); }
+  .perf { height: 0; border-top: 2px dashed var(--line); margin: 0 18px; position: relative; }
+  .perf::before, .perf::after { content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--mist); }
+  .perf::before { left: -30px; } .perf::after { right: -30px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); padding: 22px 32px; gap: 12px; }
+  .grid4 span { display: block; font-family: var(--f-mono); font-size: 11px; color: var(--stone); letter-spacing: .08em; text-transform: uppercase; }
+  .grid4 b { font-family: var(--f-display); font-weight: 700; font-size: 24px; }
+  .grid4 small { display: block; font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .ticket .foot { padding: 22px 32px 28px; display: grid; gap: 16px; }
+  .ticket .actions { justify-content: stretch; } .ticket .actions .btn { flex: 1; }
+
+  /* ---------- phone (below 992 px, react-bootstrap lg) ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; width: 1350px; }
+  .phones .shot { width: 414px; }
+  .phones .shot ul { font-size: 14px; min-height: 64px; }
+  .device { background: #0B1612; padding: 12px; border-radius: 52px; box-shadow: 0 16px 40px rgba(16,32,26,.18); }
+  .m { width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: var(--mist); position: relative; display: flex; flex-direction: column; }
+  .m .status { height: 47px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 34px; font-weight: 600; font-size: 16px; background: #F2F3F2; }
+  .urlbar { height: 52px; flex: none; background: #F2F3F2; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid #DADDDB; }
+  .urlbar .addr { flex: 1; height: 36px; border-radius: 12px; background: #E4E6E5; display: flex; align-items: center; justify-content: center; gap: 6px; font: 15px -apple-system, "Helvetica Neue", Arial, sans-serif; color: #2B2F2D; }
+  .urlbar .addr small { color: #7A807D; font-size: 15px; }
+  .m .topbar { height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 18px; border-bottom: 1px solid var(--line); background: var(--snow); }
+  .m .brand { font-size: 23px; gap: 8px; } .m .brand svg { width: 30px; height: 30px; }
+  .m .burger { width: 44px; height: 44px; display: grid; place-items: center; }
+  .m .content { padding: 20px 20px 0; flex: 1; overflow: hidden; }
+  .m h1.title { font-size: 36px; margin: 0 0 16px; }
+  .m .step { margin-bottom: 18px; }
+  .m .step-h { margin-bottom: 10px; }
+  .m .days { gap: 8px; width: max-content; }
+  .m .day { width: 62px; padding: 8px 0 7px; }
+  .m .day .d { font-size: 28px; }
+  .m .strip { margin: 0 -20px; padding: 0 20px; overflow: hidden; }
+  .m .slots { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .m .slot { padding: 12px 14px; } .m .slot.sel { padding: 11px 13px; }
+  .m .slot .time { font-size: 23px; }
+  .m .slot .free { font-size: 13px; }
+  .m .slot.sel::after { top: -8px; right: -6px; }
+  .m .stepper button { width: 52px; height: 52px; } .m .stepper .val { line-height: 52px; }
+  .m .people .hint { flex: 1; }
+  .m .alert { margin-bottom: 14px; }
+  .bottombar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--snow); border-top: 1px solid var(--line); padding: 14px 20px 34px; display: grid; gap: 10px; box-shadow: 0 -8px 24px rgba(16,32,26,.08); z-index: 2; }
+  .bottombar .what { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+  .bottombar .what b { font-weight: 600; }
+  .bottombar .what span { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .bottombar .btn, .msheet .btn, .mdone .btn { width: 100%; height: 54px; font-size: 17px; }
+  .home-ind { height: 5px; width: 134px; border-radius: 3px; background: var(--ink); position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 5; }
+  .m .scrim { inset: 159px 0 0 0; place-items: end stretch; }
+  .msheet { background: var(--snow); border-radius: 22px 22px 0 0; padding: 10px 20px 34px; display: grid; gap: 14px; }
+  .msheet .handle { width: 40px; height: 5px; border-radius: 3px; background: var(--line); justify-self: center; margin-bottom: 4px; }
+  .msheet h3 { font-family: var(--f-display); font-weight: 700; font-size: 32px; margin: 0; line-height: 1; }
+  .msheet .why { font-size: 14px; color: var(--stone); margin: 0; }
+  .stack { display: grid; gap: 10px; margin-top: 4px; }
+  .mdone { flex: 1; padding: 20px 16px; overflow: hidden; }
+  .mdone .ticket { width: auto; }
+  .mdone .ticket .head { padding: 22px 20px 20px; }
+  .mdone .ticket .head h3 { font-size: 42px; }
+  .mdone .grid4 { grid-template-columns: 1fr 1fr; padding: 18px 20px; row-gap: 16px; }
+  .mdone .ticket .foot { padding: 18px 20px 20px; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"></div>
+
+<script>
+// Every screen is built from the same small helpers, so desktop and phone stay in step.
+const MARK = `<svg width="34" height="34" viewBox="0 0 48 48"><circle cx="21" cy="21" r="15" fill="none" stroke="#1D4A3A" stroke-width="5.5"/><path d="M10 29.5 L17.5 17 L22.2 24 L25.8 19.2 L32 29.5 Z" fill="#1D4A3A"/><g transform="rotate(28 35 34)"><rect x="24" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/><rect x="32" y="30.5" width="6" height="7" fill="#FFFFFF"/><rect x="38" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/></g></svg>`;
+// Sprint 1 navbar: only pages that exist after MH-01..MH-04 (the public hut page and booking).
+const nav = () => `<div class="nav"><div class="brand">${MARK}QUOTA</div>
+  <div class="links"><a>The hut</a><a class="on">Book a table</a></div>
+  <div class="user"><div class="avatar">GR</div><div class="who"><b>Giulia Rossi</b><span>Hiker</span></div></div><div class="logout">Log out</div></div>`;
+
+// Days with no slot defined have 0 seats (issue #17), so they cannot be picked.
+const DAYS = [["Wed", 14], ["Thu", 15], ["Fri", 16, "off"], ["Sat", 17], ["Sun", 18], ["Mon", 19], ["Tue", 20]];
+const days = (sel, today) => `<div class="days">${DAYS.map(([wd, d, off]) => `<div class="day ${off ? "off" : ""} ${d === sel ? "sel" : ""}">${d === today ? '<i class="today"></i>' : ""}<div class="wd">${wd}</div><div class="d">${d}</div><div class="mo">${off ? "no slots" : "Jul"}</div></div>`).join("")}</div>`;
+
+// A slot is shown as its time. It can be picked only if the party fits in its free seats
+// and it starts in more than 2 hours (issue #7).
+const slot = ({ time, free, sel, why }) => `<div class="slot ${sel ? "sel" : ""} ${why ? "dis" : ""}"><span class="time">${time}</span>
+  <span class="free">${why || `${free} seats free`}</span></div>`;
+const people = (n, hint, max) => `<div class="people"><div class="stepper"><button class="${n === 1 ? "dim" : ""}">−</button><div class="val">${n}</div><button class="${n === max ? "dim" : ""}">+</button></div><span class="hint">${hint}</span></div>`;
+const step = (num, title, body, extra = "", todo) => `<div class="step"><div class="step-h"><span class="num ${todo ? "todo" : ""}">${num}</span>${title}${extra}</div>${body}</div>`;
+const summary = ({ rows, note, disabled, after }) => `<div class="summary"><h3>Your booking</h3>
+  <div class="rows">${rows.map(([k, v, cls]) => `<div class="row"><span>${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>
+  ${note ? `<div class="note"><span class="blaze"><i></i><i></i><i></i></span><span>${note}</span></div>` : ""}
+  <button class="btn primary" ${disabled ? "disabled" : ""}>Review booking</button>${after ? `<div class="after">${after}</div>` : ""}</div>`;
+const page = (left, right) => `<div class="page"><div><div class="eyebrow">Rifugio Alpe Lunga · 2.450 m</div><h1 class="title">Book a table</h1>
+  <p class="sub">Choose the day, how many you are, and a time. You can book up to 2 hours before.</p>${left}</div>${right}</div>`;
+const party = (list) => {
+  const total = list.reduce((sum, [, n]) => sum + n, 0);
+  return `<div class="party"><div class="head"><b>${total} seats for your party</b><span class="chip">${list.length} table${list.length > 1 ? "s" : ""}</span></div>
+    <div class="seats">${list.map(([, n]) => `<span>${"<i></i>".repeat(n)}</span>`).join("<hr>")}</div>
+    <small>${list.map(([t, n]) => `${n} at table ${t}`).join(" · ")}</small></div>`;
+};
+const rowsHtml = (rows) => `<div class="rows">${rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join("")}</div>`;
+
+// Sample data for Sat 17 Jul: three slots, each with its own free seats.
+const SAT = (party, selTime) => [
+  { time: "12:00 – 13:00", free: 5 }, { time: "13:00 – 14:00", free: 14 }, { time: "19:00 – 21:00", free: 22 },
+].map((s) => slot({ ...s, sel: s.time === selTime, why: party > s.free ? `Only ${s.free} seats free` : null })).join("");
+
+const ticket = (cls) => `<div class="ticket">
+  <div class="head"><div class="ok">✓</div><h3>Table booked</h3><p>See you at the hut, Giulia.</p></div>
+  <div class="grid4"><div><span>Day</span><b>Sat 17 Jul</b><small>2027</small></div><div><span>Time</span><b>13:00</b><small>until 14:00</small></div><div><span>People</span><b>6</b><small>in your party</small></div><div><span>Seats</span><b>4 + 2</b><small>tables 3 and 5</small></div></div>
+  <div class="perf"></div>
+  <div class="foot"><div class="${cls}"><button class="btn primary">Back to the hut page</button><button class="btn outline">Book another table</button></div></div></div>`;
+
+const screens = [
+  { n: "01", title: "Book a table", notes: ["Day, then party size, then time: the times that cannot fit the party are already greyed out, so the hiker never picks one that fails.", "Only days and times the staff defined can be picked (PO, issue #6). Fri 16 has no slots."],
+    html: nav() + page(
+      step(1, "Day", days(17, 14)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`),
+      summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "4"], ["Tables", "chosen for you", "muted"]],
+        note: "You can book this time until <b>11:00 on Sat 17 Jul</b>." })) },
+
+  { n: "02", title: "Party bigger than a time's free seats", notes: ["The party must fit in the free seats of the time (story Clarifications).", "12:00 has only 5 free seats: it stays visible but cannot be picked, and says why."],
+    html: nav() + page(
+      step(1, "Day", days(17, 14)) + step(2, "How many people", people(8, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(8, "")}</div>`, "", true),
+      summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "—", "muted"], ["People", "8"], ["Tables", "chosen for you", "muted"]], disabled: true, after: "Choose a time to continue." })) },
+
+  { n: "03", title: "Too late for a time", notes: ["Booking closes 2 hours before the start (PO, issue #7). It is 11:15 today, so 12:00 and 13:00 are closed.", "The hiker can still pick the evening time."],
+    html: nav() + page(
+      step(1, "Day", days(14, 14)) + step(2, "How many people", people(2, "Including you.")) +
+      step(3, "Time", `<div class="slots">${slot({ time: "12:00 – 13:00", why: "Closed at 10:00" })}${slot({ time: "13:00 – 14:00", why: "Closed at 11:00" })}${slot({ time: "19:00 – 21:00", free: 18, sel: true })}</div>`, '<span class="clock">Now 11:15</span>'),
+      summary({ rows: [["Day", "Today, Wed 14 Jul"], ["Time", "19:00 – 21:00", "mono"], ["People", "2"], ["Tables", "chosen for you", "muted"]],
+        note: "You can book this time until <b>17:00 today</b>." })) },
+
+  { n: "04", title: "Check and confirm", notes: ["The system chooses the tables: it keeps the party together where it can and uses the fewest free seats (PO, issue #11). Tables can be shared with other parties.", "No single table has 6 free seats here, so the seats are split 4 + 2. They are shown as one party in one bar, not as two separate bookings. Back keeps every choice."],
+    html: nav() + page(
+      step(1, "Day", days(17, 14)) + step(2, "How many people", people(6, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(6, "13:00 – 14:00")}</div>`),
+      summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "6"], ["Tables", "chosen for you", "muted"]] })) +
+      `<div class="scrim"><div class="dialog"><h3>Check your booking</h3>${rowsHtml([["Day", "Saturday 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}
+        ${party([[3, 4], [5, 2]])}
+        <p class="why">No single table has 6 free seats at this time, so your party is split over 2 tables.</p>
+        <div class="actions"><button class="btn outline">Back</button><button class="btn primary">Confirm booking</button></div></div></div>` },
+
+  { n: "05", title: "Seats taken meanwhile", notes: ["Another hiker booked first, so the server refuses (409). The free seats are reloaded and the choices are kept.", "The same happens if the 2-hour limit passes while the hiker is on the page."],
+    html: nav() + page(
+      `<div class="alert error" style="margin-bottom:20px"><span>Those seats were just taken. 13:00 now has 4 free seats. Choose another time or fewer people.</span></div>` +
+      step(1, "Day", days(17, 14)) + step(2, "How many people", people(6, "Including you.")) +
+      step(3, "Time", `<div class="slots">${slot({ time: "12:00 – 13:00", why: "Only 5 seats free" })}${slot({ time: "13:00 – 14:00", why: "Only 4 seats free" })}${slot({ time: "19:00 – 21:00", free: 22 })}</div>`, "", true),
+      summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "—", "muted"], ["People", "6"], ["Tables", "chosen for you", "muted"]], disabled: true, after: "Choose a time to continue." })) },
+
+  { n: "06", title: "Table booked", notes: ["Shown when the server saves the booking (201).", "Shows what was booked and where the party sits. Nothing else: email (MH-03), change (MH-06) and cancel (MH-08) come with their own stories."],
+    html: nav() + `<div class="done">${ticket("actions")}</div>` },
+];
+
+// ---------- phone version ----------
+const STATUS = `<div class="status"><span>9:41</span><span style="display:flex;gap:6px;align-items:center"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="1.6" fill="currentColor"/></svg></span></div>`;
+const urlbar = (path) => `<div class="urlbar"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#2B2F2D" stroke-width="1.6"><path d="M11 4L6 9l5 5"/></svg><div class="addr"><svg width="11" height="13" viewBox="0 0 11 13" fill="#5B615E"><rect x="0" y="5.5" width="11" height="7.5" rx="1.6"/><path d="M2.5 5.5V4a3 3 0 0 1 6 0v1.5" fill="none" stroke="#5B615E" stroke-width="1.5"/></svg>localhost:5173<small>${path}</small></div><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#2B2F2D" stroke-width="1.6"><path d="M15 9a6 6 0 1 1-1.8-4.3M15 3v3.5h-3.5"/></svg></div>`;
+const BURGER = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>`;
+const mTop = () => STATUS + urlbar("/book") + `<div class="topbar"><div class="brand">${MARK}QUOTA</div><div class="burger">${BURGER}</div></div>`;
+// The day strip scrolls sideways; shift keeps the chosen day in view.
+const mDays = (sel, today, shift = 0) => `<div class="strip"><div style="transform:translateX(-${shift}px)">${days(sel, today)}</div></div>`;
+const mPage = (body) => `<div class="content"><h1 class="title">Book a table</h1>${body}</div>`;
+const bar = ({ what, when, disabled }) => `<div class="bottombar"><div class="what"><b>${what}</b><span>${when}</span></div><button class="btn primary" ${disabled ? "disabled" : ""}>Review booking</button></div>`;
+
+const phones = [
+  { n: "M1", title: "Book a table", notes: ["Same three steps, one column. The days scroll sideways.", "The summary becomes a bar at the bottom, always in reach of the thumb."],
+    html: mTop() + mPage(step(1, "Day", mDays(17, 14, 30)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`))
+      + bar({ what: "Sat 17 Jul · 13:00 · 4", when: "book until 11:00" }) },
+  { n: "M2", title: "Party bigger than free seats", notes: ["12:00 cannot fit 8 people and says why.", "No time picked yet, so the button waits."],
+    html: mTop() + mPage(step(1, "Day", mDays(17, 14, 30)) + step(2, "How many people", people(8, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(8, "")}</div>`, "", true))
+      + bar({ what: "Sat 17 Jul · 8 people", when: "choose a time", disabled: true }) },
+  { n: "M3", title: "Check and confirm", notes: ["The dialog becomes a sheet from the bottom.", "Confirm is the first button, where the thumb is."],
+    html: mTop() + mPage(step(1, "Day", mDays(17, 14, 30)))
+      + `<div class="scrim"><div class="msheet"><div class="handle"></div><h3>Check your booking</h3>${rowsHtml([["Day", "Sat 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}
+        ${party([[3, 4], [5, 2]])}<p class="why">No single table has 6 free seats at this time, so your party is split over 2 tables.</p>
+        <div class="stack"><button class="btn primary">Confirm booking</button><button class="btn outline">Back</button></div></div></div>` },
+  { n: "M4", title: "Seats taken meanwhile", notes: ["Same message as desktop screen 05, on top of the page."],
+    html: mTop() + mPage(`<div class="alert error"><span>Those seats were just taken. 13:00 now has 4 free seats. Choose another time or fewer people.</span></div>` + step(2, "How many people", people(6, "Including you.")) +
+      step(3, "Time", `<div class="slots">${slot({ time: "12:00 – 13:00", why: "Only 5 seats free" })}${slot({ time: "13:00 – 14:00", why: "Only 4 seats free" })}${slot({ time: "19:00 – 21:00", free: 22 })}</div>`, "", true))
+      + bar({ what: "Sat 17 Jul · 6 people", when: "choose a time", disabled: true }) },
+  { n: "M5", title: "Table booked", notes: ["Same content as desktop screen 06, in a 2 × 2 grid."],
+    html: mTop() + `<div class="mdone">${ticket("stack")}</div>` },
+];
+
+const ul = (notes) => `<ul>${notes.map((n) => `<li>${n}</li>`).join("")}</ul>`;
+document.getElementById("sheet").innerHTML = `<div class="intro"><h1>MH-01 Book a table</h1>
+  <p>"As a hiker I want to book an available table for a selected date, time, and party size so that my party has a place reserved for the meal." The hiker is logged in (login mockup, MH-45). Everything on these screens comes from the story and the product owner's answers:</p>
+  <table>
+    <tr><td>Story, #6</td><td>Required: date, time, number of people. Date and time are chosen from those available.</td></tr>
+    <tr><td>MH-02, #9</td><td>A slot is a start and end time chosen by the staff; a day can have several (e.g. 12–13 and 13–14). So times are shown as times, not as "lunch" or "dinner".</td></tr>
+    <tr><td>#17</td><td>A day or time with no tables defined has 0 seats and cannot be booked.</td></tr>
+    <tr><td>Story</td><td>The number of people must fit in the free seats of that time.</td></tr>
+    <tr><td>#7</td><td>Booking is possible up to 2 hours before the start.</td></tr>
+    <tr><td>Story, #11</td><td>The system chooses the tables: party together where possible, fewest free seats used, tables can be shared, a big party can be split.</td></tr>
+  </table>
+  <p style="margin-top:12px">Left out on purpose (other stories): dietary needs and allergies (MH-05), confirmation email (MH-03), my bookings, change and cancel (MH-06, MH-08), menus and meal names (MH-10, MH-11), waiting list (MH-16). Open PO questions we do not decide here: how far ahead one can book (#26), party size limits (#27), several bookings in one slot (#25), private tables (#21).</p></div>
+  <h2 class="group-h">Desktop</h2>
+  ${screens.map((s) => `<section class="shot"><div class="shot-title"><span class="n">${s.n}</span><h2>${s.title}</h2></div>${ul(s.notes)}<div class="screen" id="s${s.n}">${s.html}</div></section>`).join("")}
+  <h2 class="group-h">The same page on a phone</h2>
+  <p class="intro" style="margin:-40px 0 0;color:var(--stone);font-size:15px;line-height:1.5">Not a separate app: this is the website opened in a phone browser. Below 992 px wide (react-bootstrap <code>lg</code>) the page becomes one column, the navbar folds into the menu button, the summary becomes a bar at the bottom and the review dialog a sheet from the bottom. Same data, rules and texts as desktop.</p>
+  <div class="phones">${phones.map((s) => `<section class="shot"><div class="shot-title"><span class="n">${s.n}</span><h2>${s.title}</h2></div>${ul(s.notes)}
+  <div class="device" id="${s.n}"><div class="m">${s.html}<div class="home-ind"></div></div></div></section>`).join("")}</div>`;
+</script>
+</body>
+</html>
