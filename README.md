@@ -26,8 +26,6 @@ LICENCE              the text of the EUPL-1.2
 
 The code is organised in layers, in `server/src` and in `client/src`: see [docs/architecture.md](docs/architecture.md). Every layer folder has an `example.js` (or `example.jsx`) whose header says what the layer contains and what it must not contain. In the server it also has a small example on the Mountain Hut stories. ESLint enforces who may import whom, so `npm run lint` fails on a layer that reaches too far. The examples are deleted as the real files take their place.
 
-The database is set up in its own task: until then `server/src/dao/db.js` is a placeholder, and its header says what the rest of the code expects from it.
-
 ## Requirements
 
 - **Node.js 22** (`nvm use` reads `.nvmrc`)
@@ -52,12 +50,42 @@ npm run dev               # http://localhost:5173, it forwards /api to the serve
 
 In `server`, `npm run dev` restarts the server when a file changes.
 
+### Database
+
+The server uses PostgreSQL 16. Configure `DATABASE_URL` before running the server:
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/mountain_hut"
+cd server
+npm start
+```
+
+Server tests connect through the separate `TEST_DATABASE_URL` environment variable.
+Apply the database schema before starting the server:
+
+```powershell
+cd server
+npm run db:migrate
+```
+
 ## Tests
 
 | What | Where | How |
 |---|---|---|
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
+
+For server tests that use PostgreSQL, set `NODE_ENV=test` and `TEST_DATABASE_URL` to a separate test database, then apply the schema and run the tests:
+
+```powershell
+$env:NODE_ENV = "test"
+$env:TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/mountain_hut_test"
+cd server
+npm run db:migrate
+npm test
+```
+
+Do not point `TEST_DATABASE_URL` at a database containing data you need to keep.
 
 The E2E tests start the server and the client by themselves. The first time, install everything and the browser:
 
@@ -214,6 +242,18 @@ feature/*
     ▼
   main
 ```
+
+## Pipelines
+
+The workflows are in [`.github/workflows`](.github/workflows).
+
+| Workflow | When it runs | What it does |
+|---|---|---|
+| `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the branch flow |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
+| `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `deploy.yml` also builds the client |
+
+To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
 
 ## Commit convention
 

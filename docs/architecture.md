@@ -52,19 +52,27 @@ The code is in `server/src`.
 
 **The rule: source-code dependencies point inward, towards the core.** A use case does not import the dao: `app.js` hands it over as a parameter, and likewise for the clock, the mailer, the password hasher, the controllers, the middleware and the routers. ESLint fails on any other import (`server/eslint.config.js`). The diagram above shows who *calls* whom at runtime; the table shows who may *import* whom.
 
-`dao/db.js` exports `get`, `all`, `run` and `inTransaction`, and every dao and use case assumes that shape.
+`dao/db.js` is the only module that imports the PostgreSQL driver. It reads `DATABASE_URL` at runtime and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
 
-Every layer folder has an `example.js` with a short note on what goes there and a small example. They are deleted when the real files exist.
+The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`.
+
+### Booking persistence
+
+The booking schema is defined by the migrations in `server/migrations/` and is applied with `npm run db:migrate`. A `slot` represents a concrete date and time and can reference a reusable `table_set`; each set contains its own table names and capacities in `hut_table`. A slot with no assigned table set has no bookable seats. `booking` stores the party size and the table set used, while `booking_table` stores the number of seats assigned to each table in that set. A table can therefore hold multiple bookings as long as their assigned seats do not exceed its capacity.
+
+The slots DAO calculates free seats by subtracting active `booking_table.seat_count` allocations from the capacities of the slot's tables and can list available tables and free seats for a slot. Cancelled bookings are excluded. The booking DAO locks the slot row, checks the requested table allocations, then inserts the booking and its table assignments in the same transaction. Authentication is a shared backend requirement; the booking-to-hiker foreign key must be added once the account schema is agreed.
+
+Layer folders may have an `example.js` while they have no real implementation; those placeholders are removed as the real files are added.
 
 ### Example: a request, start to finish: `POST /api/bookings`
 
-This shows how the layers work together.
+This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
 
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in hiker).
 2. The controller validates the body with the DTO (invalid input: `400`) and calls the use case with the user and the data.
 3. The use case checks that the user is a hiker (`403`), then runs in one transaction:
    - it locks the slot row, so two hikers booking the last seats take turns;
-   - it asks the domain whether the booking is still open, passing the time from the clock (less than 2 hours before the slot: `409`);
+   - it asks the domain whether the booking is still open, passing the time from the clock (less than 2 hours before the slot: `422`);
    - it asks the domain where the party can sit, and refuses if it does not fit (`409`);
    - it inserts the booking through the dao.
 4. After the commit, the use case asks the mailer to send the confirmation. A failed email never undoes the booking.
@@ -80,8 +88,8 @@ The domain throws errors, never HTTP status codes. One middleware in `app.js` tu
 | `UnauthorizedError` | `401` | nobody is logged in |
 | `ForbiddenError` | `403` | logged in, but not allowed |
 | `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there |
-| `ConflictError` | `409` | not possible in the current state (slot full, booking closed) |
-| `UnprocessableError` | `422` | a rule of the hut fails |
+| `ConflictError` | `409` | not possible in the current state (not enough seats) |
+| `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal) |
 | anything else | `500` | unexpected |
 
 ### Why it is built this way
@@ -104,12 +112,12 @@ The code is in `client/src`.
 | `hooks/` | State, loading and errors, the steps behind a button | `api/`, `lib/` |
 | `components/` | Reusable pieces that draw their props | `lib/` |
 | `api/` | The only place that calls the server: one function per endpoint, on top of `request.js` | nothing |
-| `lib/` | Pure formatting helpers (the seats of a party as `2 + 2 + 2`) | nothing |
+| `lib/` | Pure formatting helpers (the time of a slot as `12:00–13:00`) | nothing |
 | `App.jsx`, `main.jsx` | The router with one route per page; the mount of the app | everything |
 
 As in the backend, ESLint enforces the table (`client/eslint.config.js`). It also forbids `fetch` anywhere but `api/`.
 
-**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/availability`; the answer comes back as plain data; a component draws it, using `lib/` to write the seats as `2 + 2 + 2`. The page needs no login, so no route guard is involved.
+**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/slots?date=...`; the answer contains the bookable slots and their free seats, and comes back as plain data; a component draws each slot, using `lib/` to write its time as `12:00–13:00`. The page needs no login, so no route guard is involved.
 
 ### Why it is built this way
 
@@ -208,14 +216,14 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint of server and client, the server tests and the build of the client |
-| `integration.yml` | push to `dev` | The same checks on the integrated `dev` |
-| `qa.yml` | push to `qa` | The same checks plus the end-to-end tests with Playwright |
-| `deploy.yml` | push to `main` | The checks one last time, then builds what will be delivered |
-| `docker.yml` | push to `main` | Builds the Docker image from the verified commit and publishes it |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server, the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
+| `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
+| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa` |
+| `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
+| `docker.yml` | called by `deploy.yml`, after its checks | Builds the Docker image from the verified commit and publishes it |
 
-**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml` (lint, test and build): nothing merges while they are red.
+**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
-**Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged, and the new ones run for the first time in the pipeline of `qa`, together with the end-to-end tests.
+**Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
-**How Docker fits.** The image is built and published by its own workflow, only from `main`, from the commit that passed the checks, so what is delivered is what was tested. The image is published to a container registry.
+**How Docker fits.** The image is built and published by its own workflow, called only on `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry.
