@@ -4,7 +4,7 @@ Mockup for story **MH-01 Book a table**, used by the booking frontend and backen
 
 > "As a hiker I want to book an available table for a selected date, time, and party size so that my party has a place reserved for the meal."
 
-**Figma (source of truth):** page *MH-39 Book a table* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page (day, time slot, people stepper, step heading, seat table, phone browser bar and top bar). [index.html](index.html) shows the same screens in a browser with their notes. Same QUOTA brand, colours and fonts as the [login mockup](../login/README.md).
+**Figma (source of truth):** page *MH-39 Book a table* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page (day, time slot, people stepper, step heading, party seats, phone browser bar and top bar). [index.html](index.html) shows the same screens in a browser with their notes. Same QUOTA brand, colours and fonts as the [login mockup](../login/README.md).
 
 ## Rules on these screens
 
@@ -63,7 +63,7 @@ The same website in a phone browser, not a separate app. Below 992 px (react-boo
 | Slot less than 2 hours away | Closed at *HH:MM* |
 | Summary note | You can book this time until *HH:MM on day*. |
 | No time chosen | Button disabled, "Choose a time to continue." |
-| Party split | No single table has *N* free seats at this time, so your party sits at *K* tables. |
+| Party split | One card for the whole party: "*N* seats for your party", a *K* tables chip, the seats in one bar split by a thin line, and "4 at table 3 · 2 at table 5". Below it: "No single table has *N* free seats at this time, so your party is split over *K* tables." Shown as one party on purpose, so it does not look like separate bookings. |
 | Server saved the booking (`201`) | Table booked. See you at the hut, *first name*. |
 | Seats gone or time closed meanwhile (`409`) | Those seats were just taken. *HH:MM* now has *N* free seats. Choose another time or fewer people. The free seats are reloaded; the hiker's choices are kept. |
 | Invalid request (`400`) | Checked in the browser first, so it should not happen; if it does, the general message "Something went wrong on our side. Try again in a minute." |

@@ -119,12 +119,16 @@
   .scrim { position: absolute; inset: 68px 0 0 0; background: rgba(14,32,25,.55); display: grid; place-items: center; z-index: 2; }
   .dialog { width: 540px; background: var(--snow); border-radius: 18px; padding: 28px; display: grid; gap: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.25); }
   .dialog h3 { font-family: var(--f-display); font-weight: 700; font-size: 34px; margin: 0; line-height: 1; }
-  .tables { display: flex; gap: 10px; }
-  .table { flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; justify-items: center; background: var(--mist); }
-  .table .seats-dots { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 80px; }
-  .table .seats-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--pine); }
-  .table b { font-family: var(--f-display); font-size: 20px; }
-  .table span { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  /* one booking = one party: split seats sit in one bar, not in separate table cards */
+  .party { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; background: var(--mist); }
+  .party .head { display: flex; justify-content: space-between; align-items: center; }
+  .party .head b { font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+  .party .chip { font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: var(--moss-soft); color: var(--pine); }
+  .party .seats { display: flex; align-items: center; gap: 10px; }
+  .party .seats span { display: flex; gap: 5px; }
+  .party .seats i { width: 14px; height: 14px; border-radius: 50%; background: var(--pine); }
+  .party .seats hr { width: 1.5px; height: 18px; margin: 0; border: 0; background: var(--input-border); }
+  .party small { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
   .dialog .why { font-size: 14px; color: var(--stone); margin: 0; }
   .actions { display: flex; gap: 10px; justify-content: flex-end; }
 
@@ -221,7 +225,12 @@ const summary = ({ rows, note, disabled, after }) => `<div class="summary"><h3>Y
   <button class="btn primary" ${disabled ? "disabled" : ""}>Review booking</button>${after ? `<div class="after">${after}</div>` : ""}</div>`;
 const page = (left, right) => `<div class="page"><div><div class="eyebrow">Rifugio Alpe Lunga · 2.450 m</div><h1 class="title">Book a table</h1>
   <p class="sub">Choose the day, how many you are, and a time. You can book up to 2 hours before.</p>${left}</div>${right}</div>`;
-const tables = (list) => `<div class="tables">${list.map(([t, n]) => `<div class="table"><div class="seats-dots">${"<i></i>".repeat(n)}</div><b>Table ${t}</b><span>${n} seat${n > 1 ? "s" : ""}</span></div>`).join("")}</div>`;
+const party = (list) => {
+  const total = list.reduce((sum, [, n]) => sum + n, 0);
+  return `<div class="party"><div class="head"><b>${total} seats for your party</b><span class="chip">${list.length} table${list.length > 1 ? "s" : ""}</span></div>
+    <div class="seats">${list.map(([, n]) => `<span>${"<i></i>".repeat(n)}</span>`).join("<hr>")}</div>
+    <small>${list.map(([t, n]) => `${n} at table ${t}`).join(" · ")}</small></div>`;
+};
 const rowsHtml = (rows) => `<div class="rows">${rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join("")}</div>`;
 
 // Sample data for Sat 17 Jul: three slots, each with its own free seats.
@@ -254,13 +263,13 @@ const screens = [
       summary({ rows: [["Day", "Today, Wed 14 Jul"], ["Time", "19:00 – 21:00", "mono"], ["People", "2"], ["Tables", "chosen for you", "muted"]],
         note: "You can book this time until <b>17:00 today</b>." })) },
 
-  { n: "04", title: "Check and confirm", notes: ["The system chooses the tables: it keeps the party together where it can and uses the fewest free seats (PO, issue #11). Tables can be shared with other parties.", "No single table has 6 free seats here, so the party is split 4 + 2. Back keeps every choice."],
+  { n: "04", title: "Check and confirm", notes: ["The system chooses the tables: it keeps the party together where it can and uses the fewest free seats (PO, issue #11). Tables can be shared with other parties.", "No single table has 6 free seats here, so the seats are split 4 + 2. They are shown as one party in one bar, not as two separate bookings. Back keeps every choice."],
     html: nav() + page(
       step(1, "Day", days(17, 14)) + step(2, "How many people", people(6, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(6, "13:00 – 14:00")}</div>`),
       summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "6"], ["Tables", "chosen for you", "muted"]] })) +
       `<div class="scrim"><div class="dialog"><h3>Check your booking</h3>${rowsHtml([["Day", "Saturday 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}
-        <div><div class="step-h" style="margin-bottom:10px">Your seats</div>${tables([[3, 4], [5, 2]])}</div>
-        <p class="why">No single table has 6 free seats at this time, so your party sits at 2 tables.</p>
+        ${party([[3, 4], [5, 2]])}
+        <p class="why">No single table has 6 free seats at this time, so your party is split over 2 tables.</p>
         <div class="actions"><button class="btn outline">Back</button><button class="btn primary">Confirm booking</button></div></div></div>` },
 
   { n: "05", title: "Seats taken meanwhile", notes: ["Another hiker booked first, so the server refuses (409). The free seats are reloaded and the choices are kept.", "The same happens if the 2-hour limit passes while the hiker is on the page."],
@@ -294,7 +303,7 @@ const phones = [
   { n: "M3", title: "Check and confirm", notes: ["The dialog becomes a sheet from the bottom.", "Confirm is the first button, where the thumb is."],
     html: mTop() + mPage(step(1, "Day", mDays(17, 14, 30)))
       + `<div class="scrim"><div class="msheet"><div class="handle"></div><h3>Check your booking</h3>${rowsHtml([["Day", "Sat 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}
-        ${tables([[3, 4], [5, 2]])}<p class="why">No single table has 6 free seats at this time, so your party sits at 2 tables.</p>
+        ${party([[3, 4], [5, 2]])}<p class="why">No single table has 6 free seats at this time, so your party is split over 2 tables.</p>
         <div class="stack"><button class="btn primary">Confirm booking</button><button class="btn outline">Back</button></div></div></div>` },
   { n: "M4", title: "Seats taken meanwhile", notes: ["Same message as desktop screen 05, on top of the page."],
     html: mTop() + mPage(`<div class="alert error"><span>Those seats were just taken. 13:00 now has 4 free seats. Choose another time or fewer people.</span></div>` + step(2, "How many people", people(6, "Including you.")) +
