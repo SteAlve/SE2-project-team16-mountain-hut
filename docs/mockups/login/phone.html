@@ -57,7 +57,6 @@
 
   /* the form sheet slides over the hero */
   .form { background: var(--snow); border-radius: 24px 24px 0 0; margin-top: -24px; padding: 24px 24px 30px; position: relative; flex: 1; display: flex; flex-direction: column; }
-  .eyebrow { font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--pine); }
   h1 { font-family: var(--f-display); font-weight: 700; font-size: 42px; line-height: 1; margin: 6px 0 6px; }
   .sub { color: var(--stone); font-size: 15px; margin: 0 0 20px; }
   .field { margin-bottom: 16px; }
@@ -166,14 +165,14 @@ const field = ({ label, req, ph, val, err, help, focus }) => `<div class="field 
 const foot = `<div class="foot"><span class="back">← Back to the hut page</span><span class="coords">45.92° N 7.71° E<br>open June – September</span></div>`;
 
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
-  <div class="eyebrow">Welcome back</div><h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
+  <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
   ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
   <div class="forgot">Forgot password? Ask the hut staff.</div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
   <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
 
 const signup = (f) => `${status()}${urlbar("/signup")}${heroCompact("Already registered? <b>Log in</b>")}<div class="form">
-  <div class="eyebrow">New hiker</div><h1>Create your account</h1><p class="sub">Fields marked * are required.</p>
+  <h1>Create your account</h1><p class="sub">Fields marked * are required.</p>
   ${field({ label: "First name", req: 1, ph: "Giulia", ...f.first })}${field({ label: "Last name", req: 1, ph: "Rossi", ...f.last })}
   ${field({ label: "Email", req: 1, ph: "name@example.com", help: "Your booking confirmations are sent here.", ...f.email })}
   ${field({ label: "Phone", ph: "+39 333 123 4567", help: "Optional. The hut uses it only if your plans change.", ...f.phone })}
