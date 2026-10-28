@@ -74,6 +74,8 @@
   .btn.busy { background: #5D7C70; }
   .btn.outline { background: var(--snow); color: var(--ink); border: 1px solid var(--input-border); }
   .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #fff; }
+  .forgot { text-align: right; font-size: 14px; margin: -4px 0 18px; }
+  .forgot b { color: var(--pine); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
   .alt-line { text-align: center; color: var(--stone); font-size: 15px; margin-top: 16px; }
   .alt-line b { color: var(--pine); text-decoration: underline; text-underline-offset: 3px; }
   .alert { display: flex; border-radius: 10px; overflow: hidden; font-weight: 500; font-size: 14px; margin-bottom: 18px; line-height: 1.4; }
@@ -166,9 +168,12 @@ const foot = `<div class="foot"><span class="back">← Back to the hut page</spa
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
   <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
   ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
-  <div style="height:8px"></div>
+  <div class="forgot"><b>Forgot password?</b></div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
   <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
+
+const reset = (path, body) => `${status()}${urlbar(path)}${hero("No account? <b>Sign up</b>")}<div class="form">${body}${foot}</div>`;
+const backToLogin = `<div class="alt-line"><b>← Back to log in</b></div>`;
 
 const signup = (f) => `${status()}${urlbar("/signup")}${heroCompact("Already registered? <b>Log in</b>")}<div class="form">
   <h1>Create your account</h1><p class="sub">Fields marked * are required.</p>
@@ -202,6 +207,14 @@ const groups = [
         html: signup({ first: {}, last: {}, email: {}, phone: {}, pw: {}, pw2: {} }) },
       { n: "M6", title: "Sign up, errors", notes: ["Same messages as desktop screen 6. The page scrolls to the first field with an error.", "409: \"Log in\" in the message is a link."], long: true,
         html: signup({ first: { val: "Giulia" }, last: { err: "Enter your last name." }, email: { val: "giulia.rossi@example.com", err: 'An account with this email already exists. <u>Log in</u> instead.' }, phone: { ph: "+39 333 123 4567" }, pw: { val: "••••••", err: "Use at least 8 characters." }, pw2: { val: "•••••••", err: "The passwords are different." } }) },
+    ] },
+  { title: "Forgot password", text: "\"Forgot password?\" on the login page starts the reset. The hiker gets a link by email and chooses a new password; the hut staff never see or set a password. Same flow and texts as desktop screens 8–12.",
+    shots: [
+      { n: "M11", title: "Forgot password", notes: ["The hiker gives the email of the account."], html: reset("/forgot-password", `<h1>Forgot password?</h1><p class="sub">Enter the email of your account. We will send you a link to choose a new password.</p>${field({ label: "Email", ph: "name@example.com" })}<button class="btn primary">Send reset link</button>${backToLogin}`) },
+      { n: "M12", title: "Check your email", notes: ["Same message whether the account exists or not.", "The link works once and for 1 hour."], html: reset("/forgot-password", `<h1 style="margin-bottom:20px">Check your email</h1><div class="alert info"><span>If an account exists for giulia.rossi@example.com, we sent it a link to choose a new password. The link works for 1 hour.</span></div><p class="sub">Nothing in your inbox? Look in the spam folder, or ask for a new link.</p><button class="btn primary">Back to log in</button><div class="alt-line"><b>Send the link again</b></div>`) },
+      { n: "M13", title: "New password", notes: ["Opened from the link in the email.", "Same rules as sign-up."], html: reset("/reset-password", `<h1>New password</h1><p class="sub">For giulia.rossi@example.com</p>${field({ label: "New password", val: "••••••••••" })}${field({ label: "Repeat new password", val: "•••••••••", err: "The passwords are different." })}<button class="btn primary" style="margin-top:6px">Save new password</button>`) },
+      { n: "M14", title: "Link expired", notes: ["After 1 hour or after one use.", "The email is already filled in."], html: reset("/reset-password", `<h1 style="margin-bottom:20px">Link expired</h1><div class="alert error"><span>The link has expired or was already used. Ask for a new one.</span></div>${field({ label: "Email", val: "giulia.rossi@example.com" })}<button class="btn primary">Send a new link</button>${backToLogin}`) },
+      { n: "M15", title: "Password changed", notes: ["Back on the login page, with this note.", "The other sessions are logged out."], html: login({ alert: '<div class="alert info"><span>Your password has changed. Log in with the new one.</span></div>', email: { val: "giulia.rossi@example.com" } }) },
     ] },
   { title: "Navigation", text: "The navbar collapses into a menu button (react-bootstrap <code>Navbar expand=\"lg\"</code>). Opening it shows who is logged in, the pages of that role, and Log out. Desktop screen 7 shows the same three roles.",
     shots: [

@@ -7,7 +7,7 @@ Mockup for the login frontend ([MH-55](https://polito-se2-26-16.youtrack.cloud/i
 | Figma page | What it holds |
 |---|---|
 | **Brand · QUOTA** | Name, logo, palette, typography, motifs and usage rules |
-| **MH-45 Login & sign-up** | The 7 desktop screens and the 10 phone screens below |
+| **MH-45 Login & sign-up** | The 12 desktop screens and the 15 phone screens below |
 | **Components** | Logo, trail blaze, button, text field, alert, navbars, brand panel, phone browser bar and top bar, and the colour variables |
 
 ## The brand in one paragraph
@@ -25,6 +25,11 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 | 5 | Sign up, hikers only | ![Sign up](05-signup.png) |
 | 6 | Sign up, errors | ![Sign up errors](06-signup-errors.png) |
 | 7 | Navbar for each role, and a hiker on a staff page | ![Navbar per role](07-navbar-per-role.png) |
+| 8 | Forgot password | ![Forgot password](08-forgot-password.png) |
+| 9 | Check your email | ![Check your email](09-check-your-email.png) |
+| 10 | Choose a new password | ![New password](10-new-password.png) |
+| 11 | Reset link expired or already used | ![Link expired](11-link-expired.png) |
+| 12 | Password changed, back to the login | ![Password changed](12-password-changed.png) |
 
 Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
 
@@ -53,6 +58,11 @@ The same website opened in a phone browser, not a separate app: the React pages 
 | 8 | Menu, employee | ![Employee menu](phone/08-menu-employee.png) |
 | 9 | Menu, manager | ![Manager menu](phone/09-menu-manager.png) |
 | 10 | Staff only | ![Staff only on a phone](phone/10-staff-only.png) |
+| 11 | Forgot password | ![Forgot password on a phone](phone/11-forgot-password.png) |
+| 12 | Check your email | ![Check your email on a phone](phone/12-check-your-email.png) |
+| 13 | New password | ![New password on a phone](phone/13-new-password.png) |
+| 14 | Link expired | ![Link expired on a phone](phone/14-link-expired.png) |
+| 15 | Password changed | ![Password changed on a phone](phone/15-password-changed.png) |
 
 ## Behaviour
 
@@ -61,7 +71,7 @@ The same website opened in a phone browser, not a separate app: the React pages 
 - **After login:** a hiker goes to *Book a table*; an employee or the manager goes to *Slots & tables*. If the user came from a protected page (screen 4), send them back there instead.
 - **The blue note on screen 4** ("Log in to book a table.") is shown only when a user who is not logged in opens a protected page and is sent to the login. It says why they landed on the login instead of the page they clicked; without it the jump looks like an error. Opening the login page directly shows no note.
 - **After sign-up:** the hiker is logged in straight away and goes to *Book a table*.
-- **No password reset:** no story asks for one, so the login page has no "Forgot password?" link. Passwords are stored only as hashes: nobody, the hut staff included, can read them. If the team wants a reset, it has to be asked to the product owner first.
+- **Forgot password:** the hiker resets the password alone, with a link sent by email (screens 8–12). Passwords are stored only as hashes: nobody, the hut staff included, can read or set them.
 - **Log out** is in the navbar for every role and goes back to the public hut page.
 - **The navbar shows only the pages that role can use** (screen 7). A hiker who opens a staff page by URL sees the "Staff only" page.
 - **While the request is running** the button is disabled and reads "Logging in…" or "Creating account…".
@@ -93,6 +103,28 @@ Helper texts: Email "Your booking confirmations are sent here." · Phone "Option
 Email already registered (server answers `409`): under the email field, **"An account with this email already exists. Log in instead."** with *Log in* as a link.
 
 All rules except the `409` are checked in the browser before sending, and checked again by the server (`400` if they fail).
+
+### Forgot password
+
+A team decision: no story asks for it, but without it a hiker who forgets the password could not get back into the account, and the staff must never know or set passwords. Like the confirmation of MH-03, it needs the email service.
+
+1. **Login → "Forgot password?"** opens the *Forgot password* page (screen 8): one field, Email.
+2. **Send reset link.** The server always answers the same way (`202`), whether an account exists for that email or not, so nobody can find out which emails are registered. The page shows screen 9.
+3. **The email** holds a link with a random token. The token works **once** and for **1 hour**; asking for a new link cancels the old one.
+4. **The link** opens *Choose a new password* (screen 10): new password and repeat, with the same rules and messages as sign-up.
+5. **Save new password.** The server checks the token and the password (`204`), logs out every other session of that account, and the hiker goes back to the login with the note of screen 12.
+6. **Expired or used link** (`410`): screen 11, with the email already filled in to ask for a new one.
+
+| Where | Text |
+|---|---|
+| Login, under the password | **Forgot password?** |
+| Forgot password, title and text | Forgot password? · Enter the email of your account. We will send you a link to choose a new password. |
+| Forgot password, button | Send reset link · link: ← Back to log in |
+| Link sent | If an account exists for *email*, we sent it a link to choose a new password. The link works for 1 hour. · Nothing in your inbox? Look in the spam folder, or ask for a new link. |
+| New password, title | New password · For *email* |
+| New password, fields | New password · Repeat new password (rules and messages as in sign-up) · button: Save new password |
+| Link expired or used | The link has expired or was already used. Ask for a new one. · button: Send a new link |
+| Back on the login | Your password has changed. Log in with the new one. |
 
 ### Other texts
 
