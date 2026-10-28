@@ -1,9 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { close, get, inTransaction, run } from './db.js';
+import { close, get, inTransaction, run } from '../src/dao/db.js';
 
-const migrationsDirectory = fileURLToPath(new URL('./migrations/', import.meta.url));
+const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 
 const applyMigrations = async () => {
   const migrationFiles = (await readdir(migrationsDirectory))

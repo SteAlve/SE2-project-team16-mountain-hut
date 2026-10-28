@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "db:migrate": "node src/dao/migrate.js",
+    "db:migrate": "node scripts/migrate.js",
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
     "start": "node src/index.js",

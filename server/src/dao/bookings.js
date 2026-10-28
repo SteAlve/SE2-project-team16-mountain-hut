@@ -75,13 +75,13 @@ export const createWithTableAssignments = async ({
           GROUP BY booking_table.table_set_table_id
         )
         SELECT
-          table_set_table.id AS "tableId",
-          table_set_table.seat_capacity - COALESCE(booked_seats.seat_count, 0)
+          hut_table.id AS "tableId",
+          hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0)
             AS "freeSeats"
-        FROM table_set_table
-        LEFT JOIN booked_seats ON booked_seats.table_set_table_id = table_set_table.id
-        WHERE table_set_table.table_set_id = $2
-          AND table_set_table.id = ANY($3::INTEGER[])
+        FROM hut_table
+        LEFT JOIN booked_seats ON booked_seats.table_set_table_id = hut_table.id
+        WHERE hut_table.table_set_id = $2
+          AND hut_table.id = ANY($3::INTEGER[])
       `,
       [slotId, slot.tableSetId, tableIds],
     );
