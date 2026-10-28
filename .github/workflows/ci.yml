@@ -76,6 +76,11 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Apply database migrations
+        run: npm run db:migrate
+        env:
+          NODE_ENV: test
+
       - name: Run tests
         run: npm test
 
@@ -146,6 +151,9 @@ jobs:
           npm ci --prefix server
           npm ci --prefix client
           npm ci --prefix e2e
+
+      - name: Apply database migrations
+        run: DATABASE_URL="$E2E_DATABASE_URL" npm run db:migrate --prefix server
 
       - name: Install the browser
         working-directory: e2e
