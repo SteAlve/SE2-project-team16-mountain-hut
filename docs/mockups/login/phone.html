@@ -166,7 +166,7 @@ const field = ({ label, req, ph, val, err, help, focus }) => `<div class="field 
 const foot = `<div class="foot"><span class="back">← Back to the hut page</span><span class="coords">45.92° N 7.71° E<br>open June – September</span></div>`;
 
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
-  <div class="eyebrow">Welcome back</div><h1>Log in</h1><p class="sub">Hikers and hut staff use the same login.</p>${alert || ""}
+  <div class="eyebrow">Welcome back</div><h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
   ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
   <div class="forgot">Forgot password? Ask the hut staff.</div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>

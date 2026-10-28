@@ -59,6 +59,7 @@ The same website opened in a phone browser, not a separate app: the React pages 
 - **One login for every role.** Hikers, employees and the manager log in on the same page with email and password. *Manager* is the name the app shows for the role the stories call *warden*.
 - **Only hikers sign up.** Employee and manager accounts are created by the team (seed data in sprint 1). A hiker created by an employee over the phone is MH-7, not this page.
 - **After login:** a hiker goes to *Book a table*; an employee or the manager goes to *Slots & tables*. If the user came from a protected page (screen 4), send them back there instead.
+- **The blue note on screen 4** ("Log in to book a table.") is shown only when a user who is not logged in opens a protected page and is sent to the login. It says why they landed on the login instead of the page they clicked; without it the jump looks like an error. Opening the login page directly shows no note.
 - **After sign-up:** the hiker is logged in straight away and goes to *Book a table*.
 - **No password reset in sprint 1:** the login page says "Forgot password? Ask the hut staff."
 - **Log out** is in the navbar for every role and goes back to the public hut page.
