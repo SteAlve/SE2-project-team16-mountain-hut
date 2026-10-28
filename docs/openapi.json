@@ -2,10 +2,351 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.0.0",
-    "description": "API endpoints for checking meal-slot availability and booking a table."
+    "version": "1.1.1",
+    "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
   },
   "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign up as a hiker",
+        "description": "Creates a hiker account and logs the new hiker in: the response sets the session cookie. Only hikers can sign up; the role is always `HIKER` and cannot be sent in the request (any field not listed in the request body is rejected with 400). Employee and warden accounts are not created here. Names and email are trimmed. The email is stored in lowercase and is unique, compared without regard to letter case. The `repeat password` field of the form is checked in the browser and is not sent.",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "firstName": "Emily",
+                "lastName": "Parker",
+                "email": "emily.parker@example.com",
+                "phone": "+39 333 123 4567",
+                "password": "at-least-8-chars"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created and hiker logged in.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Session cookie `sid`. It is `HttpOnly` and `SameSite=Lax`, and `Secure` when the server runs behind HTTPS. It expires when the session does (24 hours by default, set by the server). The session id is regenerated on every login or sign up.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: it is not a JSON object or not valid JSON, it has a field that is not allowed, a required field is missing or blank, the email is not a valid email, the phone has characters other than digits and spaces (a leading `+` is allowed), or the password has fewer than 8 characters. The `message` says which check failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "firstName is required"
+                    }
+                  },
+                  "invalidEmail": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "email must be a valid email"
+                    }
+                  },
+                  "invalidPhone": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "phone must contain only digits, spaces and a leading +"
+                    }
+                  },
+                  "shortPassword": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "password must have at least 8 characters"
+                    }
+                  },
+                  "unknownField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Unknown field: role"
+                    }
+                  },
+                  "malformedJson": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Request body must be valid JSON"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with this email already exists. The client shows the message under the email field, with a link to log in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "An account with this email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in",
+        "description": "One login for every role (hiker, employee, warden). On success the response sets the session cookie and returns the user, whose `role` the client uses to choose the page after login and the navbar. The error never says which of the two credentials was wrong. A user who is already logged in gets a new session. The email is trimmed and compared without regard to letter case.",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "emily.parker@example.com",
+                "password": "at-least-8-chars"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Session cookie `sid`. It is `HttpOnly` and `SameSite=Lax`, and `Secure` when the server runs behind HTTPS. It expires when the session does (24 hours by default, set by the server). The session id is regenerated on every login or sign up.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email or the password is missing, the body has a field that is not allowed, or the body is not valid JSON. The login form checks the first case in the browser, so this answer is a safeguard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingCredentials": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "email and password are required"
+                    }
+                  },
+                  "unknownField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Unknown field: role"
+                    }
+                  },
+                  "malformedJson": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Request body must be valid JSON"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The email or the password is wrong.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Invalid email or password"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log out",
+        "description": "Destroys the session and clears the session cookie. It is idempotent: it answers 204 also when there is no active session.",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Logged out. No body.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Clears the `sid` cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get the logged-in user",
+        "description": "Returns the user of the current session. The client calls it when the app starts to restore who is logged in (the cookie is `HttpOnly`, so the client cannot read it), and the 401 answer means the visitor is anonymous or the session has expired.",
+        "operationId": "getCurrentUser",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The logged-in user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/slots": {
       "get": {
         "summary": "List bookable meal slots for a date",
@@ -74,7 +415,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Slots"
+        ]
       }
     },
     "/api/bookings": {
@@ -215,7 +559,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Bookings"
+        ]
       }
     }
   },
@@ -333,10 +680,131 @@
           },
           "message": {
             "type": "string",
-            "description": "Human-readable error description."
+            "description": "Human-readable error description, in English, written by the server. The client can show it as it is."
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "HIKER",
+          "EMPLOYEE",
+          "WARDEN"
+        ],
+        "description": "Role of the user. The interface calls the warden \"Manager\"."
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the user."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address, also the login."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phone number, if given."
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address, stored in lowercase. Booking confirmations are sent here."
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\s*\\+?[0-9 ]*[0-9][0-9 ]*\\s*$",
+            "description": "Optional. Digits and spaces, with an optional leading `+`; no maximum length for now. An empty string or null counts as not given. The hut uses it only if the hiker's plans change."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "At least 8 characters."
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "description": "Password."
           }
         }
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Sign up, log in, log out and current user."
+    },
+    {
+      "name": "Slots",
+      "description": "Meal slots and their availability."
+    },
+    {
+      "name": "Bookings",
+      "description": "Table bookings."
+    }
+  ]
 }
