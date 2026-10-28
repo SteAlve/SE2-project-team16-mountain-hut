@@ -69,7 +69,6 @@
   .msg { color: var(--error); font-size: 14px; margin-top: 6px; }
   .msg u { font-weight: 600; text-underline-offset: 2px; }
   .help { color: var(--stone); font-size: 14px; margin-top: 6px; }
-  .forgot { text-align: right; font-size: 14px; color: var(--stone); margin: -4px 0 18px; }
   .btn { height: 54px; width: 100%; border: 0; border-radius: 12px; font-family: var(--f-body); font-weight: 600; font-size: 17px; display: flex; align-items: center; justify-content: center; gap: 10px; }
   .btn.primary { background: var(--pine); color: var(--snow); }
   .btn.busy { background: #5D7C70; }
@@ -167,7 +166,7 @@ const foot = `<div class="foot"><span class="back">← Back to the hut page</spa
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
   <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
   ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
-  <div class="forgot">Forgot password? Ask the hut staff.</div>
+  <div style="height:8px"></div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
   <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
 
