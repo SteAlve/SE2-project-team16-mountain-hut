@@ -5,11 +5,22 @@
  * turns domain errors into status codes.
  * Not here: business rules, SQL, request handling.
  *
- * It wires no feature yet: a story adds its own lines in each step.
+ * Wired so far: the authentication (sign up, login, logout, who am I).
+ * A story adds its own lines in each step.
  */
 
 // general imports
 import express from 'express';
+
+// settings and the services handed to the use cases
+import { config } from './config.js';
+import { clock } from './clock.js';
+import * as passwordHasher from './passwordHasher.js';
+import * as tokens from './sessionTokens.js';
+
+// the dao
+import * as sessions from './dao/sessions.js';
+import * as users from './dao/users.js';
 
 // the errors the middleware turns into status codes
 import {
@@ -21,13 +32,50 @@ import {
   ValidationError,
 } from './domain/errors.js';
 
+// 1. middleware
+import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js';
+
 // 2. use cases
+import { makeAuthenticate } from './usecases/authenticate.js';
+import { makeLogin } from './usecases/login.js';
+import { makeLogout } from './usecases/logout.js';
+import { makeRegister } from './usecases/register.js';
+import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
+import {
+  makeLoginController,
+  makeLogoutController,
+  makeMeController,
+  makeRegisterController,
+} from './controllers/auth.js';
 
 // 4. routers
+import { makeAuthRouter } from './routes/auth.js';
+
+// authentication
+const startSession = makeStartSession({ sessions, tokens, clock, sessionTtlMs: config.sessionTtlMs });
+const authenticate = makeAuthenticate({ sessions, tokens, clock });
+const register = makeRegister({ users, passwordHasher, startSession });
+const login = makeLogin({ users, passwordHasher, startSession });
+const logout = makeLogout({ sessions, tokens });
+
+const readSessionCookie = makeReadSessionCookie(config.sessionCookieName);
+const requireAuth = makeRequireAuth(authenticate);
+
+const cookie = { name: config.sessionCookieName, secure: config.cookieSecure };
+const authRouter = makeAuthRouter({
+  registerController: makeRegisterController({ register, cookie }),
+  loginController: makeLoginController({ login, cookie }),
+  logoutController: makeLogoutController({ logout, cookie }),
+  meController: makeMeController(),
+  requireAuth,
+});
+
 export const app = express();
 app.use(express.json());
+app.use(readSessionCookie);
+app.use('/api', authRouter);
 
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
