@@ -1,3 +1,4 @@
+import './ci-test-missing.js'; // CI test: this import does not exist on purpose. Do not merge.
 /**
  * MAIN: the entry point, it mounts <App /> in the page (index.html). Nothing else.
  */
