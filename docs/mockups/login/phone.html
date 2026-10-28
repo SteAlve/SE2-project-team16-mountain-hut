@@ -178,7 +178,7 @@ const signup = (f) => `${status()}${urlbar("/signup")}${heroCompact("Already reg
   ${field({ label: "Phone", ph: "+39 333 123 4567", help: "Optional. The hut uses it only if your plans change.", ...f.phone })}
   ${field({ label: "Password", req: 1, ph: "At least 8 characters", ...f.pw })}${field({ label: "Repeat password", req: 1, ph: "Same password again", ...f.pw2 })}
   <button class="btn primary" style="margin-top:6px">Create account</button>
-  <div class="alt-line">Hut staff accounts are created by the manager.</div>${foot}</div>`;
+  ${foot}</div>`;
 
 const LINKS = { hiker: ["The hut", "Book a table"], staff: ["The hut", "Slots & tables"] };
 const BURGER = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>`;
