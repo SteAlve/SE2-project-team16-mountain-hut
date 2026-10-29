@@ -3,8 +3,9 @@
  * Not here: routes, wiring, logic (that is app.js). Tests import `app` without opening a port.
  */
 import { app } from './app.js';
+import { config } from './config.js';
 
-const port = process.env.PORT ?? 3001;
+const port = config.port;
 const server = app.listen(port, () => console.log(`Server listening on http://localhost:${port}`));
 
 const shutdown = () => {

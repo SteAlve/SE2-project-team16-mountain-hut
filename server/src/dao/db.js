@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
+import { config } from '../config.js';
 
 const { Pool } = pg;
 const transactionContext = new AsyncLocalStorage();
@@ -7,16 +8,11 @@ let pool;
 let nextSavepoint = 0;
 
 const getConnectionString = () => {
-  const connectionString = process.env.NODE_ENV === 'test'
-    ? process.env.TEST_DATABASE_URL
-    : process.env.DATABASE_URL;
-
-  if (!connectionString) {
-    const variable = process.env.NODE_ENV === 'test' ? 'TEST_DATABASE_URL' : 'DATABASE_URL';
-    throw new Error(`${variable} must be set to connect to PostgreSQL.`);
+  if (!config.databaseUrl) {
+    throw new Error(`${config.databaseUrlVariable} must be set to connect to PostgreSQL.`);
   }
 
-  return connectionString;
+  return config.databaseUrl;
 };
 
 const getPool = () => {

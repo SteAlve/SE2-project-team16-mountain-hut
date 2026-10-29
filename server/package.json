@@ -7,7 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
+    "db:create": "node scripts/create.js",
+    "db:drop": "node scripts/drop.js",
     "db:migrate": "node scripts/migrate.js",
+    "db:reset": "npm run db:drop && npm run db:migrate",
+    "db:seed": "node scripts/seed.js",
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
     "start": "node src/index.js",
