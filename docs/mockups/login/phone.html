@@ -192,7 +192,7 @@ const groups = [
   { title: "Login", text: "Below 992 px wide (the react-bootstrap <code>lg</code> breakpoint) the brand panel folds into a dark header and the form slides over it as a white sheet. Same fields, same texts and same rules as the desktop screens 1–4; only the layout changes.",
     shots: [
       { n: "M1", title: "Log in", notes: ["The brand panel of the desktop becomes the header.", "\"No account? Sign up\" stays in the header, top right."], html: login({}) },
-      { n: "M2", title: "Fields left empty", notes: ["Same messages as desktop screen 2, under each field."], html: login({ email: { err: "Enter your email." }, password: { err: "Enter your password." } }) },
+      { n: "M2", title: "Fields left empty", notes: ["Same messages as the sign-up, under each field."], html: login({ email: { err: "Enter a valid email, like name@example.com." }, password: { err: "Use at least 8 characters." } }) },
       { n: "M3", title: "Wrong email or password", notes: ["Server answers 401: alert on top, email kept, password emptied.", "The field gets the focus again, so the keyboard reopens on it."], html: login({ alert: '<div class="alert error"><span>The email or password is wrong. Try again.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { focus: true } }) },
       { n: "M4", title: "Login needed first", notes: ["Redirect from a protected page, as desktop screen 4.", "Shown while the request runs: button disabled, \"Logging in…\"."], html: login({ alert: '<div class="alert info"><span>Log in to book a table.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { val: "••••••••••" }, busy: true }) },
     ] },

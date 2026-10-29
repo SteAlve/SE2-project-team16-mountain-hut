@@ -72,10 +72,12 @@ The same website opened in a phone browser, not a separate app: the React pages 
 
 | Field | Required | Rule | Message under the field |
 |---|---|---|---|
-| Email | yes | not empty | Enter your email. |
-| Password | yes | not empty | Enter your password. |
+| Email | yes | valid email format | Enter a valid email, like name@example.com. |
+| Password | yes | at least 8 characters | Use at least 8 characters. |
 
-Wrong email or password (server answers `401`): alert on top, **"The email or password is wrong. Try again."** Keep the email, empty the password. Never say which of the two was wrong.
+The rules and messages are the same as the sign-up's: an empty field fails the same rule. They are checked in the browser before sending, so an email or password that no account can have never reaches the server. Employee and manager accounts must also have passwords of at least 8 characters, or they cannot log in.
+
+Wrong email or password (server answers `401`): alert on top, **"The email or password is wrong. Try again."** Keep the email, empty the password. The alert never says which of the two was wrong.
 
 ### Sign up
 
