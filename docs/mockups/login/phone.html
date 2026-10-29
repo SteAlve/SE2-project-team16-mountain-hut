@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MH-45 Login and sign-up, responsive (QUOTA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  /* QUOTA tokens: same names and values as the Figma variables (page "Components"). */
+  :root {
+    --ink: #10201A; --pine: #1D4A3A; --pine-hover: #163A2D; --pine-deep: #0E2019; --moss-soft: #E3ECE6;
+    --snow: #FFFFFF; --mist: #EEF2EF; --stone: #66736D; --line: #D8DFDA; --input-border: #C3CCC6;
+    --blaze: #E0352B; --error: #B42318; --error-soft: #FEF3F2; --info: #175CD3; --info-soft: #EFF8FF;
+    --on-dark: #F3F6F4; --on-dark-muted: #9DB3A9;
+    --f-display: "Barlow Condensed", sans-serif; --f-body: "Barlow", sans-serif; --f-mono: "IBM Plex Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DDE4E0; font-family: var(--f-body); color: var(--ink); }
+  .sheet { padding: 48px; display: grid; gap: 64px; }
+  .group > h2 { font-family: var(--f-display); font-size: 34px; margin: 0 0 6px; }
+  .group > p { margin: 0 0 24px; color: var(--stone); font-size: 15px; max-width: 900px; line-height: 1.5; }
+  .row-of-phones { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
+  .shot { display: grid; gap: 10px; width: 414px; }
+  .shot-title { display: flex; gap: 10px; align-items: baseline; }
+  .shot-title .n { font-family: var(--f-mono); color: var(--pine); font-weight: 500; }
+  .shot-title h3 { font-family: var(--f-display); font-size: 22px; margin: 0; }
+  .shot ul { margin: 0; padding-left: 18px; color: var(--stone); font-size: 14px; line-height: 1.45; min-height: 62px; }
+
+  /* device: 390 x 844 viewport (iPhone 14/15) inside a thin bezel */
+  .device { background: #0B1612; padding: 12px; border-radius: 52px; box-shadow: 0 16px 40px rgba(16,32,26,.18); }
+  .screen { width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: var(--snow); position: relative; display: flex; flex-direction: column; }
+  .screen.long { height: auto; }
+  .status { height: 47px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 34px; font-family: var(--f-body); font-weight: 600; font-size: 16px; position: relative; z-index: 2; }
+  .status .icons { display: flex; gap: 6px; align-items: center; }
+  .status { background: #F2F3F2; }
+
+  /* hero (the brand panel of the desktop, folded on top) */
+  .hero { background: var(--pine-deep); color: var(--on-dark); position: relative; overflow: hidden; padding: 4px 24px 40px; flex: none; }
+  .hero svg.contours { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .hero > * { position: relative; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-weight: 700; font-size: 24px; letter-spacing: .08em; line-height: 1; }
+  .toplink { font-size: 15px; color: var(--on-dark-muted); }
+  .toplink b { color: var(--on-dark); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+  .blz { display: flex; width: 42px; height: 6px; margin: 14px 0 10px; }
+  .blz i { flex: 1; background: var(--blaze); } .blz i:nth-child(2) { background: var(--snow); }
+  .hut { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--on-dark-muted); }
+  .alt { font-family: var(--f-display); font-weight: 800; font-size: 58px; line-height: .95; letter-spacing: -.01em; margin-top: 4px; }
+  .tag { font-family: var(--f-display); font-weight: 600; font-size: 22px; margin-top: 6px; }
+  .today { margin-top: 14px; display: inline-flex; gap: 10px; align-items: center; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); border-radius: 999px; padding: 7px 14px; font-family: var(--f-mono); font-size: 12px; color: var(--on-dark-muted); }
+  .today b { color: var(--on-dark); font-weight: 500; }
+  .today .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blaze); }
+  .hero.compact { padding-bottom: 40px; }
+  .hero.compact .hut { margin-top: 18px; }
+
+  /* the form sheet slides over the hero */
+  .form { background: var(--snow); border-radius: 24px 24px 0 0; margin-top: -24px; padding: 24px 24px 30px; position: relative; flex: 1; display: flex; flex-direction: column; }
+  h1 { font-family: var(--f-display); font-weight: 700; font-size: 42px; line-height: 1; margin: 6px 0 6px; }
+  .sub { color: var(--stone); font-size: 15px; margin: 0 0 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .field label i { color: var(--error); font-style: normal; }
+  .input { height: 52px; border: 1px solid var(--input-border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 16px; background: var(--snow); }
+  .input .ph { color: #8A958F; }
+  .field.focus .input { border: 2px solid var(--pine); padding: 0 13px; box-shadow: 0 0 0 4px var(--moss-soft); }
+  .field.err .input { border: 1.5px solid var(--error); background: var(--error-soft); padding: 0 13.5px; }
+  .msg { color: var(--error); font-size: 14px; margin-top: 6px; }
+  .msg u { font-weight: 600; text-underline-offset: 2px; }
+  .help { color: var(--stone); font-size: 14px; margin-top: 6px; }
+  .btn { height: 54px; width: 100%; border: 0; border-radius: 12px; font-family: var(--f-body); font-weight: 600; font-size: 17px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .btn.primary { background: var(--pine); color: var(--snow); }
+  .btn.busy { background: #5D7C70; }
+  .btn.outline { background: var(--snow); color: var(--ink); border: 1px solid var(--input-border); }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #fff; }
+  .alt-line { text-align: center; color: var(--stone); font-size: 15px; margin-top: 16px; }
+  .alt-line b { color: var(--pine); text-decoration: underline; text-underline-offset: 3px; }
+  .alert { display: flex; border-radius: 10px; overflow: hidden; font-weight: 500; font-size: 14px; margin-bottom: 18px; line-height: 1.4; }
+  .alert::before { content: ""; width: 4px; flex: none; }
+  .alert span { padding: 12px 14px; }
+  .alert.error { background: var(--error-soft); color: var(--error); } .alert.error::before { background: var(--error); }
+  .alert.info { background: var(--info-soft); color: var(--info); } .alert.info::before { background: var(--info); }
+  .foot { margin-top: auto; padding-top: 18px; display: grid; gap: 10px; justify-items: center; }
+  .foot .back { font-size: 15px; color: var(--stone); }
+  .foot .coords { font-family: var(--f-mono); font-size: 11px; color: var(--stone); text-align: center; line-height: 1.6; }
+  .hero.compact .marker { display: none; }
+  .home-ind { height: 5px; width: 134px; border-radius: 3px; background: var(--ink); position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 5; }
+
+  /* app top bar + menu */
+  .topbar { height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 18px; border-bottom: 1px solid var(--line); background: var(--snow); position: relative; z-index: 3; }
+  .topbar .logo { color: var(--ink); font-size: 23px; }
+  .burger { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; }
+  .burger.open { background: var(--mist); }
+  .menu { position: absolute; top: 159px; left: 0; right: 0; background: var(--snow); z-index: 3; padding: 16px 16px 20px; border-bottom: 1px solid var(--line); box-shadow: 0 18px 30px rgba(14,32,25,.18); }
+  .me { display: flex; align-items: center; gap: 12px; padding: 4px 8px 16px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--moss-soft); color: var(--pine); display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 16px; flex: none; }
+  .avatar.dark { background: var(--pine); color: var(--snow); }
+  .me b { display: block; font-size: 17px; font-weight: 600; }
+  .me span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; color: var(--stone); text-transform: uppercase; }
+  .menu a { display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 12px; border-radius: 10px; font-size: 17px; font-weight: 500; color: var(--ink); text-decoration: none; }
+  .menu a.on { background: var(--moss-soft); color: var(--pine); font-weight: 600; }
+  .menu a.on::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--pine); }
+  .menu .out { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+  .menu .out a { color: var(--stone); }
+  .scrim { position: absolute; inset: 159px 0 0 0; background: rgba(14,32,25,.45); z-index: 2; }
+  .behind { padding: 24px; display: grid; gap: 12px; }
+  .ghost-line { height: 14px; border-radius: 7px; background: var(--line); }
+  .ghost-card { height: 110px; border-radius: 14px; background: var(--mist); }
+
+  /* staff only */
+  .center { flex: 1; display: grid; place-content: center; justify-items: center; text-align: center; padding: 0 32px; gap: 12px; background: var(--mist); }
+  .center .blz { margin: 0; }
+  .center h1 { font-size: 44px; margin: 4px 0 0; }
+  .center p { margin: 0 0 8px; color: var(--stone); font-size: 16px; line-height: 1.45; }
+  .center .btn { width: auto; padding: 0 22px; }
+
+  /* mobile browser chrome: these are web pages, not an app */
+  .urlbar { height: 52px; flex: none; background: #F2F3F2; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid #DADDDB; position: relative; z-index: 4; }
+  .urlbar .addr { flex: 1; height: 36px; border-radius: 12px; background: #E4E6E5; display: flex; align-items: center; justify-content: center; gap: 6px; font: 15px -apple-system, "Helvetica Neue", Arial, sans-serif; color: #2B2F2D; }
+  .urlbar .addr small { color: #7A807D; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"></div>
+
+<script>
+// Every screen is built from the same small helpers so phone and desktop stay in step.
+const mark = (c) => `<svg width="30" height="30" viewBox="0 0 48 48"><circle cx="21" cy="21" r="15" fill="none" stroke="${c}" stroke-width="5.5"/><path d="M10 29.5 L17.5 17 L22.2 24 L25.8 19.2 L32 29.5 Z" fill="${c}"/><g transform="rotate(28 35 34)"><rect x="24" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/><rect x="32" y="30.5" width="6" height="7" fill="#FFFFFF"/><rect x="38" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/></g></svg>`;
+const logo = (dark) => `<div class="logo">${mark(dark ? "#F3F6F4" : "#1D4A3A")}QUOTA</div>`;
+const status = (dark) => `<div class="status ${dark ? "dark" : ""}"><span>9:41</span><span class="icons">
+  <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+  <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3C13.3 1.5 10.8.4 8 .4S2.7 1.5.8 3.3L2 4.6c1.6-1.5 3.7-2.4 6-2.4zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3C11.4 4.7 9.8 4 8 4s-3.4.7-4.6 1.8l1.2 1.3c.9-.8 2.1-1.3 3.4-1.3zM8 9.3l2-2.1C9.5 6.8 8.8 6.5 8 6.5s-1.5.3-2 .7l2 2.1z"/></svg>
+  <svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="1.6" fill="currentColor"/><rect x="23.5" y="4" width="1.8" height="4" rx=".9" fill="currentColor" opacity=".5"/></svg></span></div>`;
+
+const urlbar = (path) => `<div class="urlbar"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#2B2F2D" stroke-width="1.6"><path d="M11 4L6 9l5 5"/></svg><div class="addr"><svg width="11" height="13" viewBox="0 0 11 13" fill="#5B615E"><rect x="0" y="5.5" width="11" height="7.5" rx="1.6"/><path d="M2.5 5.5V4a3 3 0 0 1 6 0v1.5" fill="none" stroke="#5B615E" stroke-width="1.5"/></svg>localhost:5173<small>${path}</small></div><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#2B2F2D" stroke-width="1.6"><path d="M15 9a6 6 0 1 1-1.8-4.3M15 3v3.5h-3.5"/></svg></div>`;
+
+// Contour lines like the desktop brand panel, centred near the hut marker.
+const contours = (() => {
+  const paths = [];
+  for (let k = 1; k <= 13; k++) {
+    const r = 18 + k * 26, pts = [];
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      const rr = r * (1 + 0.13 * Math.sin(3 * a + k * 0.4) + 0.06 * Math.sin(5 * a + k));
+      pts.push(`${(318 + rr * 1.25 * Math.cos(a)).toFixed(1)},${(150 + rr * 0.8 * Math.sin(a)).toFixed(1)}`);
+    }
+    paths.push(`<polyline points="${pts.join(" ")}" fill="none" stroke="#FFFFFF" stroke-opacity="${(0.13 - k * 0.004).toFixed(3)}" stroke-width="1"/>`);
+  }
+  return `<svg class="contours" viewBox="0 0 390 360" preserveAspectRatio="xMidYMin slice">${paths.join("")}<g class="marker"><circle cx="318" cy="150" r="9" fill="none" stroke="#E0352B" stroke-width="1"/><circle cx="318" cy="150" r="4" fill="#E0352B"/></g></svg>`;
+})();
+
+const blz = `<div class="blz"><i></i><i></i><i></i></div>`;
+const hero = (toplink) => `<div class="hero">${contours}<div class="hero-top">${logo(true)}<span class="toplink">${toplink}</span></div>
+  ${blz}<div class="hut">RIFUGIO ALPE LUNGA</div><div class="alt">2.450 m</div><div class="tag">Your seat at altitude.</div>
+</div>`;
+const heroCompact = (toplink) => `<div class="hero compact">${contours}<div class="hero-top">${logo(true)}<span class="toplink">${toplink}</span></div>
+  <div class="hut">RIFUGIO ALPE LUNGA · 2.450 m</div></div>`;
+
+const ERR = `<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#B42318" stroke-width="1.6"/><rect x="9.1" y="5.2" width="1.8" height="6" rx=".9" fill="#B42318"/><circle cx="10" cy="14.2" r="1.1" fill="#B42318"/></svg>`;
+const field = ({ label, req, ph, val, err, help, focus }) => `<div class="field ${err ? "err" : ""} ${focus ? "focus" : ""}">
+  <label>${label}${req ? " <i>*</i>" : ""}</label><div class="input">${val ? `<span>${val}</span>` : `<span class="ph">${err ? "" : ph}</span>`}${err ? ERR : ""}</div>
+  ${err ? `<div class="msg">${err}</div>` : help ? `<div class="help">${help}</div>` : ""}</div>`;
+const foot = `<div class="foot"><span class="back">← Back to the hut page</span><span class="coords">45.92° N 7.71° E<br>open June – September</span></div>`;
+
+const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
+  <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
+  ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
+  <div style="height:8px"></div>
+  <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
+  <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
+
+const signup = (f) => `${status()}${urlbar("/signup")}${heroCompact("Already registered? <b>Log in</b>")}<div class="form">
+  <h1>Create your account</h1><p class="sub">Fields marked * are required.</p>
+  ${field({ label: "First name", req: 1, ph: "Giulia", ...f.first })}${field({ label: "Last name", req: 1, ph: "Rossi", ...f.last })}
+  ${field({ label: "Email", req: 1, ph: "name@example.com", help: "Your booking confirmations are sent here.", ...f.email })}
+  ${field({ label: "Phone", ph: "+39 333 123 4567", help: "Optional. The hut uses it only if your plans change.", ...f.phone })}
+  ${field({ label: "Password", req: 1, ph: "At least 8 characters", ...f.pw })}${field({ label: "Repeat password", req: 1, ph: "Same password again", ...f.pw2 })}
+  <button class="btn primary" style="margin-top:6px">Create account</button>
+  ${foot}</div>`;
+
+const LINKS = { hiker: ["The hut", "Book a table"], staff: ["The hut", "Slots & tables"] };
+const BURGER = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>`;
+const CLOSE = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M5 5l12 12M17 5L5 17"/></svg>`;
+const appTop = (open, path) => `${status()}${urlbar(path)}<div class="topbar">${logo()}<div class="burger ${open ? "open" : ""}">${open ? CLOSE : BURGER}</div></div>`;
+const menuOpen = ({ initials, name, role, links, dark }) => `${appTop(true, role === "Hiker" ? "/book" : "/slots")}
+  <div class="behind"><div class="ghost-line" style="width:40%"></div><div class="ghost-line" style="width:70%;height:30px"></div><div class="ghost-card"></div><div class="ghost-card"></div></div>
+  <div class="scrim"></div><div class="menu"><div class="me"><div class="avatar ${dark ? "dark" : ""}">${initials}</div><div><b>${name}</b><span>${role}</span></div></div>
+  ${links.map((l, i) => `<a class="${i === 1 ? "on" : ""}">${l.replace("&", "&amp;")}</a>`).join("")}<div class="out"><a>Log out</a></div></div>`;
+
+const groups = [
+  { title: "Login", text: "Below 992 px wide (the react-bootstrap <code>lg</code> breakpoint) the brand panel folds into a dark header and the form slides over it as a white sheet. Same fields, same texts and same rules as the desktop screens 1–4; only the layout changes.",
+    shots: [
+      { n: "M1", title: "Log in", notes: ["The brand panel of the desktop becomes the header.", "\"No account? Sign up\" stays in the header, top right."], html: login({}) },
+      { n: "M2", title: "Fields left empty", notes: ["Same messages as desktop screen 2, under each field."], html: login({ email: { err: "Enter your email." }, password: { err: "Enter your password." } }) },
+      { n: "M3", title: "Wrong email or password", notes: ["Server answers 401: alert on top, email kept, password emptied.", "The field gets the focus again, so the keyboard reopens on it."], html: login({ alert: '<div class="alert error"><span>The email or password is wrong. Try again.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { focus: true } }) },
+      { n: "M4", title: "Login needed first", notes: ["Redirect from a protected page, as desktop screen 4.", "Shown while the request runs: button disabled, \"Logging in…\"."], html: login({ alert: '<div class="alert info"><span>Log in to book a table.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { val: "••••••••••" }, busy: true }) },
+    ] },
+  { title: "Sign up", text: "The header shrinks to the logo and the hut name so the form starts higher. Fields that sit side by side on desktop (first and last name, the two passwords) are stacked. Both screens are shown as the full page; on the phone it scrolls.",
+    shots: [
+      { n: "M5", title: "Sign up, hikers only", notes: ["Inputs use 16 px text, so iPhones do not zoom in when a field is tapped.", "Email field uses the email keyboard, phone the phone keypad."], long: true,
+        html: signup({ first: {}, last: {}, email: {}, phone: {}, pw: {}, pw2: {} }) },
+      { n: "M6", title: "Sign up, errors", notes: ["Same messages as desktop screen 6. The page scrolls to the first field with an error.", "409: \"Log in\" in the message is a link."], long: true,
+        html: signup({ first: { val: "Giulia" }, last: { err: "Enter your last name." }, email: { val: "giulia.rossi@example.com", err: 'An account with this email already exists. <u>Log in</u> instead.' }, phone: { ph: "+39 333 123 4567" }, pw: { val: "••••••", err: "Use at least 8 characters." }, pw2: { val: "•••••••", err: "The passwords are different." } }) },
+    ] },
+  { title: "Navigation", text: "The navbar collapses into a menu button (react-bootstrap <code>Navbar expand=\"lg\"</code>). Opening it shows who is logged in, the pages of that role, and Log out. Desktop screen 7 shows the same three roles.",
+    shots: [
+      { n: "M7", title: "Menu, hiker", notes: ["Only the pages that exist in sprint 1. Pages of later stories are added with them.", "Tapping outside the menu or on a link closes it."], html: menuOpen({ initials: "GR", name: "Giulia Rossi", role: "Hiker", links: LINKS.hiker }) },
+      { n: "M8", title: "Menu, employee", notes: ["Employee and manager see the same pages: the manager can do everything an employee does (context.md)."], html: menuOpen({ initials: "MB", name: "Marco Bianchi", role: "Employee", links: LINKS.staff }) },
+      { n: "M9", title: "Menu, manager", notes: ["Dark avatar marks the manager, as on desktop."], html: menuOpen({ initials: "AV", name: "Anna Verdi", role: "Manager", links: LINKS.staff, dark: true }) },
+      { n: "M10", title: "Staff only", notes: ["A hiker opens a staff page by URL."], html: `${appTop(false, "/slots")}<div class="center">${blz}<h1>Staff only</h1><p>This page is for the hut team.<br>You are logged in as a hiker.</p><button class="btn primary">Go to Book a table</button></div>` },
+    ] },
+];
+
+document.getElementById("sheet").innerHTML = `<section class="group"><h2>The same website on a phone</h2><p>Not a separate app: these are the login and sign-up pages of the website, opened in a phone browser. The React pages are the same; below 992 px wide the CSS (react-bootstrap grid and <code>Navbar expand="lg"</code>) rearranges them into one column. Between 576 and 991 px (tablets) the form keeps a maximum width of 440 px, centred.</p></section>` + groups.map((g) => `<section class="group"><h2>${g.title}</h2><p>${g.text}</p><div class="row-of-phones">
+  ${g.shots.map((s) => `<div class="shot"><div class="shot-title"><span class="n">${s.n}</span><h3>${s.title}</h3></div><ul>${s.notes.map((n) => `<li>${n}</li>`).join("")}</ul>
+  <div class="device" id="${s.n}"><div class="screen ${s.long ? "long" : ""}">${s.html}<div class="home-ind"></div></div></div></div>`).join("")}</div></section>`).join("");
+</script>
+</body>
+</html>

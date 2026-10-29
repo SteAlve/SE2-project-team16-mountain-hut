@@ -5,11 +5,16 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const serverDir = fileURLToPath(new URL('../server/', import.meta.url));
+const serverEnv = { ...process.env, PORT: '3001' };
+
+if (process.env.E2E_DATABASE_URL) {
+  serverEnv.DATABASE_URL = process.env.E2E_DATABASE_URL;
+}
 
 const server = spawn(process.execPath, ['src/index.js'], {
   cwd: serverDir,
   stdio: 'inherit',
-  env: { ...process.env, PORT: '3001' },
+  env: serverEnv,
 });
 
 // When Playwright stops this script, the server stops with it.
