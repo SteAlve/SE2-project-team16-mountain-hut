@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
   },
   "paths": {
@@ -350,7 +350,7 @@
     "/api/slots": {
       "get": {
         "summary": "List bookable meal slots for a date",
-        "description": "Returns slots that are still open for booking on the requested date, with their remaining free seats.",
+        "description": "Returns the slots of the requested date that can still be booked: they have free seats and the meal starts at least two hours from now (the hut's local time). The times are the local times of the hut. No login is required.",
         "operationId": "getBookableSlots",
         "parameters": [
           {
@@ -424,7 +424,7 @@
     "/api/bookings": {
       "post": {
         "summary": "Book a table",
-        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away.",
+        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The server chooses the seats: the whole party at one table when a table has enough free seats (the table with the fewest free seats that fits, so tables can be shared with other parties); otherwise the party is split over as few tables as possible. The response does not say which tables.",
         "operationId": "createBooking",
         "security": [
           {
@@ -506,7 +506,7 @@
             }
           },
           "409": {
-            "description": "The requested slot does not have enough free seats.",
+            "description": "The party does not fit in the free seats of the slot (the whole party is refused, never part of it).",
             "content": {
               "application/json": {
                 "schema": {
@@ -520,7 +520,7 @@
             }
           },
           "422": {
-            "description": "A rule of the hut fails: the slot does not exist or is not offered on that date, or the meal starts less than two hours from now, so booking is closed.",
+            "description": "A rule of the hut fails: the slot does not exist on that date or cannot be booked, the meal starts less than two hours from now so booking is closed, or the hiker already has a booking for that slot.",
             "content": {
               "application/json": {
                 "schema": {
@@ -539,6 +539,20 @@
                     "value": {
                       "error": "UnprocessableError",
                       "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "summary": "The slot has no tables",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  },
+                  "alreadyBooked": {
+                    "summary": "The hiker already booked this slot",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "You already have a booking for this slot"
                     }
                   }
                 }

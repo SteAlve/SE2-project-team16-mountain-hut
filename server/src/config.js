@@ -32,6 +32,14 @@ if (!Number.isFinite(ttlHours) || ttlHours <= 0) {
   throw new Error('SESSION_TTL_HOURS must be a positive number.');
 }
 
+const hutTimeZone = process.env.HUT_TIME_ZONE ?? 'Europe/Rome';
+
+try {
+  new Intl.DateTimeFormat('en-US', { timeZone: hutTimeZone });
+} catch {
+  throw new Error('HUT_TIME_ZONE must be a valid time zone name, for example Europe/Rome.');
+}
+
 const databaseUrlVariable = process.env.NODE_ENV === 'test' ? 'TEST_DATABASE_URL' : 'DATABASE_URL';
 
 export const config = {

@@ -1,4 +1,4 @@
-import { all } from './db.js';
+import { all, get } from './db.js';
 
 export const findBookableByDate = (serviceDate) => all(
   `
@@ -62,4 +62,20 @@ export const findAvailableTablesBySlotId = (slotId) => all(
     ORDER BY hut_table.id
   `,
   [slotId],
+);
+
+// The slot of that date, or null. Dates and times are read as text: the driver would turn a DATE
+// into a JavaScript Date at local midnight, which moves the day on a server in another time zone.
+export const findByIdAndDate = (slotId, serviceDate) => get(
+  `
+    SELECT
+      id AS "slotId",
+      service_date::TEXT AS "serviceDate",
+      starts_at::TEXT AS "startsAt",
+      ends_at::TEXT AS "endsAt",
+      table_set_id AS "tableSetId"
+    FROM slot
+    WHERE id = $1 AND service_date = $2
+  `,
+  [slotId, serviceDate],
 );

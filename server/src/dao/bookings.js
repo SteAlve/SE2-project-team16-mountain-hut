@@ -2,7 +2,16 @@ import { all, get, inTransaction, run } from './db.js';
 
 const isPositiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 
-const validateBooking = ({ slotId, partySize, tableAssignments }) => {
+// A failure the use case can tell apart (it cannot import this file): the `code` of the error.
+//   SEATS_UNAVAILABLE   a table has fewer free seats than asked, e.g. a booking came in just before
+//   DUPLICATE_BOOKING   the hiker already has an active booking for the slot
+const fail = (code, message) => Object.assign(new RangeError(message), { code });
+
+const validateBooking = ({ hikerId, slotId, partySize, tableAssignments }) => {
+  if (!isPositiveInteger(hikerId)) {
+    throw new TypeError('hikerId must be a positive safe integer.');
+  }
+
   if (!isPositiveInteger(slotId)) {
     throw new TypeError('slotId must be a positive safe integer.');
   }
@@ -40,12 +49,22 @@ const validateBooking = ({ slotId, partySize, tableAssignments }) => {
   }
 };
 
+// Does the hiker already have an active (not cancelled) booking for the slot?
+export const hasActiveBooking = async (hikerId, slotId) => {
+  const row = await get(
+    'SELECT 1 AS found FROM booking WHERE hiker_id = $1 AND slot_id = $2 AND cancelled_at IS NULL',
+    [hikerId, slotId],
+  );
+  return row !== null;
+};
+
 export const createWithTableAssignments = async ({
+  hikerId,
   slotId,
   partySize,
   tableAssignments,
 }) => {
-  validateBooking({ slotId, partySize, tableAssignments });
+  validateBooking({ hikerId, slotId, partySize, tableAssignments });
 
   return inTransaction(async () => {
     const slot = await get(
@@ -59,6 +78,11 @@ export const createWithTableAssignments = async ({
 
     if (slot.tableSetId === null) {
       throw new RangeError(`Slot ${slotId} has no table set and cannot be booked.`);
+    }
+
+    // The slot is locked, so two bookings for it take turns: this check cannot be overtaken.
+    if (await hasActiveBooking(hikerId, slotId)) {
+      throw fail('DUPLICATE_BOOKING', `Hiker ${hikerId} already has a booking for slot ${slotId}.`);
     }
 
     const tableIds = tableAssignments.map(({ tableId }) => tableId);
@@ -87,7 +111,7 @@ export const createWithTableAssignments = async ({
     );
 
     if (availableTables.length !== tableAssignments.length) {
-      throw new RangeError(`One or more tables are not available for slot ${slotId}.`);
+      throw fail('SEATS_UNAVAILABLE', `One or more tables are not available for slot ${slotId}.`);
     }
 
     const freeSeatsByTable = new Map(
@@ -98,7 +122,8 @@ export const createWithTableAssignments = async ({
       const freeSeats = freeSeatsByTable.get(tableId);
 
       if (seatCount > freeSeats) {
-        throw new RangeError(
+        throw fail(
+          'SEATS_UNAVAILABLE',
           `Table ${tableId} has ${freeSeats} free seats in slot ${slotId}; ${seatCount} requested.`,
         );
       }
@@ -106,11 +131,11 @@ export const createWithTableAssignments = async ({
 
     const booking = await get(
       `
-        INSERT INTO booking (slot_id, table_set_id, party_size)
-        VALUES ($1, $2, $3)
+        INSERT INTO booking (slot_id, table_set_id, hiker_id, party_size)
+        VALUES ($1, $2, $3, $4)
         RETURNING id, slot_id AS "slotId", party_size AS "partySize"
       `,
-      [slotId, slot.tableSetId, partySize],
+      [slotId, slot.tableSetId, hikerId, partySize],
     );
 
     for (const { tableId, seatCount } of tableAssignments) {
