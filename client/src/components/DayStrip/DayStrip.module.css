@@ -1,0 +1,103 @@
+.strip {
+  display: flex;
+  gap: 10px;
+}
+
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 86px;
+  padding: 10px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.day:hover:not(:disabled):not(.selected) {
+  border-color: var(--pine);
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.weekday,
+.month {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--stone);
+}
+
+.weekday {
+  letter-spacing: 0.88px;
+  text-transform: uppercase;
+}
+
+.number {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.today {
+  position: absolute;
+  top: 5px;
+  right: 9px;
+}
+
+.selected {
+  border-color: var(--pine);
+  background: var(--pine);
+  color: var(--snow);
+  cursor: default;
+}
+
+.selected .weekday,
+.selected .month {
+  color: #b9ccc3;
+}
+
+.empty {
+  border-style: dashed;
+  border-color: var(--input-border);
+  background: transparent;
+  cursor: default;
+}
+
+.empty .weekday,
+.empty .number,
+.empty .month {
+  color: #a9b3ae;
+}
+
+.day:disabled:not(.empty) {
+  cursor: progress;
+}
+
+@media (max-width: 991.98px) {
+  .strip {
+    gap: 8px;
+    margin: 0 -20px;
+    padding: 0 20px 2px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .day {
+    width: 62px;
+    scroll-snap-align: center;
+  }
+
+  .today {
+    right: 6px;
+  }
+}

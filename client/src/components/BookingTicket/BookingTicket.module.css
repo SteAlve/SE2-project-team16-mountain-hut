@@ -1,0 +1,113 @@
+.ticket {
+  width: 620px;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--snow);
+  box-shadow: 0 12px 40px rgb(16 32 26 / 0.12);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 28px 32px 24px;
+  background: var(--pine-deep);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--on-dark);
+}
+
+.greeting {
+  margin: 0;
+  color: var(--on-dark-muted);
+}
+
+.details {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 12px;
+  margin: 0;
+  padding: 22px 32px;
+}
+
+.details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.details dt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.88px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.details dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.details .sub {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--stone);
+}
+
+.perforation {
+  margin: 0 18px;
+  border-top: 2px dashed var(--line);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 22px 32px 28px;
+}
+
+.action {
+  flex: 1 1 0;
+  min-height: 46px;
+}
+
+@media (max-width: 991.98px) {
+  .head {
+    padding: 24px 20px 20px;
+  }
+
+  .title {
+    font-size: 42px;
+  }
+
+  .details {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 12px;
+    padding: 20px;
+  }
+
+  .actions {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .action {
+    min-height: 54px;
+  }
+}
