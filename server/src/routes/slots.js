@@ -3,8 +3,9 @@
  */
 import { Router } from 'express';
 
-export const makeSlotsRouter = ({ listSlotsController }) => {
+export const makeSlotsRouter = ({ listSlotsController, seatingController }) => {
   const router = Router();
   router.get('/slots', listSlotsController);
+  router.get('/slots/:slotId/seating', seatingController);
   return router;
 };

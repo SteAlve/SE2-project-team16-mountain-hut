@@ -10,6 +10,8 @@
  *                      uses TEST_DATABASE_URL instead, so a test never touches your data.
  *   TEST_DATABASE_URL  the PostgreSQL database of the tests
  *   PORT               the port of the server (default 3001)
+ *   HUT_TIME_ZONE      the time zone of the hut (default Europe/Rome): the times of the slots are
+ *                      local times of the hut, and "booking closes 2 hours before" is measured in it
  *   SESSION_TTL_HOURS  how long a login lasts (default 24)
  *   COOKIE_SECURE      'true' only when the site is served over HTTPS: a Secure cookie is
  *                      dropped by the browser on plain http, so the login would not work
@@ -46,6 +48,7 @@ export const config = {
   databaseUrlVariable,
   databaseUrl: process.env[databaseUrlVariable],
   port: Number(process.env.PORT ?? 3001),
+  hutTimeZone,
   sessionCookieName: 'sid',
   sessionTtlMs: ttlHours * 60 * 60 * 1000,
   cookieSecure: process.env.COOKIE_SECURE === 'true',

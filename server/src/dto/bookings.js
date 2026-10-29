@@ -1,10 +1,11 @@
 /**
- * DTO of slots and bookings: validates the query of GET /api/slots and the body of
- * POST /api/bookings (wrong input throws a ValidationError, 400) and shapes what goes out.
+ * DTO of slots and bookings: validates the body of POST /api/bookings and the parameters of the
+ * seating preview (wrong input throws a ValidationError, 400) and shapes what goes out.
  */
 import { ValidationError } from '../domain/errors.js';
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/;
 
 const isCalendarDate = (value) => {
   const match = typeof value === 'string' ? DATE_PATTERN.exec(value) : null;
@@ -26,7 +27,13 @@ const requirePositiveInteger = (value, field) => {
   return value;
 };
 
-export const parseSlotsQuery = (query) => ({ date: requireDate(query?.date) });
+// A value of the URL (a path parameter or a query string value) is text.
+const requirePositiveIntegerText = (value, field) => {
+  if (typeof value !== 'string' || !POSITIVE_INTEGER_TEXT.test(value)) {
+    throw new ValidationError(`${field} must be a positive integer`);
+  }
+  return requirePositiveInteger(Number(value), field);
+};
 
 export function parseCreateBooking(body) {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
@@ -42,14 +49,37 @@ export function parseCreateBooking(body) {
   };
 }
 
+// GET /api/slots/:slotId/seating?partySize=6
+export const parseSeatingRequest = (params, query) => ({
+  slotId: requirePositiveIntegerText(params?.slotId, 'slotId'),
+  partySize: requirePositiveIntegerText(query?.partySize, 'partySize'),
+});
+
 // '12:00:00' -> '12:00'
 const toHourMinute = (time) => time.slice(0, 5);
 
-export const toBookableSlotDto = ({ slotId, startsAt, endsAt, freeSeats }) => ({
+export const toSlotDto = ({ slotId, date, startsAt, endsAt, freeSeats, bookingOpen, bookingClosesAt }) => ({
   slotId,
+  date,
   startsAt: toHourMinute(startsAt),
   endsAt: toHourMinute(endsAt),
   freeSeats,
+  bookingOpen,
+  bookingClosesAt,
 });
 
-export const toBookingDto = ({ id, date, slotId, partySize }) => ({ id, date, slotId, partySize });
+const toTablesDto = (tables) => tables.map(({ tableNumber, seats }) => ({ tableNumber, seats }));
+
+export const toSeatingDto = ({ slotId, partySize, tables }) => ({
+  slotId,
+  partySize,
+  tables: toTablesDto(tables),
+});
+
+export const toBookingDto = ({ id, date, slotId, partySize, tables }) => ({
+  id,
+  date,
+  slotId,
+  partySize,
+  tables: toTablesDto(tables),
+});

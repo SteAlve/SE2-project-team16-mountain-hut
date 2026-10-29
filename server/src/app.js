@@ -5,8 +5,8 @@
  * turns domain errors into status codes.
  * Not here: business rules, SQL, request handling.
  *
- * Wired so far: the authentication (sign up, login, logout, who am I), the bookable slots
- * and the booking of a table.
+ * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
+ * seating preview and the booking of a table.
  * A story adds its own lines in each step.
  */
 
@@ -41,7 +41,9 @@ import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js'
 // 2. use cases
 import { makeAuthenticate } from './usecases/authenticate.js';
 import { makeCreateBooking } from './usecases/createBooking.js';
-import { makeListBookableSlots } from './usecases/listBookableSlots.js';
+import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
+import { makeListSlots } from './usecases/listSlots.js';
+import { makePreviewSeating } from './usecases/previewSeating.js';
 import { makeLogin } from './usecases/login.js';
 import { makeLogout } from './usecases/logout.js';
 import { makeRegister } from './usecases/register.js';
@@ -49,7 +51,7 @@ import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
 import { makeCreateBookingController } from './controllers/bookings.js';
-import { makeListSlotsController } from './controllers/slots.js';
+import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
   makeLoginController,
   makeLogoutController,
@@ -82,10 +84,15 @@ const authRouter = makeAuthRouter({
 });
 
 // slots and bookings
-const listBookableSlots = makeListBookableSlots({ slots, clock, hutTimeZone: config.hutTimeZone });
-const createBooking = makeCreateBooking({ slots, bookings, clock, hutTimeZone: config.hutTimeZone });
+const checkSlotOpen = makeCheckSlotOpen({ clock, hutTimeZone: config.hutTimeZone });
+const listSlots = makeListSlots({ slots, clock, hutTimeZone: config.hutTimeZone });
+const previewSeating = makePreviewSeating({ slots, checkSlotOpen });
+const createBooking = makeCreateBooking({ slots, bookings, checkSlotOpen });
 
-const slotsRouter = makeSlotsRouter({ listSlotsController: makeListSlotsController({ listBookableSlots }) });
+const slotsRouter = makeSlotsRouter({
+  listSlotsController: makeListSlotsController({ listSlots }),
+  seatingController: makeSeatingController({ previewSeating }),
+});
 const bookingsRouter = makeBookingsRouter({
   createBookingController: makeCreateBookingController({ createBooking }),
   requireAuth,

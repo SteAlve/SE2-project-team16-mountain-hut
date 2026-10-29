@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
   },
   "paths": {
@@ -349,55 +349,34 @@
     },
     "/api/slots": {
       "get": {
-        "summary": "List bookable meal slots for a date",
-        "description": "Returns the slots of the requested date that can still be booked: they have free seats and the meal starts at least two hours from now (the hut's local time). The times are the local times of the hut. No login is required.",
-        "operationId": "getBookableSlots",
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": true,
-            "description": "Date for which to check bookable meal slots.",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-10-28"
-          }
+        "summary": "List the slots from today",
+        "description": "Returns every slot from today on, in order of day and time, with its free seats. \"Today\" is the day in the time zone of the hut, decided by the server: the request has no parameters. Slots that are full, have no tables yet or are already closed are listed too, so the page can show them greyed with the reason (`freeSeats`, `bookingOpen`, `bookingClosesAt`). There is no limit on how far ahead. No login is required.",
+        "operationId": "getSlots",
+        "tags": [
+          "Slots"
         ],
         "responses": {
           "200": {
-            "description": "Bookable meal slots for the requested date. An empty array means no slots can be booked.",
+            "description": "The slots from today. An empty array means the hut has none.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/BookableSlot"
+                    "$ref": "#/components/schemas/Slot"
                   }
                 },
                 "example": [
                   {
                     "slotId": 12,
+                    "date": "2026-10-28",
                     "startsAt": "12:00",
                     "endsAt": "13:00",
-                    "freeSeats": 4
+                    "freeSeats": 4,
+                    "bookingOpen": true,
+                    "bookingClosesAt": "2026-10-28T10:00"
                   }
                 ]
-              }
-            }
-          },
-          "400": {
-            "description": "The date is missing or is not a valid calendar date.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                },
-                "example": {
-                  "error": "ValidationError",
-                  "message": "date must be a valid date"
-                }
               }
             }
           },
@@ -415,16 +394,13 @@
               }
             }
           }
-        },
-        "tags": [
-          "Slots"
-        ]
+        }
       }
     },
     "/api/bookings": {
       "post": {
         "summary": "Book a table",
-        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The server chooses the seats: the whole party at one table when a table has enough free seats (the table with the fewest free seats that fits, so tables can be shared with other parties); otherwise the party is split over as few tables as possible. The response does not say which tables.",
+        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The server chooses the seats: the whole party at one table when a table has enough free seats (the table with the fewest free seats that fits, so tables can be shared with other parties); otherwise the party is split over as few tables as possible. The response says which tables the party got.",
         "operationId": "createBooking",
         "security": [
           {
@@ -458,7 +434,17 @@
                   "id": 45,
                   "date": "2026-10-28",
                   "slotId": 12,
-                  "partySize": 4
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 4
+                    },
+                    {
+                      "tableNumber": 5,
+                      "seats": 2
+                    }
+                  ]
                 }
               }
             }
@@ -578,6 +564,147 @@
           "Bookings"
         ]
       }
+    },
+    "/api/slots/{slotId}/seating": {
+      "get": {
+        "summary": "Where a party would sit",
+        "description": "Tells which tables a party of that size would get in the slot, without booking anything: the same choice the booking makes (the whole party at one table when a table has enough free seats, the one with the fewest free seats that fits; otherwise as few tables as possible). Nothing is held: if someone books first, the booking chooses again among the seats left, or answers 409. No login is required.",
+        "operationId": "getSeating",
+        "tags": [
+          "Slots"
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the meal slot.",
+            "example": 12
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of people in the party.",
+            "example": 6
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The tables of the party.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatingPlan"
+                },
+                "example": {
+                  "slotId": 12,
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 4
+                    },
+                    {
+                      "tableNumber": 5,
+                      "seats": 2
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The slot id or the party size is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "partySize must be a positive integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The party does not fit in the free seats of the slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "Not enough free seats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot cannot be booked: it has no tables, or booking is closed (less than two hours to the meal).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "bookingClosed": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -589,38 +716,6 @@
       }
     },
     "schemas": {
-      "BookableSlot": {
-        "type": "object",
-        "required": [
-          "slotId",
-          "startsAt",
-          "endsAt",
-          "freeSeats"
-        ],
-        "properties": {
-          "slotId": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "Identifier of the meal slot."
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "time",
-            "description": "Local start time of the meal slot."
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "time",
-            "description": "Local end time of the meal slot."
-          },
-          "freeSeats": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Number of seats still available in the slot."
-          }
-        }
-      },
       "CreateBookingRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -654,7 +749,8 @@
           "id",
           "date",
           "slotId",
-          "partySize"
+          "partySize",
+          "tables"
         ],
         "properties": {
           "id": {
@@ -678,6 +774,14 @@
             "type": "integer",
             "minimum": 1,
             "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables chosen for the party, by table number.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
           }
         }
       },
@@ -802,6 +906,101 @@
             "format": "password",
             "minLength": 1,
             "description": "Password."
+          }
+        }
+      },
+      "Slot": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "date",
+          "startsAt",
+          "endsAt",
+          "freeSeats",
+          "bookingOpen",
+          "bookingClosesAt"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the meal slot."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Day of the meal."
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Local start time of the meal, as HH:MM (the time of the hut).",
+            "example": "12:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Local end time of the meal, as HH:MM (the time of the hut).",
+            "example": "13:00"
+          },
+          "freeSeats": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seats still free in the slot. 0 when it is full or has no tables yet. A party up to this number can be seated: it is split over tables when no single table is big enough."
+          },
+          "bookingOpen": {
+            "type": "boolean",
+            "description": "True while a hiker can still book this slot: booking closes two hours before the meal."
+          },
+          "bookingClosesAt": {
+            "type": "string",
+            "description": "When booking closes (or closed), as the local date and time of the hut, without time zone: YYYY-MM-DDTHH:MM.",
+            "example": "2026-10-28T10:00"
+          }
+        }
+      },
+      "TableSeats": {
+        "type": "object",
+        "required": [
+          "tableNumber",
+          "seats"
+        ],
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The number of the table, as the hiker reads it (not an internal id)."
+          },
+          "seats": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Seats of the party at that table."
+          }
+        }
+      },
+      "SeatingPlan": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables the party would get, by table number. One table when the whole party fits at one.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
           }
         }
       }

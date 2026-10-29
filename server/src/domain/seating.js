@@ -81,3 +81,12 @@ export function assignSeats(partySize, tables) {
   }
   return assignments.sort((a, b) => a.tableId - b.tableId);
 }
+
+// What the hiker reads: the numbers of the tables and the seats on each, by table number.
+// assignments: [{ tableId, seatCount }]   tables: [{ tableId, tableNumber, ... }]
+export const describeSeating = (assignments, tables) => {
+  const numberOf = new Map(tables.map((table) => [table.tableId, table.tableNumber]));
+  return assignments
+    .map(({ tableId, seatCount }) => ({ tableNumber: numberOf.get(tableId), seats: seatCount }))
+    .sort((a, b) => a.tableNumber - b.tableNumber);
+};

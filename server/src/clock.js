@@ -3,7 +3,8 @@
  * else calls new Date() (ESLint forbids it in domain/ and usecases/) and a test can use a fake clock.
  * now() is the current instant; after(ms) is the instant ms milliseconds from now;
  * at(date, time, timeZone) is the instant of a wall-clock time in a time zone;
- * today() is the day as 'YYYY-MM-DD' in the local time of the server.
+ * today(timeZone) is the day as 'YYYY-MM-DD' in a time zone;
+ * localDateTime(instantMs, timeZone) writes an instant as 'YYYY-MM-DDTHH:MM' in a time zone.
  *
  * Why at(): a slot is stored as a date and a time with no time zone (the local time of the hut),
  * while now() is an instant. To compare them (booking closes 2 hours before the meal) the time of
@@ -46,9 +47,27 @@ export const clock = {
     return new Date(wall - offsetMs(firstGuess, timeZone));
   },
 
-  today() {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  today(timeZone) {
+    // the 'en-CA' format is YYYY-MM-DD
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  },
+
+  localDateTime(instantMs, timeZone) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).formatToParts(new Date(instantMs));
+    const v = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${v.year}-${v.month}-${v.day}T${v.hour}:${v.minute}`;
   },
 };

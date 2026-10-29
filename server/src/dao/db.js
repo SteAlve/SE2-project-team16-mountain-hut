@@ -3,6 +3,10 @@ import pg from 'pg';
 import { config } from '../config.js';
 
 const { Pool } = pg;
+
+// A DATE stays the text 'YYYY-MM-DD'. By default the driver turns it into a Date at local midnight
+// of the server, which gives the previous day on a server east of UTC. Times (TIME) are already text.
+pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
 const transactionContext = new AsyncLocalStorage();
 let pool;
 let nextSavepoint = 0;
