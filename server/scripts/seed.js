@@ -1,7 +1,9 @@
 /**
- * SEED: creates the demo hut staff (one warden, two employees) so that the app can be tried and
- * demoed without a sign up page for staff. Run it with `npm run db:seed`, after `npm run db:migrate`.
- * It is safe to run again: an account whose email already exists is left untouched.
+ * SEED: creates the demo hut staff (one warden, two employees) and the demo table sets and meal
+ * slots (November 2026), so that the app can be tried and demoed without a sign up page for staff.
+ * Run it with `npm run db:seed`, after `npm run db:migrate`.
+ * It is safe to run again: an account whose email already exists is left untouched, and a slot
+ * that already has bookings is not changed.
  *
  * The password below is a DEMO password, published in the README. Do not seed a real hut with it.
  */
