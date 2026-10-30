@@ -80,9 +80,7 @@ export const createWithTableAssignments = async ({
       throw new RangeError(`Slot ${slotId} has no table set and cannot be booked.`);
     }
 
-    // The check that counts (the use case has made a first one, only to answer earlier). The slot is
-    // locked, so two bookings for it take turns and this check cannot be overtaken. The unique index
-    // `booking_one_active_per_hiker_slot_idx` is the last guard if this code is ever bypassed.
+    // The slot is locked, so two bookings for it take turns: this check cannot be overtaken.
     if (await hasActiveBooking(hikerId, slotId)) {
       throw fail('DUPLICATE_BOOKING', `Hiker ${hikerId} already has a booking for slot ${slotId}.`);
     }

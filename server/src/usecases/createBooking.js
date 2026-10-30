@@ -33,9 +33,6 @@ export const makeCreateBooking = ({ slots, bookings, checkSlotOpen }) =>
     if (!slot) throw new NotFoundError(`Slot ${slotId} not found`);
     checkSlotOpen(slot);
 
-    // A first, cheap check, so a repeated booking is refused with a clear 422 before the seats are
-    // worked out. It is not enough alone: two requests of the same hiker can both pass it, so the
-    // dao checks again, with the slot locked, and that second check is the one that counts.
     if (await bookings.hasActiveBooking(user.id, slotId)) {
       throw new UnprocessableError('You already have a booking for this slot');
     }
