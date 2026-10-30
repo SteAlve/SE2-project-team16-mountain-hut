@@ -2,7 +2,8 @@
  * The summary of the choices of the booking page. It fills in as the hiker chooses and says
  * until when the chosen time can be booked. `BookingSummary` is the card on the right (desktop);
  * `BookingBar` is the bar fixed at the bottom of a phone. The page shows both: CSS picks one.
- * `slot` is the chosen slot or null; without it Review booking is disabled.
+ * `slot` is the chosen slot or null; without it Review booking is disabled. `isPending` is true
+ * while the server says where the party would sit.
  */
 import {
   formatBookUntil,
@@ -18,7 +19,7 @@ import styles from './BookingSummary.module.css';
 
 const dayLabel = (date, now) => (date === toDay(now) ? `Today, ${formatDay(date)}` : formatDay(date));
 
-export function BookingSummary({ date, slot, partySize, now, onReview }) {
+export function BookingSummary({ date, slot, partySize, now, isPending, onReview }) {
   return (
     <aside className={styles.card} aria-label="Your booking">
       <h2 className={styles.title}>Your booking</h2>
@@ -52,13 +53,15 @@ export function BookingSummary({ date, slot, partySize, now, onReview }) {
         </p>
       )}
 
-      <Button block disabled={!slot} onClick={onReview}>Review booking</Button>
+      <Button block disabled={!slot || isPending} onClick={onReview}>
+        {isPending ? 'Checking…' : 'Review booking'}
+      </Button>
       {!slot && <p className={styles.hint}>Choose a time to continue.</p>}
     </aside>
   );
 }
 
-export function BookingBar({ date, slot, partySize, onReview }) {
+export function BookingBar({ date, slot, partySize, isPending, onReview }) {
   const summary = [date && formatDay(date), slot ? formatTime(slot.startsAt) : '—', partySize]
     .filter(Boolean)
     .join(' · ');
@@ -70,7 +73,9 @@ export function BookingBar({ date, slot, partySize, onReview }) {
           {slot ? `book until ${formatClosingTime(date, slot.startsAt)}` : 'choose a time'}
         </span>
       </div>
-      <Button block disabled={!slot} onClick={onReview}>Review booking</Button>
+      <Button block disabled={!slot || isPending} onClick={onReview}>
+        {isPending ? 'Checking…' : 'Review booking'}
+      </Button>
     </div>
   );
 }

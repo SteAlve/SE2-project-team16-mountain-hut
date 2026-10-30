@@ -4,5 +4,11 @@
  */
 import { request } from './request.js';
 
-// The bookable slots of a day ('YYYY-MM-DD'). Resolves to [{ slotId, startsAt, endsAt, freeSeats }].
-export const getSlots = (date) => request(`/slots?date=${encodeURIComponent(date)}`);
+// Every slot from today on (today of the hut), full or closed ones too. Resolves to
+// [{ slotId, date, startsAt, endsAt, freeSeats, bookingOpen, bookingClosesAt }].
+export const getSlots = () => request('/slots');
+
+// Where a party would sit, without booking. Resolves to { slotId, partySize, tables: [{ tableNumber, seats }] }.
+// Rejects with ApiError 404 (no such slot), 409 code NO_SEATS (the party does not fit), 422 (booking closed).
+export const getSeating = (slotId, partySize) =>
+  request(`/slots/${encodeURIComponent(slotId)}/seating?partySize=${encodeURIComponent(partySize)}`);

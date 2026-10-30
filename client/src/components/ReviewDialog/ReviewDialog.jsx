@@ -1,15 +1,17 @@
 /**
  * "Check your booking": the last check before the booking is saved (mockup screens 4 and P3).
  * A dialog on desktop, a sheet from the bottom on a phone. Back (or Esc) keeps every choice.
- * `tables` is [{ name, seatCount }] when known: a split party gets a sentence that says why.
+ * `tables` is [{ tableNumber, seats }], the seating preview: a split party gets a sentence that says why.
+ * `notice` (optional) is shown on top, e.g. when the tables changed just before confirming.
  */
 import { useEffect, useRef } from 'react';
 import { formatLongDay, formatTimeRange } from '../../lib/bookingDates.js';
+import { Alert } from '../Alert/Alert.jsx';
 import { Button } from '../Button/Button.jsx';
 import { PartySeats } from '../PartySeats/PartySeats.jsx';
 import styles from './ReviewDialog.module.css';
 
-export function ReviewDialog({ open, date, slot, partySize, tables, isPending, onBack, onConfirm }) {
+export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPending, onBack, onConfirm }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export function ReviewDialog({ open, date, slot, partySize, tables, isPending, o
         <div className={styles.body}>
           <span className={styles.handle} aria-hidden="true" />
           <h2 id="review-title" className={styles.title}>Check your booking</h2>
+          {notice && <Alert variant="info">{notice}</Alert>}
           <dl className={styles.rows}>
             <div className={styles.row}>
               <dt>Day</dt>

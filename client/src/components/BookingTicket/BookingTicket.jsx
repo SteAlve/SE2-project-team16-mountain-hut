@@ -1,6 +1,7 @@
 /**
  * "Table booked" (mockup screens 6 and P5): what was booked and, when the server says it, where
- * the party sits. `booking` is { date, partySize, slot: { startsAt, endsAt }, tables? }.
+ * the party sits. `booking` is { date, partySize, slot: { startsAt, endsAt }, tables? }, tables
+ * as [{ tableNumber, seats }].
  */
 import bookedIcon from '../../assets/booking/booked.svg';
 import { formatDay, formatTime, yearOf } from '../../lib/bookingDates.js';
@@ -9,8 +10,8 @@ import styles from './BookingTicket.module.css';
 
 const tableNames = (tables) =>
   tables.length === 1
-    ? `table ${tables[0].name}`
-    : `tables ${tables.slice(0, -1).map((t) => t.name).join(', ')} and ${tables.at(-1).name}`;
+    ? `table ${tables[0].tableNumber}`
+    : `tables ${tables.slice(0, -1).map((t) => t.tableNumber).join(', ')} and ${tables.at(-1).tableNumber}`;
 
 export function BookingTicket({ booking, firstName, onHome, onBookAnother }) {
   const { date, partySize, slot, tables } = booking;
@@ -41,7 +42,7 @@ export function BookingTicket({ booking, firstName, onHome, onBookAnother }) {
         {tables?.length > 0 && (
           <div>
             <dt>Seats</dt>
-            <dd>{tables.map((t) => t.seatCount).join(' + ')}</dd>
+            <dd>{tables.map((t) => t.seats).join(' + ')}</dd>
             <dd className={styles.sub}>{tableNames(tables)}</dd>
           </div>
         )}

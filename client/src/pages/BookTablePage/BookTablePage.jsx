@@ -146,16 +146,25 @@ export function BookTablePage() {
           </section>
         </div>
 
-        <BookingSummary date={date} slot={slot} partySize={partySize} now={now} onReview={handleReview} />
+        <BookingSummary
+          date={date}
+          slot={slot}
+          partySize={partySize}
+          now={now}
+          isPending={book.isPending}
+          onReview={handleReview}
+        />
       </main>
 
-      <BookingBar date={date} slot={slot} partySize={partySize} onReview={handleReview} />
+      <BookingBar date={date} slot={slot} partySize={partySize} isPending={book.isPending} onReview={handleReview} />
 
       <ReviewDialog
         open={book.isReviewing}
         date={date}
         slot={slot}
         partySize={partySize}
+        tables={book.tables}
+        notice={book.reviewNotice}
         isPending={book.isPending}
         onBack={book.back}
         onConfirm={handleConfirm}
