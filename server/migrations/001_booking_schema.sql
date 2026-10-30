@@ -69,3 +69,8 @@ CREATE TABLE booking_table (
 
 CREATE INDEX booking_table_by_slot_table_idx
     ON booking_table (slot_id, hut_table_id);
+
+-- A hiker has one booking per time slot (a cancelled booking does not count).
+CREATE UNIQUE INDEX booking_one_active_per_hiker_slot_idx
+  ON booking (hiker_id, slot_id)
+  WHERE cancelled_at IS NULL;
