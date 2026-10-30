@@ -1,22 +1,27 @@
 /**
- * Use case: a hiker books a table (MH-01).
+ * Use case: a hiker books the tables the seating preview showed (MH-01).
+ *
+ * The client sends back the tables of the preview. The server works out again where the party
+ * would sit now (domain/seating.js, the same choice as the preview) and books the request only if
+ * it is exactly that: the same tables with the same seats. Otherwise it books nothing and answers
+ * 409, so a hiker never gets other tables than the ones shown. The client then asks for a new preview.
  *
  * Errors: 403 the user is not a hiker; 422 the slot does not exist on that date, cannot be booked,
  * is closed (less than 2 hours to the meal) or the hiker already has a booking for it;
- * 409 the party does not fit in the free seats.
- *
- * The seats are chosen here (domain/seating.js) from the free seats read just before. The dao
- * checks them again with the slot locked, so if another booking took them in between, the choice
- * is made again, a few times, before answering 409. The answer says which tables were used.
+ * 409 the tables are not the ones now proposed for the party (someone booked in between, or
+ * the request was not a preview).
  */
 import { ConflictError, ForbiddenError, UnprocessableError } from '../domain/errors.js';
 import { ROLES } from '../domain/roles.js';
 import { assignSeats, describeSeating } from '../domain/seating.js';
 
-const MAX_ATTEMPTS = 3;
+const NOT_THE_PREVIEW = 'The chosen tables are no longer the ones proposed for this party';
+
+const sameTables = (a, b) => a.length === b.length
+  && a.every((table, i) => table.tableNumber === b[i].tableNumber && table.seats === b[i].seats);
 
 export const makeCreateBooking = ({ slots, bookings, checkSlotOpen }) =>
-  async ({ user, date, slotId, partySize }) => {
+  async ({ user, date, slotId, partySize, tables }) => {
     if (user.role !== ROLES.HIKER) throw new ForbiddenError('Only hikers can create bookings');
 
     const slot = await slots.findByIdAndDate(slotId, date);
@@ -27,32 +32,33 @@ export const makeCreateBooking = ({ slots, bookings, checkSlotOpen }) =>
       throw new UnprocessableError('You already have a booking for this slot');
     }
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-      const tables = await slots.findAvailableTablesBySlotId(slotId);
-      const tableAssignments = assignSeats(partySize, tables);
-      if (tableAssignments === null) throw new ConflictError('Not enough free seats');
-
-      try {
-        const booking = await bookings.createWithTableAssignments({
-          hikerId: user.id,
-          slotId,
-          partySize,
-          tableAssignments,
-        });
-        return {
-          id: booking.id,
-          date,
-          slotId,
-          partySize,
-          tables: describeSeating(tableAssignments, tables),
-        };
-      } catch (error) {
-        if (error.code === 'DUPLICATE_BOOKING') {
-          throw new UnprocessableError('You already have a booking for this slot');
-        }
-        if (error.code !== 'SEATS_UNAVAILABLE') throw error;
-      }
+    const free = await slots.findAvailableTablesBySlotId(slotId);
+    const proposed = assignSeats(partySize, free);
+    const requested = [...tables].sort((x, y) => x.tableNumber - y.tableNumber);
+    if (proposed === null || !sameTables(requested, describeSeating(proposed, free))) {
+      throw new ConflictError(NOT_THE_PREVIEW);
     }
 
-    throw new ConflictError('Not enough free seats');
+    try {
+      const booking = await bookings.createWithTableAssignments({
+        hikerId: user.id,
+        slotId,
+        partySize,
+        tableAssignments: proposed,
+      });
+      return {
+        id: booking.id,
+        date,
+        slotId,
+        partySize,
+        tables: requested,
+      };
+    } catch (error) {
+      // The dao checks the seats again with the slot locked: someone may have booked just now.
+      if (error.code === 'SEATS_UNAVAILABLE') throw new ConflictError(NOT_THE_PREVIEW);
+      if (error.code === 'DUPLICATE_BOOKING') {
+        throw new UnprocessableError('You already have a booking for this slot');
+      }
+      throw error;
+    }
   };

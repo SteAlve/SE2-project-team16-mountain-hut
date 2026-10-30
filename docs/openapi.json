@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
   },
   "paths": {
@@ -399,8 +399,8 @@
     },
     "/api/bookings": {
       "post": {
-        "summary": "Book a table",
-        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The server chooses the seats: the whole party at one table when a table has enough free seats (the table with the fewest free seats that fits, so tables can be shared with other parties); otherwise the party is split over as few tables as possible. The response says which tables the party got.",
+        "summary": "Book the tables of the preview",
+        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown; the client then asks for a new preview. The slot must be offered on that date and must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent.",
         "operationId": "createBooking",
         "security": [
           {
@@ -417,7 +417,17 @@
               "example": {
                 "date": "2026-10-28",
                 "slotId": 12,
-                "partySize": 4
+                "partySize": 6,
+                "tables": [
+                  {
+                    "tableNumber": 3,
+                    "seats": 4
+                  },
+                  {
+                    "tableNumber": 5,
+                    "seats": 2
+                  }
+                ]
               }
             }
           }
@@ -450,7 +460,7 @@
             }
           },
           "400": {
-            "description": "The request body is invalid or contains invalid input.",
+            "description": "The request body is invalid: a wrong field, `tables` missing or empty, a table twice, or seats that do not add up to `partySize`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -492,7 +502,7 @@
             }
           },
           "409": {
-            "description": "The party does not fit in the free seats of the slot (the whole party is refused, never part of it).",
+            "description": "The tables are not the ones now proposed for the party: someone booked in between, or the tables are not those of a preview. Nothing is booked. The client asks for a new preview.",
             "content": {
               "application/json": {
                 "schema": {
@@ -500,7 +510,7 @@
                 },
                 "example": {
                   "error": "ConflictError",
-                  "message": "Not enough free seats"
+                  "message": "The chosen tables are no longer the ones proposed for this party"
                 }
               }
             }
@@ -568,7 +578,7 @@
     "/api/slots/{slotId}/seating": {
       "get": {
         "summary": "Where a party would sit",
-        "description": "Tells which tables a party of that size would get in the slot, without booking anything: the same choice the booking makes (the whole party at one table when a table has enough free seats, the one with the fewest free seats that fits; otherwise as few tables as possible). Nothing is held: if someone books first, the booking chooses again among the seats left, or answers 409. No login is required.",
+        "description": "Tells which tables a party of that size would get in the slot, without booking anything: the proposal the client then sends to `POST /api/bookings` (the whole party at one table when a table has enough free seats, the one with the fewest free seats that fits; otherwise as few tables as possible). Nothing is held: if someone books first, the booking of those tables answers 409 and the client asks again. No login is required.",
         "operationId": "getSeating",
         "tags": [
           "Slots"
@@ -722,7 +732,8 @@
         "required": [
           "date",
           "slotId",
-          "partySize"
+          "partySize",
+          "tables"
         ],
         "properties": {
           "date": {
@@ -740,6 +751,14 @@
             "type": "integer",
             "minimum": 1,
             "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables of the seating preview, unchanged. Each table appears once and the seats add up to `partySize`.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
           }
         }
       },

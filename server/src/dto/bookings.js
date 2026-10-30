@@ -35,17 +35,41 @@ const requirePositiveIntegerText = (value, field) => {
   return requirePositiveInteger(Number(value), field);
 };
 
+const requireTables = (value, partySize) => {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new ValidationError('tables must be a non-empty array');
+  }
+  const seen = new Set();
+  let seats = 0;
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      throw new ValidationError('Each table must be an object');
+    }
+    const unknown = Object.keys(item).filter((key) => !['tableNumber', 'seats'].includes(key));
+    if (unknown.length > 0) throw new ValidationError(`Unknown field in tables: ${unknown[0]}`);
+    const tableNumber = requirePositiveInteger(item.tableNumber, 'tableNumber');
+    if (seen.has(tableNumber)) throw new ValidationError('A table can appear only once in tables');
+    seen.add(tableNumber);
+    seats += requirePositiveInteger(item.seats, 'seats');
+  }
+  if (seats !== partySize) throw new ValidationError('The seats of the tables must add up to partySize');
+  return value.map(({ tableNumber, seats: tableSeats }) => ({ tableNumber, seats: tableSeats }));
+};
+
+// Body of POST /api/bookings: the tables are the ones the seating preview showed.
 export function parseCreateBooking(body) {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     throw new ValidationError('Request body must be a JSON object');
   }
-  const unknown = Object.keys(body).filter((key) => !['date', 'slotId', 'partySize'].includes(key));
+  const unknown = Object.keys(body).filter((key) => !['date', 'slotId', 'partySize', 'tables'].includes(key));
   if (unknown.length > 0) throw new ValidationError(`Unknown field: ${unknown[0]}`);
 
+  const partySize = requirePositiveInteger(body.partySize, 'partySize');
   return {
     date: requireDate(body.date),
     slotId: requirePositiveInteger(body.slotId, 'slotId'),
-    partySize: requirePositiveInteger(body.partySize, 'partySize'),
+    partySize,
+    tables: requireTables(body.tables, partySize),
   };
 }
 

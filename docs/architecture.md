@@ -103,18 +103,21 @@ Layer folders may have an `example.js` while they have no real implementation; t
 
 This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
 
+A booking takes two calls. First the client asks `GET /api/slots/:slotId/seating?partySize=N`: the server answers where the party *would* sit, with the rules above, and books nothing. Then the client sends `POST /api/bookings` with **those same tables** in the body. The server works out the proposal again and books the request only if it is exactly that; otherwise it books nothing and answers `409`. A hiker never gets other tables than the ones shown.
+
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in user).
-2. The controller validates the body `{ date, slotId, partySize }` with the DTO (invalid input: `400`) and calls the use case with the user and the data.
+2. The controller validates the body `{ date, slotId, partySize, tables: [{ tableNumber, seats }] }` with the DTO and calls the use case with the user and the data. Invalid input gives `400`: a missing or empty `tables`, a table twice, or seats that do not add up to `partySize`.
 3. The use case checks that the user is a hiker (`403`), then:
    - it reads the slot on that date and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a missing slot, a slot without tables or less than 2 hours to the meal give `422`;
    - it checks that the hiker has no active booking for the slot (`422`);
-   - it reads the free seats and asks the domain where the party sits; if it does not fit: `409`;
-   - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, the use case chooses again, up to 3 attempts, and then answers `409`.
+   - it reads the tables of the slot that have free seats and asks the domain where the party would sit now (the same function as the preview); if the tables of the request are not exactly that (other tables, other seats, or the party does not fit any more) the answer is `409`;
+   - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, nothing is booked and the answer is `409`.
+   After a `409` the client asks for a new preview.
 4. The controller shapes the answer: `201` with the booking and the numbers of the tables.
 
 No email is sent yet. When the mailer exists, the use case will call it after the commit, and a failed email will never undo the booking.
 
-The same choice of seats is available without booking: `GET /api/slots/:slotId/seating?partySize=N` answers where the party *would* sit. Nothing is held, so the booking can differ from the preview if someone books in between.
+Nothing is held between the preview and the booking: if someone books in between and the proposal changes, the booking fails instead of seating the party somewhere else.
 
 ### Errors
 
@@ -126,7 +129,7 @@ The domain throws errors, never HTTP status codes. One middleware in `app.js` tu
 | `UnauthorizedError` | `401` | nobody is logged in |
 | `ForbiddenError` | `403` | logged in, but not allowed |
 | `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there |
-| `ConflictError` | `409` | not possible in the current state (not enough free seats; the email is already registered) |
+| `ConflictError` | `409` | not possible in the current state (the tables are not the ones now proposed for the party; the email is already registered) |
 | `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal, slot not bookable, a second booking for the same slot) |
 | anything else | `500` | unexpected |
 
@@ -205,8 +208,9 @@ Hikers, employees and the warden, with email and password. The role is stored wi
 - **Cross-site requests (CSRF):** the cookie is `SameSite=Lax`, state is never changed by `GET`, and the API accepts only JSON bodies, which a form on another site cannot send.
 - **Stealing the session from the page (XSS):** the cookie is `HttpOnly`, and React escapes what it draws.
 - **Stolen database:** passwords are stored only as salted hashes and session ids only as hashes.
+- **Guessing which emails exist:** the same answer and the same work for a wrong password and an unknown email.
 
-Not designed yet, to be decided when they are needed: how accounts are created, a password reset, and a limit on login attempts.
+Not designed yet, to be decided when they are needed: a password reset and a limit on login attempts.
 
 ### Why sessions and not tokens
 
@@ -232,12 +236,13 @@ The web client runs in the browser of each device: the visitor's, the employee's
 |---|---|
 | The port | `PORT`, default `3001` |
 | The database | `DATABASE_URL` |
-| Email, session length | environment variables |
+| Time zone of the hut, session length, `Secure` cookie | `HUT_TIME_ZONE`, `SESSION_TTL_HOURS`, `COOKIE_SECURE` (set `COOKIE_SECURE=true` behind HTTPS) |
+| Email (when the mailer exists) | SMTP settings, as environment variables |
 | Creating the tables | a migration command run before the server starts |
 | Stopping | the server closes cleanly on `SIGTERM` |
 | Knowing that it is ready | Compose waits for the database with `pg_isready` and for the API on its port |
 
-**In development Docker is not needed.** The server runs with `npm run dev` and the client with the Vite dev server, which forwards `/api` to the server.
+**In development Docker is not needed.** Copy `server/.env.example` to `server/.env`, create the database with `npm run db:create`, apply the schema with `npm run db:migrate` (and `npm run db:seed` for the demo data). The server runs with `npm run dev` and the client with the Vite dev server, which forwards `/api` to the server.
 
 The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`.
 
@@ -254,7 +259,7 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server, the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
 | `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa` |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
