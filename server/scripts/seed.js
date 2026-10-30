@@ -1,6 +1,6 @@
 /**
  * SEED: creates the demo hut staff (one warden, two employees) and the demo table sets and meal
- * slots (November 2026), so that the app can be tried and demoed without a sign up page for staff.
+ * slots (the next three weeks, counted from the day it runs), so that the app can be tried and demoed without a sign up page for staff.
  * Run it with `npm run db:seed`, after `npm run db:migrate`.
  * It is safe to run again: an account whose email already exists is left untouched, and a slot
  * that already has bookings is not changed.
@@ -8,6 +8,8 @@
  * The password below is a DEMO password, published in the README. Do not seed a real hut with it.
  */
 import { fileURLToPath } from 'node:url';
+import { clock } from '../src/clock.js';
+import { config } from '../src/config.js';
 import { close, get, inTransaction, run } from '../src/dao/db.js';
 import * as users from '../src/dao/users.js';
 import { hash } from '../src/passwordHasher.js';
@@ -21,7 +23,6 @@ export const DEMO_STAFF = [
 ];
 
 // Demo layouts vary the number and capacity of tables from service to service.
-// These dates are for November 2026; update them when preparing a later demo season.
 export const DEMO_TABLE_LAYOUTS = [
   { name: 'Demo Compact', tableCapacities: [2, 2, 2, 4, 4, 6] },
   { name: 'Demo Balanced', tableCapacities: [2, 3, 4, 4, 6, 8] },
@@ -29,21 +30,26 @@ export const DEMO_TABLE_LAYOUTS = [
   { name: 'Demo Large Groups', tableCapacities: [4, 6, 6, 8] },
 ];
 
-const DEMO_SERVICE_DAYS = [4, 5, 7, 8, 10, 12, 13, 15, 16, 18, 20, 21, 23, 24];
+// The service days, as a number of days from the day the seed runs (tomorrow is 1).
+const DEMO_DAY_OFFSETS = [1, 2, 4, 5, 7, 9, 10, 12, 13, 15, 16, 18, 20, 21];
 const DEMO_MEAL_TIMES = [
   { startsAt: '12:00', endsAt: '13:00' },
   { startsAt: '13:00', endsAt: '14:00' },
   { startsAt: '19:00', endsAt: '21:00' },
 ];
 
-export const DEMO_SLOTS = DEMO_SERVICE_DAYS.flatMap((day) => {
-  const serviceDate = new Date(Date.UTC(2026, 10, day)).toISOString().slice(0, 10);
-  return DEMO_MEAL_TIMES.map((meal, mealIndex) => ({
-    serviceDate,
-    ...meal,
-    tableSetName: DEMO_TABLE_LAYOUTS[(day + mealIndex) % DEMO_TABLE_LAYOUTS.length].name,
-  }));
-});
+// The demo slots of a run. `today` is 'YYYY-MM-DD', the day of the hut; the days are counted from it.
+export const demoSlots = (today) => {
+  const [year, month, day] = today.split('-').map(Number);
+  return DEMO_DAY_OFFSETS.flatMap((offset) => {
+    const serviceDate = new Date(Date.UTC(year, month - 1, day + offset)).toISOString().slice(0, 10);
+    return DEMO_MEAL_TIMES.map((meal, mealIndex) => ({
+      serviceDate,
+      ...meal,
+      tableSetName: DEMO_TABLE_LAYOUTS[(offset + mealIndex) % DEMO_TABLE_LAYOUTS.length].name,
+    }));
+  });
+};
 
 export async function seedStaff() {
   const passwordHash = await hash(DEMO_PASSWORD);
@@ -55,7 +61,8 @@ export async function seedStaff() {
   return created;
 }
 
-export async function seedSlots() {
+// `today` is a parameter so that a test can fix it; by default it is today in the time zone of the hut.
+export async function seedSlots(today = clock.today(config.hutTimeZone)) {
   return inTransaction(async () => {
     const tableSetIds = new Map();
     let tablesCreated = 0;
@@ -76,7 +83,7 @@ export async function seedSlots() {
     }
 
     let slotsSeeded = 0;
-    for (const slot of DEMO_SLOTS) {
+    for (const slot of demoSlots(today)) {
       const result = await run(
         `INSERT INTO slot AS existing (service_date, starts_at, ends_at, table_set_id)
          VALUES ($1, $2, $3, $4)

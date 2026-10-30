@@ -1,7 +1,7 @@
 import { all, get } from './db.js';
 
 // Every slot from that date on (the day included), full or without tables too, with the free seats
-// of its tables (0 when it has no tables). Ordered by day and time.
+// of its tables (0 when it has no tables). Ordered by day and time. Dates and times are text, as above.
 export const findFromDate = (serviceDate) => all(
   `
     WITH booked_seats AS (
@@ -18,9 +18,9 @@ export const findFromDate = (serviceDate) => all(
     )
     SELECT
       slot.id AS "slotId",
-      slot.service_date::TEXT AS "date",
-      slot.starts_at::TEXT AS "startsAt",
-      slot.ends_at::TEXT AS "endsAt",
+      slot.service_date AS "date",
+      slot.starts_at AS "startsAt",
+      slot.ends_at AS "endsAt",
       COALESCE(
         SUM(hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0)),
         0
@@ -42,7 +42,6 @@ export const findAvailableTablesBySlotId = (slotId) => all(
     SELECT
       hut_table.id AS "tableId",
       hut_table.table_number AS "tableNumber",
-      hut_table.seat_capacity AS "seatCapacity",
       hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0) AS "freeSeats"
     FROM slot
     JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
@@ -63,15 +62,15 @@ export const findAvailableTablesBySlotId = (slotId) => all(
   [slotId],
 );
 
-// The slot with that id, or null. Dates and times are read as text: the driver would turn a DATE
-// into a JavaScript Date at local midnight, which moves the day on a server in another time zone.
+// The slot with that id, or null. The date is the text 'YYYY-MM-DD' and the times are 'HH:MM:SS'
+// (db.js keeps a DATE as text, see there).
 export const findById = (slotId) => get(
   `
     SELECT
       id AS "slotId",
-      service_date::TEXT AS "serviceDate",
-      starts_at::TEXT AS "startsAt",
-      ends_at::TEXT AS "endsAt",
+      service_date AS "serviceDate",
+      starts_at AS "startsAt",
+      ends_at AS "endsAt",
       table_set_id AS "tableSetId"
     FROM slot
     WHERE id = $1
