@@ -1,0 +1,26 @@
+.alert {
+  padding: 11px 14px 11px 16px;
+  border-left: 4px solid;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.error {
+  border-color: var(--error);
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.info {
+  border-color: var(--info);
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+@media (max-width: 991.98px) {
+  .alert {
+    border-radius: 10px;
+  }
+}

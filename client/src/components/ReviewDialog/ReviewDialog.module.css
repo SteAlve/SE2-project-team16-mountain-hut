@@ -1,0 +1,108 @@
+.dialog {
+  width: 540px;
+  max-width: calc(100vw - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: var(--snow);
+  color: var(--ink);
+  box-shadow: 0 24px 60px rgb(16 32 26 / 0.25);
+}
+
+.dialog::backdrop {
+  background: rgb(14 32 25 / 0.55);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+}
+
+.handle {
+  display: none;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.rows {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 15px;
+}
+
+.row dt {
+  color: var(--stone);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--stone);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 991.98px) {
+  .dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 60px);
+    margin: auto 0 0;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .body {
+    gap: 14px;
+    padding: 10px 20px calc(14px + env(safe-area-inset-bottom, 20px));
+  }
+
+  .handle {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--line);
+  }
+
+  .title {
+    font-size: 32px;
+  }
+
+  /* Confirm is the first button, under the thumb */
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .back,
+  .confirm {
+    min-height: 54px;
+  }
+}

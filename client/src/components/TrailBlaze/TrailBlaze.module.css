@@ -1,0 +1,15 @@
+.blaze {
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: 1.24px;
+}
+
+.blaze span {
+  width: 8.68px;
+  height: 3.72px;
+  background: var(--blaze);
+}
+
+.blaze span:nth-child(2) {
+  background: var(--snow);
+}
