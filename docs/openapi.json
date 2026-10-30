@@ -350,7 +350,7 @@
     "/api/slots": {
       "get": {
         "summary": "List bookable meal slots for a date",
-        "description": "Returns slots that are still open for booking on the requested date, with their remaining free seats. A slot without a table set is not listed.",
+        "description": "Returns slots that are still open for booking on the requested date, with their remaining free seats.",
         "operationId": "getBookableSlots",
         "parameters": [
           {
@@ -805,7 +805,7 @@
           "Staff"
         ],
         "summary": "Create a slot",
-        "description": "Creates a meal slot on a date. The start time and the duration are free, and a day can have more than one slot (for example 12:00-13:00 and 13:00-14:00). A slot with a table set can be booked; without one it has no seats, so nothing can be booked and it is not listed by `GET /api/slots`, until a table set is given to it. Only an employee or the warden can create a slot.",
+        "description": "Creates a meal slot on a date. The start time and the duration are free, and a day can have more than one slot (for example 12:00-13:00 and 13:00-14:00). A slot with a table set can be booked; without one it has no seats, so nothing can be booked until a table set is given to it. Only an employee or the warden can create a slot.",
         "operationId": "createSlot",
         "security": [
           {
@@ -956,7 +956,7 @@
           "Staff"
         ],
         "summary": "List the slots of a period",
-        "description": "Returns every slot between two dates, both included, in order of date and time. Unlike `GET /api/slots` it also returns the slots without a table set and the ones that are full or no longer open for booking. It is also how to find a previous slot whose table set can be reused.",
+        "description": "Returns every slot between two dates, both included, in order of date and time. It is the staff view: it also returns the slots without a table set and the ones that are full or no longer open for booking, and it shows the table set of each slot. It is also how to find a previous slot whose table set can be reused.",
         "operationId": "listStaffSlots",
         "security": [
           {
