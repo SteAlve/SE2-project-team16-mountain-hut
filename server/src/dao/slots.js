@@ -10,8 +10,8 @@ export const findFromDate = (serviceDate) => all(
         booking_table.table_set_table_id,
         SUM(booking_table.seat_count)::INTEGER AS seat_count
       FROM booking_table
-      JOIN booking ON booking.id = booking_table.booking_id
-      JOIN slot ON slot.id = booking_table.slot_id
+             JOIN booking ON booking.id = booking_table.booking_id
+             JOIN slot ON slot.id = booking_table.slot_id
       WHERE booking.cancelled_at IS NULL
         AND slot.service_date >= $1
       GROUP BY booking_table.slot_id, booking_table.table_set_table_id
@@ -26,12 +26,12 @@ export const findFromDate = (serviceDate) => all(
         0
       )::INTEGER AS "freeSeats"
     FROM slot
-    LEFT JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
-    LEFT JOIN booked_seats
-      ON booked_seats.slot_id = slot.id
-      AND booked_seats.table_set_table_id = hut_table.id
+           LEFT JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
+           LEFT JOIN booked_seats
+                     ON booked_seats.slot_id = slot.id
+                       AND booked_seats.table_set_table_id = hut_table.id
     WHERE slot.service_date >= $1
-    GROUP BY slot.id
+    GROUP BY slot.id, slot.service_date, slot.starts_at, slot.ends_at
     ORDER BY slot.service_date, slot.starts_at
   `,
   [serviceDate],
@@ -45,13 +45,13 @@ export const findAvailableTablesBySlotId = (slotId) => all(
       hut_table.seat_capacity AS "seatCapacity",
       hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0) AS "freeSeats"
     FROM slot
-    JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
-    LEFT JOIN (
+           JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
+           LEFT JOIN (
       SELECT
         booking_table.table_set_table_id,
         SUM(booking_table.seat_count)::INTEGER AS seat_count
       FROM booking_table
-      JOIN booking ON booking.id = booking_table.booking_id
+             JOIN booking ON booking.id = booking_table.booking_id
       WHERE booking.slot_id = $1
         AND booking.cancelled_at IS NULL
       GROUP BY booking_table.table_set_table_id
