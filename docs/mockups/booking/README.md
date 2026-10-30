@@ -4,7 +4,7 @@ Mockup for story **MH-01 Book a table**, used by the booking frontend and backen
 
 > "As a hiker I want to book an available table for a selected date, time, and party size so that my party has a place reserved for the meal."
 
-**Figma (source of truth):** page *MH-39 Book a table* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page (day, time slot, people stepper, step heading, party seats, phone browser bar and top bar). [index.html](index.html) shows the same screens in a browser with their notes. Same QUOTA brand, colours and fonts as the [login mockup](../login/README.md).
+**Figma (source of truth):** page *MH-39 Book a table* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page (day, day arrow, time slot, people stepper, step heading, party seats, phone browser bar and top bar). [index.html](index.html) shows the same screens in a browser with their notes. Same QUOTA brand, colours and fonts as the [login mockup](../login/README.md).
 
 ## Rules on these screens
 
@@ -22,7 +22,7 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 
 ## The flow
 
-1. **Day.** Only days that have slots can be picked; the others show "no slots".
+1. **Day.** Only days that have slots can be picked; the others show "no slots". The strip has no end: it scrolls sideways (with the arrows on a computer) and loads the next days as the hiker gets near its end.
 2. **How many people.** A stepper, starting at 1.
 3. **Time.** Each slot shows its free seats. A slot that cannot fit the party, or that starts in less than 2 hours, stays visible but cannot be picked, and says why. So the hiker never picks a time that fails.
 4. **Review booking** opens a check with the tables the system chose. **Confirm booking** saves it; **Back** keeps every choice.
@@ -43,7 +43,7 @@ The summary on the right (a bar at the bottom on a phone) fills in as the hiker 
 
 ### On a phone
 
-The same website in a phone browser, not a separate app. Below 992 px (react-bootstrap `lg`) the page becomes one column, the navbar folds into the menu button, the summary becomes a bar fixed at the bottom, the review dialog becomes a sheet from the bottom, and the days scroll sideways.
+The same website in a phone browser, not a separate app. Below 992 px (react-bootstrap `lg`) the page becomes one column, the navbar folds into the menu button, the summary becomes a bar fixed at the bottom, the review dialog becomes a sheet from the bottom, and the days are swiped sideways (no arrows).
 
 | # | Screen | Image |
 |---|---|---|
@@ -76,7 +76,7 @@ These belong to other stories and are added with them: confirmation email (MH-03
 
 Asked to the product owner and still open; the mockup does not depend on the answers:
 
-- How far ahead a table can be booked ([#26](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/26)). The day strip shows the days that have slots.
+- How far ahead a table can be booked ([#26](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/26)). The day strip has no end and shows the days that have slots, so the server decides how far ahead a day has any.
 - Smallest and largest party ([#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27)). The stepper goes from 1 to the most free seats of any time that day.
 - More than one booking by the same hiker in a slot ([#25](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/25)).
 - A table not shared with other parties ([#21](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/21)).

@@ -3,6 +3,7 @@
  * Loads the slots of the next days, keeps the hiker's choices and books.
  *
  *   days                   [{ date, hasSlots }] the day strip; hasSlots is undefined while loading
+ *   showMoreDays()         adds the next days to the strip (it has no end), and loads their slots
  *   date, partySize        the chosen day and party size; maxPartySize is the top of the stepper
  *   slots                  [{ slotId, startsAt, endsAt, freeSeats, bookable, label }] of the chosen day
  *   slot                   the chosen slot, or null (a slot that stops fitting is not chosen any more)
@@ -16,14 +17,14 @@
  *
  * `initial` ({ date, partySize, slotId }, all optional) restores the choices, e.g. after the login.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createBooking } from '../api/bookings.js';
 import { getSlots } from '../api/slots.js';
-import { formatClosingTime, formatTime, isClosed, nextDays } from '../lib/bookingDates.js';
+import { daysBetween, formatClosingTime, formatTime, isClosed, nextDays, toDay } from '../lib/bookingDates.js';
 import { largestParty, slotAvailability } from '../lib/slotAvailability.js';
 
-// How far ahead the day strip goes (open question #26).
-const DAYS_SHOWN = 7;
+// The strip has no end: it grows by this many days as the hiker scrolls (open question #26).
+const DAYS_PER_PAGE = 14;
 const TICK_MS = 30 * 1000;
 const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
 
@@ -38,7 +39,14 @@ function useNow() {
 
 export function useBookTable(initial = {}) {
   const now = useNow();
-  const [dates] = useState(() => nextDays(new Date(), DAYS_SHOWN));
+  const [start] = useState(() => new Date());
+  // A restored day further ahead is already in the strip.
+  const [dayCount, setDayCount] = useState(() => {
+    const ahead = daysBetween(toDay(start), initial.date);
+    return ahead >= 0 ? (Math.floor(ahead / DAYS_PER_PAGE) + 1) * DAYS_PER_PAGE : DAYS_PER_PAGE;
+  });
+  const dates = useMemo(() => nextDays(start, dayCount), [start, dayCount]);
+  const requested = useRef(new Set());
   const [slotsByDate, setSlotsByDate] = useState({});
   const [chosenDate, setChosenDate] = useState(initial.date ?? null);
   const [chosenPartySize, setChosenPartySize] = useState(initial.partySize ?? 1);
@@ -54,18 +62,20 @@ export function useBookTable(initial = {}) {
     return slots;
   }, []);
 
+  // Loads only the days just added to the strip.
   useEffect(() => {
-    let ignore = false;
-    Promise.all(dates.map((date) => getSlots(date).catch(() => null))).then((results) => {
-      if (ignore) return;
+    const added = dates.filter((date) => !requested.current.has(date));
+    if (added.length === 0) return;
+    added.forEach((date) => requested.current.add(date));
+    Promise.all(added.map((date) => getSlots(date).catch(() => null))).then((results) => {
       if (results.every((slots) => slots === null)) setAlert(GENERIC_ERROR);
       // A day that failed to load counts as a day with no slots.
-      setSlotsByDate(Object.fromEntries(dates.map((date, i) => [date, results[i] ?? []])));
+      const loaded = Object.fromEntries(added.map((date, i) => [date, results[i] ?? []]));
+      setSlotsByDate((current) => ({ ...current, ...loaded }));
     });
-    return () => {
-      ignore = true;
-    };
   }, [dates]);
+
+  const showMoreDays = useCallback(() => setDayCount((count) => count + DAYS_PER_PAGE), []);
 
   const days = dates.map((date) => ({ date, hasSlots: slotsByDate[date] && slotsByDate[date].length > 0 }));
 
@@ -131,6 +141,7 @@ export function useBookTable(initial = {}) {
 
   return {
     days,
+    showMoreDays,
     date,
     chooseDate,
     partySize,

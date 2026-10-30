@@ -27,6 +27,10 @@ export const toDay = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)
 export const nextDays = (from, count) =>
   Array.from({ length: count }, (_, i) => toDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + i)));
 
+// Days from `from` to `day`, both 'YYYY-MM-DD' (negative when `day` is before); NaN for a bad day.
+export const daysBetween = (from, day) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(day ?? '') ? Math.round((parseDay(day) - parseDay(from)) / 864e5) : NaN;
+
 // { weekday: 'Sat', day: '17', month: 'Jul' }, for the day strip.
 export const dayParts = (day) => {
   const date = parseDay(day);

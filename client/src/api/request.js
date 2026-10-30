@@ -12,9 +12,11 @@ export class ApiError extends Error {
 }
 
 export async function request(path, options) {
+  // `npm run dev:mock`: a fake server in memory answers instead of Express (see mockServer.js).
+  const send = import.meta.env.MODE === 'mock' ? (await import('./mockServer.js')).mockFetch : fetch;
   let res;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await send(`/api${path}`, {
       ...options,
       headers: { 'Content-Type': 'application/json', ...options?.headers },
     });

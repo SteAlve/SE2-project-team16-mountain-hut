@@ -109,6 +109,7 @@ export function BookTablePage() {
               selected={date}
               today={today}
               onSelect={book.chooseDate}
+              onReachEnd={book.showMoreDays}
               labelledBy="step-day"
             />
           </section>
