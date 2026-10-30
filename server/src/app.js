@@ -130,5 +130,7 @@ app.use((err, _req, res, _next) => {
   if (isBadJson(err)) {
     return res.status(400).json({ error: 'ValidationError', message: 'Request body must be valid JSON' });
   }
-  res.status(status).json({ error: err.name, message: err.message });
+  const body = { error: err.name, message: err.message };
+  if (err.code !== undefined) body.code = err.code;
+  res.status(status).json(body);
 });

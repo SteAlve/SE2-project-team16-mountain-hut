@@ -16,7 +16,7 @@ export const makePreviewSeating = ({ slots, checkSlotOpen }) => async ({ slotId,
 
   const tables = await slots.findAvailableTablesBySlotId(slotId);
   const assignments = assignSeats(partySize, tables);
-  if (assignments === null) throw new ConflictError('Not enough free seats');
+  if (assignments === null) throw new ConflictError('Not enough free seats', { code: 'NO_SEATS' });
 
   return { slotId, partySize, tables: describeSeating(assignments, tables) };
 };

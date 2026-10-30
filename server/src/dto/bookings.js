@@ -4,21 +4,7 @@
  */
 import { ValidationError } from '../domain/errors.js';
 
-const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/;
-
-const isCalendarDate = (value) => {
-  const match = typeof value === 'string' ? DATE_PATTERN.exec(value) : null;
-  if (!match) return false;
-  const [year, month, day] = match.slice(1).map(Number);
-  const check = new Date(Date.UTC(year, month - 1, day));
-  return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day;
-};
-
-const requireDate = (value) => {
-  if (!isCalendarDate(value)) throw new ValidationError('date must be a valid date');
-  return value;
-};
 
 const requirePositiveInteger = (value, field) => {
   if (!Number.isSafeInteger(value) || value < 1) {
@@ -61,12 +47,11 @@ export function parseCreateBooking(body) {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     throw new ValidationError('Request body must be a JSON object');
   }
-  const unknown = Object.keys(body).filter((key) => !['date', 'slotId', 'partySize', 'tables'].includes(key));
+  const unknown = Object.keys(body).filter((key) => !['slotId', 'partySize', 'tables'].includes(key));
   if (unknown.length > 0) throw new ValidationError(`Unknown field: ${unknown[0]}`);
 
   const partySize = requirePositiveInteger(body.partySize, 'partySize');
   return {
-    date: requireDate(body.date),
     slotId: requirePositiveInteger(body.slotId, 'slotId'),
     partySize,
     tables: requireTables(body.tables, partySize),

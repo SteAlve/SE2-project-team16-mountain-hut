@@ -97,7 +97,7 @@ Layer folders may have an `example.js` while they have no real implementation; t
 - **Time zone.** The time of a slot is the local time of the hut (`HUT_TIME_ZONE`). `clock.js` turns a local date and time into an instant (`clock.at`), the other way round (`clock.localDateTime`) and gives the current day of the hut (`clock.today`); it handles the daylight-saving change. The server's own time zone does not matter.
 - **Booking window.** A booking is open until **2 hours before** the start of the slot, the limit included (`domain/bookingWindow.js`). There is no limit on how far ahead a hiker can book.
 - **One booking per hiker per slot.** Cancelled bookings do not count.
-- **Seating** (`domain/seating.js`, pure functions). The whole party goes to **one table** when one has enough free seats: the one with the fewest free seats that is enough (a tie goes to the lowest table number). Otherwise the party is split over **as few tables as possible**, choosing the group of tables that leaves the fewest seats free. The server chooses; the hiker does not pick tables.
+- **Seating** (`domain/seating.js`, pure functions). The whole party goes to **one table** when one has enough free seats: the one with the fewest free seats that is enough (a tie goes to the lowest table number). Otherwise the party is split over **as few tables as possible**, choosing the group of tables that leaves the fewest seats free. The proposal is made by `GET /api/slots/:slotId/seating`; the hiker does not pick tables.
 
 ### Example: a request, start to finish: `POST /api/bookings`
 
@@ -106,13 +106,13 @@ This shows how the layers work together. The endpoints, with their requests, ans
 A booking takes two calls. First the client asks `GET /api/slots/:slotId/seating?partySize=N`: the server answers where the party *would* sit, with the rules above, and books nothing. Then the client sends `POST /api/bookings` with **those same tables** in the body. The server works out the proposal again and books the request only if it is exactly that; otherwise it books nothing and answers `409`. A hiker never gets other tables than the ones shown.
 
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in user).
-2. The controller validates the body `{ date, slotId, partySize, tables: [{ tableNumber, seats }] }` with the DTO and calls the use case with the user and the data. Invalid input gives `400`: a missing or empty `tables`, a table twice, or seats that do not add up to `partySize`.
+2. The controller validates the body `{ slotId, partySize, tables: [{ tableNumber, seats }] }` (the slot already says the day and the time, so there is no date) with the DTO and calls the use case with the user and the data. Invalid input gives `400`: a missing or empty `tables`, a table twice, or seats that do not add up to `partySize`.
 3. The use case checks that the user is a hiker (`403`), then:
-   - it reads the slot on that date and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a missing slot, a slot without tables or less than 2 hours to the meal give `422`;
+   - it reads the slot (a missing slot gives `404`, like the preview) and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a slot without tables or less than 2 hours to the meal give `422`;
    - it checks that the hiker has no active booking for the slot (`422`);
-   - it reads the tables of the slot that have free seats and asks the domain where the party would sit now (the same function as the preview); if the tables of the request are not exactly that (other tables, other seats, or the party does not fit any more) the answer is `409`;
-   - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, nothing is booked and the answer is `409`.
-   After a `409` the client asks for a new preview.
+   - it reads the tables of the slot that have free seats and asks the domain where the party would sit now (the same function as the preview); if the party does not fit any more the answer is `409` with the code `NO_SEATS`; if it fits but the tables of the request are not exactly the proposal (other tables or other seats) the answer is `409` with the code `TABLES_CHANGED`;
+   - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, nothing is booked and the answer is `409` with the code `TABLES_CHANGED`.
+   After `TABLES_CHANGED` the client asks for a new preview; after `NO_SEATS` the hiker chooses another slot.
 4. The controller shapes the answer: `201` with the booking and the numbers of the tables.
 
 No email is sent yet. When the mailer exists, the use case will call it after the commit, and a failed email will never undo the booking.
@@ -121,15 +121,15 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`.
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer (today only the two reasons of a booking `409`: `NO_SEATS` and `TABLES_CHANGED`).
 
 | Error | Status | Meaning |
 |---|---|---|
 | `ValidationError` (and malformed JSON) | `400` | the input is wrong |
 | `UnauthorizedError` | `401` | nobody is logged in |
 | `ForbiddenError` | `403` | logged in, but not allowed |
-| `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there |
-| `ConflictError` | `409` | not possible in the current state (the tables are not the ones now proposed for the party; the email is already registered) |
+| `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there (an unknown slot, in the preview and in the booking) |
+| `ConflictError` | `409` | not possible in the current state (the party does not fit, `NO_SEATS`, or the tables are not the ones now proposed, `TABLES_CHANGED`; the email is already registered) |
 | `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal, slot not bookable, a second booking for the same slot) |
 | anything else | `500` | unexpected |
 
