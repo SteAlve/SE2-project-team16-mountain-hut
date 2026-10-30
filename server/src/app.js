@@ -5,7 +5,8 @@
  * turns domain errors into status codes.
  * Not here: business rules, SQL, request handling.
  *
- * Wired so far: the authentication (sign up, login, logout, who am I).
+ * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
+ * seating preview and the booking of a table.
  * A story adds its own lines in each step.
  */
 
@@ -19,7 +20,9 @@ import * as passwordHasher from './passwordHasher.js';
 import * as tokens from './sessionTokens.js';
 
 // the dao
+import * as bookings from './dao/bookings.js';
 import * as sessions from './dao/sessions.js';
+import * as slots from './dao/slots.js';
 import * as users from './dao/users.js';
 
 // the errors the middleware turns into status codes
@@ -37,12 +40,18 @@ import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js'
 
 // 2. use cases
 import { makeAuthenticate } from './usecases/authenticate.js';
+import { makeCreateBooking } from './usecases/createBooking.js';
+import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
+import { makeListSlots } from './usecases/listSlots.js';
+import { makePreviewSeating } from './usecases/previewSeating.js';
 import { makeLogin } from './usecases/login.js';
 import { makeLogout } from './usecases/logout.js';
 import { makeRegister } from './usecases/register.js';
 import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
+import { makeCreateBookingController } from './controllers/bookings.js';
+import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
   makeLoginController,
   makeLogoutController,
@@ -52,6 +61,8 @@ import {
 
 // 4. routers
 import { makeAuthRouter } from './routes/auth.js';
+import { makeBookingsRouter } from './routes/bookings.js';
+import { makeSlotsRouter } from './routes/slots.js';
 
 // authentication
 const startSession = makeStartSession({ sessions, tokens, clock, sessionTtlMs: config.sessionTtlMs });
@@ -72,10 +83,27 @@ const authRouter = makeAuthRouter({
   requireAuth,
 });
 
+// slots and bookings
+const checkSlotOpen = makeCheckSlotOpen({ clock, hutTimeZone: config.hutTimeZone });
+const listSlots = makeListSlots({ slots, clock, hutTimeZone: config.hutTimeZone });
+const previewSeating = makePreviewSeating({ slots, checkSlotOpen });
+const createBooking = makeCreateBooking({ slots, bookings, checkSlotOpen });
+
+const slotsRouter = makeSlotsRouter({
+  listSlotsController: makeListSlotsController({ listSlots }),
+  seatingController: makeSeatingController({ previewSeating }),
+});
+const bookingsRouter = makeBookingsRouter({
+  createBookingController: makeCreateBookingController({ createBooking }),
+  requireAuth,
+});
+
 export const app = express();
 app.use(express.json());
 app.use(readSessionCookie);
 app.use('/api', authRouter);
+app.use('/api', slotsRouter);
+app.use('/api', bookingsRouter);
 
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
@@ -102,5 +130,7 @@ app.use((err, _req, res, _next) => {
   if (isBadJson(err)) {
     return res.status(400).json({ error: 'ValidationError', message: 'Request body must be valid JSON' });
   }
-  res.status(status).json({ error: err.name, message: err.message });
+  const body = { error: err.name, message: err.message };
+  if (err.code !== undefined) body.code = err.code;
+  res.status(status).json(body);
 });
