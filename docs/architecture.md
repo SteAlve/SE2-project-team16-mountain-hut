@@ -47,36 +47,74 @@ The code is in `server/src`.
 | `routes/` | Maps URLs to controllers, and puts the middleware in front of the protected ones | `express` only |
 | `middleware/` | Code that runs before the controllers: finding out who is calling | nothing: what it needs is handed over |
 | `app.js` | Builds every piece and wires them together | everything |
-| `clock.js`, `index.js` | The only reader of the date; the start of the server | nothing; `app.js` |
-| `mailer.js`, `passwordHasher.js` | The only place that sends emails; the only place that hashes passwords | nothing |
+| `config.js`, `clock.js`, `index.js` | The only reader of the environment; the only reader of the date; the start of the server | nothing; nothing; `app.js` |
+| `passwordHasher.js`, `sessionTokens.js` | The only place that hashes passwords; the only place that makes and hashes session ids | nothing |
+| `mailer.js` | The only place that send emails. | nothing |
 
 **The rule: source-code dependencies point inward, towards the core.** A use case does not import the dao: `app.js` hands it over as a parameter, and likewise for the clock, the mailer, the password hasher, the controllers, the middleware and the routers. ESLint fails on any other import (`server/eslint.config.js`). The diagram above shows who *calls* whom at runtime; the table shows who may *import* whom.
 
-`dao/db.js` is the only module that imports the PostgreSQL driver. It reads `DATABASE_URL` at runtime and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
+`config.js` is the only module that reads the environment. It first loads `server/.env` if the file exists (a variable already set in the real environment wins, so Docker, CI and the IDE are not overridden) and then exports one frozen object. A wrong value stops the server at start-up, not at the first request. `server/.env.example` lists the variables.
 
-The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`.
+| Variable | Default | Meaning |
+|---|---|---|
+| `DATABASE_URL` | — (required) | The database of the server |
+| `TEST_DATABASE_URL` | — | The database of the tests; used instead of `DATABASE_URL` when `NODE_ENV=test`, which vitest sets by itself |
+| `PORT` | `3001` | The port of the server |
+| `HUT_TIME_ZONE` | `Europe/Rome` | The time zone of the hut (an IANA name, checked at start-up) |
+| `SESSION_TTL_HOURS` | `24` | How long a login lasts |
+| `COOKIE_SECURE` | `false` | Sets `Secure` on the session cookie; `true` when the site is served over HTTPS |
+
+`dao/db.js` is the only module that imports the PostgreSQL driver. It takes the database URL from `config.js` and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
+
+The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`, because the tests delete data. The driver would read a `DATE` column as midnight of the *server's* time zone, which is the previous day on a server east of UTC; `db.js` therefore returns `DATE` as plain text (`'2026-11-02'`), and so the date of a slot never moves.
+
+### Database and scripts
+
+The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions) and `001_booking_schema.sql` (slots, tables, bookings). The scripts in `server/scripts/` are run with npm:
+
+| Command | What it does |
+|---|---|
+| `npm run db:create` | Creates the database named in the URL (connecting through the `postgres` maintenance database). With `NODE_ENV=test`, the test database |
+| `npm run db:migrate` | Applies the migrations not yet applied |
+| `npm run db:seed` | Adds the demo data (among them a few employees and a warden) |
+| `npm run db:drop` | Drops the `public` schema; it refuses to run in production |
+| `npm run db:reset` | `db:drop` and then `db:migrate` |
+
+Vitest applies the migrations to the test database by itself before the tests (`globalSetup`), and runs the test files one at a time, because they share that database.
 
 ### Booking persistence
 
-The booking schema is defined by the migrations in `server/migrations/` and is applied with `npm run db:migrate`. A `slot` represents a concrete date and time and can reference a reusable `table_set`; each set contains its own table names and capacities in `hut_table`. A slot with no assigned table set has no bookable seats. `booking` stores the party size and the table set used, while `booking_table` stores the number of seats assigned to each table in that set. A table can therefore hold multiple bookings as long as their assigned seats do not exceed its capacity.
+A `slot` represents a concrete date and time of the hut (a local `DATE` and a `TIME`, without time zone) and can reference a reusable `table_set`; each set contains its tables in `hut_table`, each with a `table_number` (unique inside the set) and a capacity. A slot with no assigned table set has no bookable seats. `booking` stores the hiker (`hiker_id`, a foreign key to the user), the party size and the table set used, while `booking_table` stores the number of seats assigned to each table in that set. A table can therefore hold multiple bookings as long as their assigned seats do not exceed its capacity: tables are shared between parties. There is no row per seat and no "hold" on seats: only counts.
 
-The slots DAO calculates free seats by subtracting active `booking_table.seat_count` allocations from the capacities of the slot's tables and can list available tables and free seats for a slot. Cancelled bookings are excluded. The booking DAO locks the slot row, checks the requested table allocations, then inserts the booking and its table assignments in the same transaction. Authentication is a shared backend requirement; the booking-to-hiker foreign key must be added once the account schema is agreed.
+A unique partial index (`booking_one_active_per_hiker_slot_idx` on `hiker_id, slot_id` where `cancelled_at IS NULL`) guarantees that a hiker has at most one active booking per slot, even if two requests arrive together.
+
+The slots DAO calculates free seats by subtracting active `booking_table.seat_count` allocations from the capacities of the slot's tables, lists the slots from a date on (with their free seats, `0` when a slot has no tables) and the tables with free seats of a slot. Cancelled bookings are excluded. The booking DAO locks the slot row (`FOR UPDATE`), checks that the hiker has no active booking for it and that the requested seats are still free, then inserts the booking and its table assignments in the same transaction. When a check fails it throws an error with a `code` (`SEATS_UNAVAILABLE`, `DUPLICATE_BOOKING`) that the use case understands.
 
 Layer folders may have an `example.js` while they have no real implementation; those placeholders are removed as the real files are added.
+
+### The rules of a booking
+
+- **Time zone.** The time of a slot is the local time of the hut (`HUT_TIME_ZONE`). `clock.js` turns a local date and time into an instant (`clock.at`), the other way round (`clock.localDateTime`) and gives the current day of the hut (`clock.today`); it handles the daylight-saving change. The server's own time zone does not matter.
+- **Booking window.** A booking is open until **2 hours before** the start of the slot, the limit included (`domain/bookingWindow.js`). There is no limit on how far ahead a hiker can book.
+- **One booking per hiker per slot.** Cancelled bookings do not count.
+- **Seating** (`domain/seating.js`, pure functions). The whole party goes to **one table** when one has enough free seats: the one with the fewest free seats that is enough (a tie goes to the lowest table number). Otherwise the party is split over **as few tables as possible**, choosing the group of tables that leaves the fewest seats free. The server chooses; the hiker does not pick tables.
 
 ### Example: a request, start to finish: `POST /api/bookings`
 
 This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
 
-1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in hiker).
-2. The controller validates the body with the DTO (invalid input: `400`) and calls the use case with the user and the data.
-3. The use case checks that the user is a hiker (`403`), then runs in one transaction:
-   - it locks the slot row, so two hikers booking the last seats take turns;
-   - it asks the domain whether the booking is still open, passing the time from the clock (less than 2 hours before the slot: `422`);
-   - it asks the domain where the party can sit, and refuses if it does not fit (`409`);
-   - it inserts the booking through the dao.
-4. After the commit, the use case asks the mailer to send the confirmation. A failed email never undoes the booking.
-5. The controller shapes the answer: `201` with the booking.
+1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in user).
+2. The controller validates the body `{ date, slotId, partySize }` with the DTO (invalid input: `400`) and calls the use case with the user and the data.
+3. The use case checks that the user is a hiker (`403`), then:
+   - it reads the slot on that date and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a missing slot, a slot without tables or less than 2 hours to the meal give `422`;
+   - it checks that the hiker has no active booking for the slot (`422`);
+   - it reads the free seats and asks the domain where the party sits; if it does not fit: `409`;
+   - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, the use case chooses again, up to 3 attempts, and then answers `409`.
+4. The controller shapes the answer: `201` with the booking and the numbers of the tables.
+
+No email is sent yet. When the mailer exists, the use case will call it after the commit, and a failed email will never undo the booking.
+
+The same choice of seats is available without booking: `GET /api/slots/:slotId/seating?partySize=N` answers where the party *would* sit. Nothing is held, so the booking can differ from the preview if someone books in between.
 
 ### Errors
 
@@ -88,8 +126,8 @@ The domain throws errors, never HTTP status codes. One middleware in `app.js` tu
 | `UnauthorizedError` | `401` | nobody is logged in |
 | `ForbiddenError` | `403` | logged in, but not allowed |
 | `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there |
-| `ConflictError` | `409` | not possible in the current state (not enough seats) |
-| `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal) |
+| `ConflictError` | `409` | not possible in the current state (not enough free seats; the email is already registered) |
+| `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal, slot not bookable, a second booking for the same slot) |
 | anything else | `500` | unexpected |
 
 ### Why it is built this way

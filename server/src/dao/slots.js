@@ -7,14 +7,14 @@ export const findFromDate = (serviceDate) => all(
     WITH booked_seats AS (
       SELECT
         booking_table.slot_id,
-        booking_table.table_set_table_id,
+        booking_table.hut_table_id,
         SUM(booking_table.seat_count)::INTEGER AS seat_count
       FROM booking_table
       JOIN booking ON booking.id = booking_table.booking_id
       JOIN slot ON slot.id = booking_table.slot_id
       WHERE booking.cancelled_at IS NULL
         AND slot.service_date >= $1
-      GROUP BY booking_table.slot_id, booking_table.table_set_table_id
+      GROUP BY booking_table.slot_id, booking_table.hut_table_id
     )
     SELECT
       slot.id AS "slotId",
@@ -29,7 +29,7 @@ export const findFromDate = (serviceDate) => all(
     LEFT JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
     LEFT JOIN booked_seats
       ON booked_seats.slot_id = slot.id
-      AND booked_seats.table_set_table_id = hut_table.id
+      AND booked_seats.hut_table_id = hut_table.id
     WHERE slot.service_date >= $1
     GROUP BY slot.id
     ORDER BY slot.service_date, slot.starts_at
@@ -48,14 +48,14 @@ export const findAvailableTablesBySlotId = (slotId) => all(
     JOIN hut_table ON hut_table.table_set_id = slot.table_set_id
     LEFT JOIN (
       SELECT
-        booking_table.table_set_table_id,
+        booking_table.hut_table_id,
         SUM(booking_table.seat_count)::INTEGER AS seat_count
       FROM booking_table
       JOIN booking ON booking.id = booking_table.booking_id
       WHERE booking.slot_id = $1
         AND booking.cancelled_at IS NULL
-      GROUP BY booking_table.table_set_table_id
-    ) AS booked_seats ON booked_seats.table_set_table_id = hut_table.id
+      GROUP BY booking_table.hut_table_id
+    ) AS booked_seats ON booked_seats.hut_table_id = hut_table.id
     WHERE slot.id = $1
       AND hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0) > 0
     ORDER BY hut_table.id

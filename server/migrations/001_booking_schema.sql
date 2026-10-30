@@ -56,16 +56,16 @@ CREATE TABLE booking_table (
     booking_id INTEGER NOT NULL,
     slot_id INTEGER NOT NULL,
     table_set_id INTEGER NOT NULL,
-    table_set_table_id INTEGER NOT NULL,
+    hut_table_id INTEGER NOT NULL,
     seat_count INTEGER NOT NULL CHECK (seat_count > 0),
-    PRIMARY KEY (booking_id, table_set_table_id),
+    PRIMARY KEY (booking_id, hut_table_id),
     FOREIGN KEY (booking_id, slot_id, table_set_id)
         REFERENCES booking (id, slot_id, table_set_id)
         ON DELETE CASCADE,
-    FOREIGN KEY (table_set_table_id, table_set_id)
+    FOREIGN KEY (hut_table_id, table_set_id)
         REFERENCES hut_table (id, table_set_id)
         ON DELETE RESTRICT
 );
 
 CREATE INDEX booking_table_by_slot_table_idx
-    ON booking_table (slot_id, table_set_table_id);
+    ON booking_table (slot_id, hut_table_id);

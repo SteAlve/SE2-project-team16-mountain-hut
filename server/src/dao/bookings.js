@@ -90,20 +90,20 @@ export const createWithTableAssignments = async ({
       `
         WITH booked_seats AS (
           SELECT
-            booking_table.table_set_table_id,
+            booking_table.hut_table_id,
             SUM(booking_table.seat_count)::INTEGER AS seat_count
           FROM booking_table
           JOIN booking ON booking.id = booking_table.booking_id
           WHERE booking_table.slot_id = $1
             AND booking.cancelled_at IS NULL
-          GROUP BY booking_table.table_set_table_id
+          GROUP BY booking_table.hut_table_id
         )
         SELECT
           hut_table.id AS "tableId",
           hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0)
             AS "freeSeats"
         FROM hut_table
-        LEFT JOIN booked_seats ON booked_seats.table_set_table_id = hut_table.id
+        LEFT JOIN booked_seats ON booked_seats.hut_table_id = hut_table.id
         WHERE hut_table.table_set_id = $2
           AND hut_table.id = ANY($3::INTEGER[])
       `,
@@ -142,7 +142,7 @@ export const createWithTableAssignments = async ({
       await run(
         `
           INSERT INTO booking_table
-            (booking_id, slot_id, table_set_id, table_set_table_id, seat_count)
+            (booking_id, slot_id, table_set_id, hut_table_id, seat_count)
           VALUES ($1, $2, $3, $4, $5)
         `,
         [booking.id, slotId, slot.tableSetId, tableId, seatCount],
