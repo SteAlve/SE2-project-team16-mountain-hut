@@ -691,7 +691,7 @@
           "EMPLOYEE",
           "WARDEN"
         ],
-        "description": "Role of the user. The interface calls the warden \"Manager\"."
+        "description": "Role of the user."
       },
       "User": {
         "type": "object",

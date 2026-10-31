@@ -1,4 +1,4 @@
-// The roles of the users. The interface calls the warden "Manager".
+// The roles of the users.
 export const ROLES = Object.freeze({
   HIKER: 'HIKER',
   EMPLOYEE: 'EMPLOYEE',

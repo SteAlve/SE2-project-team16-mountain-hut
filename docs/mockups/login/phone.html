@@ -66,6 +66,7 @@
   .input .ph { color: #8A958F; }
   .field.focus .input { border: 2px solid var(--pine); padding: 0 13px; box-shadow: 0 0 0 4px var(--moss-soft); }
   .field.err .input { border: 1.5px solid var(--error); background: var(--error-soft); padding: 0 13.5px; }
+  .input .icons-r { display: flex; gap: 8px; margin-left: auto; }
   .msg { color: var(--error); font-size: 14px; margin-top: 6px; }
   .msg u { font-weight: 600; text-underline-offset: 2px; }
   .help { color: var(--stone); font-size: 14px; margin-top: 6px; }
@@ -115,6 +116,15 @@
   .center p { margin: 0 0 8px; color: var(--stone); font-size: 16px; line-height: 1.45; }
   .center .btn { width: auto; padding: 0 22px; }
 
+  /* log out dialog: over the whole page, below the browser bar */
+  .dim { position: absolute; inset: 99px 0 0 0; background: rgba(14,32,25,.45); z-index: 4; }
+  .dialog { position: absolute; left: 16px; right: 16px; top: calc(99px + (100% - 99px) / 2); transform: translateY(-50%); z-index: 5; background: var(--snow); border-radius: 16px; padding: 24px; display: grid; gap: 20px; box-shadow: 0 24px 48px rgba(16,32,26,.24); }
+  .dialog h1 { font-size: 32px; line-height: 1.1; margin: 0; }
+  .dialog p { margin: 8px 0 0; color: var(--stone); font-size: 16px; line-height: 1.45; }
+  .dialog .alert { margin: 0; }
+  .dialog .actions { display: flex; gap: 10px; }
+  .dialog .btn { height: 48px; font-size: 15px; border-radius: 10px; }
+
   /* mobile browser chrome: these are web pages, not an app */
   .urlbar { height: 52px; flex: none; background: #F2F3F2; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid #DADDDB; position: relative; z-index: 4; }
   .urlbar .addr { flex: 1; height: 36px; border-radius: 12px; background: #E4E6E5; display: flex; align-items: center; justify-content: center; gap: 6px; font: 15px -apple-system, "Helvetica Neue", Arial, sans-serif; color: #2B2F2D; }
@@ -158,14 +168,15 @@ const heroCompact = (toplink) => `<div class="hero compact">${contours}<div clas
   <div class="hut">RIFUGIO ALPE LUNGA · 2.450 m</div></div>`;
 
 const ERR = `<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#B42318" stroke-width="1.6"/><rect x="9.1" y="5.2" width="1.8" height="6" rx=".9" fill="#B42318"/><circle cx="10" cy="14.2" r="1.1" fill="#B42318"/></svg>`;
-const field = ({ label, req, ph, val, err, help, focus }) => `<div class="field ${err ? "err" : ""} ${focus ? "focus" : ""}">
-  <label>${label}${req ? " <i>*</i>" : ""}</label><div class="input">${val ? `<span>${val}</span>` : `<span class="ph">${err ? "" : ph}</span>`}${err ? ERR : ""}</div>
+const EYE = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#66736D" stroke-width="1.6"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10Z" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.5"/></svg>`;
+const field = ({ label, req, ph, val, err, help, focus, eye }) => `<div class="field ${err ? "err" : ""} ${focus ? "focus" : ""}">
+  <label>${label}${req ? " <i>*</i>" : ""}</label><div class="input">${val ? `<span>${val}</span>` : `<span class="ph">${err ? "" : ph}</span>`}${err || eye ? `<span class="icons-r">${err ? ERR : ""}${eye ? EYE : ""}</span>` : ""}</div>
   ${err ? `<div class="msg">${err}</div>` : help ? `<div class="help">${help}</div>` : ""}</div>`;
 const foot = `<div class="foot"><span class="back">← Back to the hut page</span><span class="coords">45.92° N 7.71° E<br>open June – September</span></div>`;
 
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
   <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
-  ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", ...password })}
+  ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", eye: true, ...password })}
   <div style="height:8px"></div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
   <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
@@ -188,10 +199,15 @@ const menuOpen = ({ initials, name, role, links, dark }) => `${appTop(true, role
   <div class="scrim"></div><div class="menu"><div class="me"><div class="avatar ${dark ? "dark" : ""}">${initials}</div><div><b>${name}</b><span>${role}</span></div></div>
   ${links.map((l, i) => `<a class="${i === 1 ? "on" : ""}">${l.replace("&", "&amp;")}</a>`).join("")}<div class="out"><a>Log out</a></div></div>`;
 
+const logoutDialog = (alert = "") => `${appTop(false, "/slots")}
+  <div class="behind"><div class="ghost-line" style="width:40%"></div><div class="ghost-line" style="width:70%;height:30px"></div><div class="ghost-card"></div><div class="ghost-card"></div></div>
+  <div class="dim"></div><div class="dialog"><div><h1>Log out?</h1><p>You will need your email and password to log in again.</p></div>${alert}
+  <div class="actions"><button class="btn outline">Cancel</button><button class="btn primary">Log out</button></div></div>`;
+
 const groups = [
   { title: "Login", text: "Below 992 px wide (the react-bootstrap <code>lg</code> breakpoint) the brand panel folds into a dark header and the form slides over it as a white sheet. Same fields, same texts and same rules as the desktop screens 1–4; only the layout changes.",
     shots: [
-      { n: "M1", title: "Log in", notes: ["The brand panel of the desktop becomes the header.", "\"No account? Sign up\" stays in the header, top right."], html: login({}) },
+      { n: "M1", title: "Log in", notes: ["The brand panel of the desktop becomes the header.", "\"No account? Sign up\" stays in the header, top right.", "The eye in the password field shows or hides the password."], html: login({}) },
       { n: "M2", title: "Fields left empty", notes: ["Same messages as the sign-up, under each field."], html: login({ email: { err: "Enter a valid email, like name@example.com." }, password: { err: "Use at least 8 characters." } }) },
       { n: "M3", title: "Wrong email or password", notes: ["Server answers 401: alert on top, email kept, password emptied.", "The field gets the focus again, so the keyboard reopens on it."], html: login({ alert: '<div class="alert error"><span>The email or password is wrong. Try again.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { focus: true } }) },
       { n: "M4", title: "Login needed first", notes: ["Redirect from a protected page, as desktop screen 4.", "Shown while the request runs: button disabled, \"Logging in…\"."], html: login({ alert: '<div class="alert info"><span>Log in to book a table.</span></div>', email: { val: "giulia.rossi@example.com" }, password: { val: "••••••••••" }, busy: true }) },
@@ -206,9 +222,14 @@ const groups = [
   { title: "Navigation", text: "The navbar collapses into a menu button (react-bootstrap <code>Navbar expand=\"lg\"</code>). Opening it shows who is logged in, the pages of that role, and Log out. Desktop screen 7 shows the same three roles.",
     shots: [
       { n: "M7", title: "Menu, hiker", notes: ["Only the pages that exist in sprint 1. Pages of later stories are added with them.", "Tapping outside the menu or on a link closes it."], html: menuOpen({ initials: "GR", name: "Giulia Rossi", role: "Hiker", links: LINKS.hiker }) },
-      { n: "M8", title: "Menu, employee", notes: ["Employee and manager see the same pages: the manager can do everything an employee does (context.md)."], html: menuOpen({ initials: "MB", name: "Marco Bianchi", role: "Employee", links: LINKS.staff }) },
-      { n: "M9", title: "Menu, manager", notes: ["Dark avatar marks the manager, as on desktop."], html: menuOpen({ initials: "AV", name: "Anna Verdi", role: "Manager", links: LINKS.staff, dark: true }) },
+      { n: "M8", title: "Menu, employee", notes: ["Employee and warden see the same pages: the warden can do everything an employee does (context.md)."], html: menuOpen({ initials: "MB", name: "Marco Bianchi", role: "Employee", links: LINKS.staff }) },
+      { n: "M9", title: "Menu, warden", notes: ["Dark avatar marks the warden, as on desktop."], html: menuOpen({ initials: "AV", name: "Anna Verdi", role: "Warden", links: LINKS.staff, dark: true }) },
       { n: "M10", title: "Staff only", notes: ["A hiker opens a staff page by URL."], html: `${appTop(false, "/slots")}<div class="center">${blz}<h1>Staff only</h1><p>This page is for the hut team.<br>You are logged in as a hiker.</p><button class="btn primary">Go to Book a table</button></div>` },
+    ] },
+  { title: "Log out", text: "Log out asks first, in a dialog over the page. If the server cannot log the user out, the session is still open: the dialog stays with an alert and Log out tries again. Desktop screens 8 and 9 show the same dialog.",
+    shots: [
+      { n: "M11", title: "Log out: confirm", notes: ["Log out in the menu closes the menu and asks first.", "Cancel or a tap outside closes the dialog: nothing happens."], html: logoutDialog() },
+      { n: "M12", title: "Log out failed", notes: ["The session is still open: the dialog stays, Log out tries again.", "Cancel keeps the user logged in on the same page."], html: logoutDialog('<div class="alert error"><span>You are still logged in: something went wrong on our side. Try again in a minute.</span></div>') },
     ] },
 ];
 

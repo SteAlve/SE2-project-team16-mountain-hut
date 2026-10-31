@@ -1,0 +1,96 @@
+.dialog {
+  width: min(420px, calc(100% - 32px));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--snow);
+  color: var(--ink);
+  box-shadow: 0 24px 48px rgb(16 32 26 / 0.24);
+}
+
+.dialog::backdrop {
+  background: rgb(14 32 25 / 0.45);
+}
+
+.body {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.text {
+  margin: 8px 0 0;
+  color: var(--stone);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Small buttons, as in the navbar: outline and primary. */
+.cancel,
+.confirm {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.cancel {
+  border-color: var(--input-border);
+  background: var(--snow);
+  color: var(--ink);
+}
+
+.cancel:hover {
+  background: var(--mist);
+}
+
+.confirm {
+  background: var(--pine);
+  color: var(--snow);
+}
+
+.confirm:hover {
+  background: var(--pine-hover);
+}
+
+.cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirm:disabled {
+  background: #5d7c70;
+  cursor: progress;
+}
+
+@media (max-width: 991.98px) {
+  .body {
+    padding: 24px;
+  }
+
+  /* The two buttons share the width and are tall enough to tap. */
+  .cancel,
+  .confirm {
+    flex: 1;
+    height: 48px;
+  }
+}
