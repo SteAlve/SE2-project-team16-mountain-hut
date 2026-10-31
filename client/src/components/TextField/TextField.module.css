@@ -1,0 +1,144 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.required {
+  color: var(--error);
+}
+
+.control {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--snow);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* at least 16px, or iPhones zoom in when the field is tapped */
+}
+
+.input::placeholder {
+  color: #8a958f;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--pine);
+  box-shadow:
+    0 0 0 1px var(--pine),
+    0 0 0 4px var(--moss-soft);
+}
+
+.invalid .input {
+  padding-right: 44px;
+  border-color: var(--error);
+  background: var(--error-soft);
+  box-shadow: 0 0 0 0.5px var(--error);
+}
+
+.invalid .input:focus {
+  box-shadow:
+    0 0 0 1px var(--error),
+    0 0 0 4px var(--error-soft);
+}
+
+.icon {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--error);
+  pointer-events: none;
+}
+
+/* Show or hide the password: the eye at the right, the error icon (if any) on its left. */
+
+.revealable .input {
+  padding-right: 48px;
+}
+
+.revealable.invalid .input {
+  padding-right: 74px;
+}
+
+.revealable .icon {
+  right: 44px;
+}
+
+/* The browser's own reveal button (Edge) would sit next to ours. */
+.input::-ms-reveal {
+  display: none;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.reveal:hover {
+  background: var(--mist);
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+
+.helper,
+.error {
+  margin: -2px 0 0;
+  font-size: 13px;
+}
+
+.helper {
+  color: var(--stone);
+}
+
+.error {
+  color: var(--error);
+}
+
+.error a {
+  color: inherit;
+}
+
+@media (max-width: 991.98px) {
+  .field {
+    gap: 6px;
+  }
+
+  .input {
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .helper,
+  .error {
+    margin: 0;
+    font-size: 14px;
+  }
+}
