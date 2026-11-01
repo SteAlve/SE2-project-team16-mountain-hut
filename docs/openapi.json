@@ -1,0 +1,1065 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mountain Hut API",
+    "version": "1.4.0",
+    "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign up as a hiker",
+        "description": "Creates a hiker account and logs the new hiker in: the response sets the session cookie. Only hikers can sign up; the role is always `HIKER` and cannot be sent in the request (any field not listed in the request body is rejected with 400). Employee and warden accounts are not created here. Names and email are trimmed. The email is stored in lowercase and is unique, compared without regard to letter case. The `repeat password` field of the form is checked in the browser and is not sent.",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "firstName": "Emily",
+                "lastName": "Parker",
+                "email": "emily.parker@example.com",
+                "phone": "+39 333 123 4567",
+                "password": "at-least-8-chars"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created and hiker logged in.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Session cookie `sid`. It is `HttpOnly` and `SameSite=Lax`, and `Secure` when the server runs behind HTTPS. It expires when the session does (24 hours by default, set by the server). The session id is regenerated on every login or sign up.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: it is not a JSON object or not valid JSON, it has a field that is not allowed, a required field is missing or blank, the email is not a valid email, the phone has characters other than digits and spaces (a leading `+` is allowed), or the password has fewer than 8 characters. The `message` says which check failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "firstName is required"
+                    }
+                  },
+                  "invalidEmail": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "email must be a valid email"
+                    }
+                  },
+                  "invalidPhone": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "phone must contain only digits, spaces and a leading +"
+                    }
+                  },
+                  "shortPassword": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "password must have at least 8 characters"
+                    }
+                  },
+                  "unknownField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Unknown field: role"
+                    }
+                  },
+                  "malformedJson": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Request body must be valid JSON"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with this email already exists. The client shows the message under the email field, with a link to log in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "An account with this email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in",
+        "description": "One login for every role (hiker, employee, warden). On success the response sets the session cookie and returns the user, whose `role` the client uses to choose the page after login and the navbar. The error never says which of the two credentials was wrong. A user who is already logged in gets a new session. The email is trimmed and compared without regard to letter case.",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "emily.parker@example.com",
+                "password": "at-least-8-chars"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Session cookie `sid`. It is `HttpOnly` and `SameSite=Lax`, and `Secure` when the server runs behind HTTPS. It expires when the session does (24 hours by default, set by the server). The session id is regenerated on every login or sign up.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The email or the password is missing, the body has a field that is not allowed, or the body is not valid JSON. The login form checks the first case in the browser, so this answer is a safeguard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingCredentials": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "email and password are required"
+                    }
+                  },
+                  "unknownField": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Unknown field: role"
+                    }
+                  },
+                  "malformedJson": {
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Request body must be valid JSON"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The email or the password is wrong.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Invalid email or password"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log out",
+        "description": "Destroys the session and clears the session cookie. It is idempotent: it answers 204 also when there is no active session.",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Logged out. No body.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Clears the `sid` cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get the logged-in user",
+        "description": "Returns the user of the current session. The client calls it when the app starts to restore who is logged in (the cookie is `HttpOnly`, so the client cannot read it), and the 401 answer means the visitor is anonymous or the session has expired.",
+        "operationId": "getCurrentUser",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The logged-in user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 7,
+                  "firstName": "Emily",
+                  "lastName": "Parker",
+                  "email": "emily.parker@example.com",
+                  "phone": "+39 333 123 4567",
+                  "role": "HIKER"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slots": {
+      "get": {
+        "summary": "List the slots from today",
+        "description": "Returns every slot from today on, in order of day and time, with its free seats. \"Today\" is the day in the time zone of the hut, decided by the server: the request has no parameters. Slots that are full, have no tables yet or are already closed are listed too, so the page can show them greyed with the reason (`freeSeats`, `bookingOpen`, `bookingClosesAt`). There is no limit on how far ahead. No login is required.",
+        "operationId": "getSlots",
+        "tags": [
+          "Slots"
+        ],
+        "responses": {
+          "200": {
+            "description": "The slots from today. An empty array means the hut has none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Slot"
+                  }
+                },
+                "example": [
+                  {
+                    "slotId": 12,
+                    "date": "2026-10-28",
+                    "startsAt": "12:00",
+                    "endsAt": "13:00",
+                    "freeSeats": 4,
+                    "bookingOpen": true,
+                    "bookingClosesAt": "2026-10-28T10:00"
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "post": {
+        "summary": "Book the tables of the preview",
+        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent.",
+        "operationId": "createBooking",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingRequest"
+              },
+              "example": {
+                "slotId": 12,
+                "partySize": 6,
+                "tables": [
+                  {
+                    "tableNumber": 3,
+                    "seats": 4
+                  },
+                  {
+                    "tableNumber": 5,
+                    "seats": 2
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                },
+                "example": {
+                  "id": 45,
+                  "date": "2026-10-28",
+                  "slotId": 12,
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 4
+                    },
+                    {
+                      "tableNumber": 5,
+                      "seats": 2
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: a wrong or unknown field (a `date` is not accepted), `tables` missing or empty, a table twice, or seats that do not add up to `partySize`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "partySize must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not a hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only hikers can create bookings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The booking is refused and nothing is booked. The `code` says why: `NO_SEATS` the party does not fit in the free seats of the slot any more; `TABLES_CHANGED` the party still fits, but not at the tables sent (someone booked in between, or they are not the tables of a preview).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "noSeats": {
+                    "summary": "The party does not fit any more: choose another slot",
+                    "value": {
+                      "error": "ConflictError",
+                      "code": "NO_SEATS",
+                      "message": "Not enough free seats"
+                    }
+                  },
+                  "tablesChanged": {
+                    "summary": "The tables changed: ask for a new preview",
+                    "value": {
+                      "error": "ConflictError",
+                      "code": "TABLES_CHANGED",
+                      "message": "The chosen tables are no longer the ones proposed for this party"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rule of the hut fails: the slot cannot be booked (no tables), the meal starts less than two hours from now so booking is closed, or the hiker already has a booking for that slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "bookingClosed": {
+                    "summary": "Booking is closed",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "summary": "The slot has no tables",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  },
+                  "alreadyBooked": {
+                    "summary": "The hiker already booked this slot",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "You already have a booking for this slot"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/slots/{slotId}/seating": {
+      "get": {
+        "summary": "Where a party would sit",
+        "description": "Tells which tables a party of that size would get in the slot, without booking anything: the proposal the client then sends to `POST /api/bookings` (the whole party at one table when a table has enough free seats, the one with the fewest free seats that fits; otherwise as few tables as possible). Nothing is held: if someone books first, the booking of those tables answers 409 and the client asks again. No login is required.",
+        "operationId": "getSeating",
+        "tags": [
+          "Slots"
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the meal slot.",
+            "example": 12
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of people in the party.",
+            "example": 6
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The tables of the party.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatingPlan"
+                },
+                "example": {
+                  "slotId": 12,
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 4
+                    },
+                    {
+                      "tableNumber": 5,
+                      "seats": 2
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The slot id or the party size is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "partySize must be a positive integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The party does not fit in the free seats of the slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "code": "NO_SEATS",
+                  "message": "Not enough free seats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot cannot be booked: it has no tables, or booking is closed (less than two hours to the meal).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "bookingClosed": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sid"
+      }
+    },
+    "schemas": {
+      "CreateBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the meal slot on the requested date."
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables of the seating preview, unchanged. Each table appears once and the seats add up to `partySize`.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
+          }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "required": [
+          "id",
+          "date",
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the created booking."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the booked meal."
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the booked meal slot."
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables chosen for the party, by table number.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Stable error type."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error description, in English, written by the server. The client can show it as it is."
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "NO_SEATS",
+              "TABLES_CHANGED"
+            ],
+            "description": "Present on some 409 answers only, so the client can tell the cases apart: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview)."
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "HIKER",
+          "EMPLOYEE",
+          "WARDEN"
+        ],
+        "description": "Role of the user."
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the user."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address, also the login."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phone number, if given."
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address, stored in lowercase. Booking confirmations are sent here."
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\s*\\+?[0-9 ]*[0-9][0-9 ]*\\s*$",
+            "description": "Optional. Digits and spaces, with an optional leading `+`; no maximum length for now. An empty string or null counts as not given. The hut uses it only if the hiker's plans change."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "At least 8 characters."
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "description": "Password."
+          }
+        }
+      },
+      "Slot": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "date",
+          "startsAt",
+          "endsAt",
+          "freeSeats",
+          "bookingOpen",
+          "bookingClosesAt"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the meal slot."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Day of the meal."
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Local start time of the meal, as HH:MM (the time of the hut).",
+            "example": "12:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Local end time of the meal, as HH:MM (the time of the hut).",
+            "example": "13:00"
+          },
+          "freeSeats": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seats still free in the slot. 0 when it is full or has no tables yet. A party up to this number can be seated: it is split over tables when no single table is big enough."
+          },
+          "bookingOpen": {
+            "type": "boolean",
+            "description": "True while a hiker can still book this slot: booking closes two hours before the meal."
+          },
+          "bookingClosesAt": {
+            "type": "string",
+            "description": "When booking closes (or closed), as the local date and time of the hut, without time zone: YYYY-MM-DDTHH:MM.",
+            "example": "2026-10-28T10:00"
+          }
+        }
+      },
+      "TableSeats": {
+        "type": "object",
+        "required": [
+          "tableNumber",
+          "seats"
+        ],
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The number of the table, as the hiker reads it (not an internal id)."
+          },
+          "seats": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Seats of the party at that table."
+          }
+        }
+      },
+      "SeatingPlan": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables the party would get, by table number. One table when the whole party fits at one.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Sign up, log in, log out and current user."
+    },
+    {
+      "name": "Slots",
+      "description": "Meal slots and their availability."
+    },
+    {
+      "name": "Bookings",
+      "description": "Table bookings."
+    }
+  ]
+}

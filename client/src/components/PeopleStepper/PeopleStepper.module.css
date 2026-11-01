@@ -1,0 +1,49 @@
+.stepper {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  background: var(--snow);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 50px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 22px;
+  color: var(--pine);
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+.step:disabled {
+  color: #a9b3ae;
+  cursor: not-allowed;
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 50px;
+  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+}

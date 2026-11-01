@@ -7,13 +7,19 @@
     "node": ">=22"
   },
   "scripts": {
+    "db:create": "node scripts/create.js",
+    "db:drop": "node scripts/drop.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:reset": "npm run db:drop && npm run db:migrate",
+    "db:seed": "node scripts/seed.js",
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
     "start": "node src/index.js",
     "test": "vitest run"
   },
   "dependencies": {
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
