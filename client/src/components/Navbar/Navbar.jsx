@@ -1,70 +1,134 @@
 /**
- * The navbar of the app pages (Figma "Navbar / Logged in", "Phone / Top bar").
- * `links` is [{ to, label }]: only the pages of the user's role. With a `user` it shows the
- * avatar, the name, the role and Log out; without one, Log in. Below 992 px the links and the
- * user fold into the menu button.
+ * The navbar of the app pages (docs/mockups/login, screen 7 and phone screens 7-9).
+ * Logged in: the logo, only the pages of the user's role, who is logged in, and Log out.
+ * `onLogout` is called when Log out is clicked: the parent asks first.
+ * Logged out (`user` null): the logo, The hut and Log in.
+ * On a phone it is a top bar with a menu button; the menu closes on a link, on Esc or outside it.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import qMark from '../../assets/booking/q-mark.svg';
-import menuIcon from '../../assets/booking/menu.svg';
-import { Button } from '../Button/Button.jsx';
+import { NAV_PAGES, PAGES, ROLE_LABEL, ROLES } from '../../lib/roles.js';
+import closeIcon from '../../assets/close.svg';
+import menuIcon from '../../assets/menu.svg';
+import quotaMark from '../../assets/quota-mark.svg';
 import styles from './Navbar.module.css';
 
-const ROLE_LABELS = { HIKER: 'Hiker', EMPLOYEE: 'Employee', WARDEN: 'Manager' };
+const initials = ({ firstName, lastName }) => `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
 
-const initialsOf = (user) => `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase();
+function Avatar({ user, className }) {
+  // The manager's avatar is filled, so the role stands out.
+  const strong = user.role === ROLES.WARDEN ? styles.avatarStrong : '';
+  return (
+    <span className={`${styles.avatar} ${strong} ${className}`} aria-hidden="true">
+      {initials(user)}
+    </span>
+  );
+}
 
-export function Navbar({ links, user, onLogout, loginTo = '/login' }) {
-  const [isOpen, setIsOpen] = useState(false);
+function Who({ user }) {
+  return (
+    <span className={styles.who}>
+      <span className={styles.name}>
+        {user.firstName} {user.lastName}
+      </span>
+      <span className={styles.role}>{ROLE_LABEL[user.role]}</span>
+    </span>
+  );
+}
+
+const linkClass =
+  (base) =>
+  ({ isActive }) =>
+    `${base} ${isActive ? styles.active : ''}`;
+
+export function Navbar({ user, onLogout }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pages = user ? NAV_PAGES[user.role] ?? [PAGES.hut] : [PAGES.hut];
+  const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (event) => event.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   return (
     <header className={styles.navbar}>
-      <Link to="/" className={styles.logo} aria-label="QUOTA, home">
-        <img src={qMark} alt="" width="48" height="48" className={styles.mark} />
-        <span className={styles.wordmark}>QUOTA</span>
+      <Link to="/" className={styles.logo} onClick={closeMenu}>
+        <img src={quotaMark} width="34" height="34" alt="" />
+        QUOTA
       </Link>
 
-      <button
-        type="button"
-        className={styles.menuButton}
-        aria-expanded={isOpen}
-        aria-controls="navbar-menu"
-        aria-label="Menu"
-        onClick={() => setIsOpen((open) => !open)}
-      >
-        <img src={menuIcon} alt="" width="22" height="22" />
-      </button>
+      <nav className={styles.links} aria-label="Pages">
+        {pages.map(({ path, label }) => (
+          <NavLink key={path} to={path} end className={linkClass(styles.link)}>
+            {label}
+          </NavLink>
+        ))}
+      </nav>
 
-      <div id="navbar-menu" className={`${styles.menu} ${isOpen ? styles.open : ''}`}>
-        <nav className={styles.links}>
-          {links.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end
-              className={({ isActive }) => `${styles.link} ${isActive ? styles.active : ''}`}
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+      {user ? (
+        <>
+          <div className={styles.user}>
+            <Avatar user={user} />
+            <Who user={user} />
+          </div>
+          <button type="button" className={`${styles.ghost} ${styles.desktopOnly}`} onClick={onLogout}>
+            Log out
+          </button>
 
-        {user ? (
-          <>
-            <div className={styles.user}>
-              <span className={styles.avatar} aria-hidden="true">{initialsOf(user)}</span>
-              <span className={styles.who}>
-                <span className={styles.name}>{user.firstName} {user.lastName}</span>
-                <span className={styles.role}>{ROLE_LABELS[user.role] ?? user.role}</span>
-              </span>
-            </div>
-            <Button variant="ghost" size="small" onClick={onLogout}>Log out</Button>
-          </>
-        ) : (
-          <Link to={loginTo} className={styles.login}>Log in</Link>
-        )}
-      </div>
+          <button
+            type="button"
+            className={styles.menuButton}
+            aria-expanded={menuOpen}
+            aria-controls="navbar-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <img src={menuOpen ? closeIcon : menuIcon} width="22" height="22" alt="" />
+          </button>
+
+          {menuOpen && (
+            <>
+              <div className={styles.scrim} onClick={closeMenu} aria-hidden="true" />
+              <div id="navbar-menu" className={styles.menu}>
+                <div className={styles.me}>
+                  <Avatar user={user} className={styles.avatarLarge} />
+                  <Who user={user} />
+                </div>
+                <nav className={styles.menuLinks} aria-label="Pages">
+                  {pages.map(({ path, label }) => (
+                    <NavLink
+                      key={path}
+                      to={path}
+                      end
+                      className={linkClass(styles.menuLink)}
+                      onClick={closeMenu}
+                    >
+                      {label}
+                    </NavLink>
+                  ))}
+                </nav>
+                <button
+                  type="button"
+                  className={styles.menuLogout}
+                  onClick={() => {
+                    closeMenu();
+                    onLogout();
+                  }}
+                >
+                  Log out
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <Link to="/login" className={styles.ghost}>
+          Log in
+        </Link>
+      )}
     </header>
   );
 }

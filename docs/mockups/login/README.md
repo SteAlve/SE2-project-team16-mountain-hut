@@ -7,8 +7,8 @@ Mockup for the login frontend ([MH-55](https://polito-se2-26-16.youtrack.cloud/i
 | Figma page | What it holds |
 |---|---|
 | **Brand · QUOTA** | Name, logo, palette, typography, motifs and usage rules |
-| **MH-45 Login & sign-up** | The 7 desktop screens and the 10 phone screens below |
-| **Components** | Logo, trail blaze, button, text field, alert, navbars, brand panel, phone browser bar and top bar, and the colour variables |
+| **MH-45 Login & sign-up** | The 9 desktop screens and the 12 phone screens below |
+| **Components** | Logo, trail blaze, eye icon, button, text field (with the show/hide password toggle), alert, navbars, log out dialog, brand panel, phone browser bar and top bar, and the colour variables |
 
 ## The brand in one paragraph
 
@@ -25,10 +25,12 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 | 5 | Sign up, hikers only | ![Sign up](05-signup.png) |
 | 6 | Sign up, errors | ![Sign up errors](06-signup-errors.png) |
 | 7 | Navbar for each role, and a hiker on a staff page | ![Navbar per role](07-navbar-per-role.png) |
+| 8 | Log out, asked first | ![Log out confirm](08-logout-confirm.png) |
+| 9 | Log out failed | ![Log out failed](09-logout-failed.png) |
 
 Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
 
-The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* for employees and the manager. Pages of later stories are added to the navbar with their story.
+The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* for employees and the warden. Pages of later stories are added to the navbar with their story.
 
 ## On a phone
 
@@ -39,6 +41,7 @@ The same website opened in a phone browser, not a separate app: the React pages 
 - **Sign up:** the header shrinks to the logo and the hut name. Fields that sit side by side on desktop (first and last name, the two passwords) are stacked.
 - **Fields:** 16 px text, so iPhones do not zoom in when a field is tapped. Email uses `type="email"`, phone `type="tel"`, so the phone shows the right keyboard.
 - **Menu:** shows who is logged in, the pages of that role (current page highlighted) and Log out. Tapping a link or outside the menu closes it.
+- **Log out dialog:** the same as on desktop, 16 px from the screen edges; the two buttons share the width and are 48 px tall.
 - Texts, fields, rules and messages are the same as on desktop.
 
 | # | Screen | Image |
@@ -51,18 +54,22 @@ The same website opened in a phone browser, not a separate app: the React pages 
 | 6 | Sign up, errors (the page scrolls to the first error) | ![Sign up errors on a phone](phone/06-signup-errors.png) |
 | 7 | Menu, hiker | ![Hiker menu](phone/07-menu-hiker.png) |
 | 8 | Menu, employee | ![Employee menu](phone/08-menu-employee.png) |
-| 9 | Menu, manager | ![Manager menu](phone/09-menu-manager.png) |
+| 9 | Menu, warden | ![Warden menu](phone/09-menu-warden.png) |
 | 10 | Staff only | ![Staff only on a phone](phone/10-staff-only.png) |
+| 11 | Log out, asked first (from the menu) | ![Log out confirm on a phone](phone/11-logout-confirm.png) |
+| 12 | Log out failed | ![Log out failed on a phone](phone/12-logout-failed.png) |
 
 ## Behaviour
 
-- **One login for every role.** Hikers, employees and the manager log in on the same page with email and password. *Manager* is the name the app shows for the role the stories call *warden*.
-- **Only hikers sign up.** Employee and manager accounts are created by the team (seed data in sprint 1). A hiker created by an employee over the phone is MH-7, not this page.
-- **After login:** a hiker goes to *Book a table*; an employee or the manager goes to *Slots & tables*. If the user came from a protected page (screen 4), send them back there instead.
+- **One login for every role.** Hikers, employees and the warden log in on the same page with email and password. The navbar and the menu show the role as *Warden*, as the stories call it.
+- **Only hikers sign up.** Employee and warden accounts are created by the team (seed data in sprint 1). A hiker created by an employee over the phone is MH-7, not this page.
+- **After login:** a hiker goes to *Book a table*; an employee or the warden goes to *Slots & tables*. If the user came from a protected page (screen 4), send them back there instead.
+- **Show or hide the password:** the password field of the login has an eye button on the right (screens 1–4). The password starts hidden; a click shows it as plain text and the icon becomes the eye struck through, another click hides it again. The focus stays in the field, so on a phone the keyboard stays open. For screen readers the button reads "Show password" or "Hide password". With an error the eye sits right of the error icon.
 - **The blue note on screen 4** ("Log in to book a table.") is shown only when a user who is not logged in opens a protected page and is sent to the login. It says why they landed on the login instead of the page they clicked; without it the jump looks like an error. Opening the login page directly shows no note.
 - **After sign-up:** the hiker is logged in straight away and goes to *Book a table*.
 - **No password reset:** no story asks for one, so the login page has no "Forgot password?" link. Passwords are stored only as hashes: nobody, the hut staff included, can read them. If the team wants a reset, it has to be asked to the product owner first.
-- **Log out** is in the navbar for every role and goes back to the public hut page.
+- **Log out** is in the navbar for every role. It asks first (screen 8): a dialog "Log out?" with *Cancel* and *Log out*. Cancel, Esc or a click outside the dialog closes it and nothing happens. *Log out* ends the session and goes back to the public hut page; while the request runs both buttons are disabled and the button reads "Logging out…".
+- **Log out failed** (server down or any error, screen 9): the session is still open, so the user stays logged in on the same page. The dialog stays open with an alert above the buttons, and *Log out* tries again.
 - **The navbar shows only the pages that role can use** (screen 7). A hiker who opens a staff page by URL sees the "Staff only" page.
 - **While the request is running** the button is disabled and reads "Logging in…" or "Creating account…".
 
@@ -72,10 +79,14 @@ The same website opened in a phone browser, not a separate app: the React pages 
 
 | Field | Required | Rule | Message under the field |
 |---|---|---|---|
-| Email | yes | not empty | Enter your email. |
-| Password | yes | not empty | Enter your password. |
+| Email | yes | valid email format | Enter a valid email, like name@example.com. |
+| Password | yes | at least 8 characters | Use at least 8 characters. |
 
-Wrong email or password (server answers `401`): alert on top, **"The email or password is wrong. Try again."** Keep the email, empty the password. Never say which of the two was wrong.
+The password field has the show/hide eye (see *Behaviour*).
+
+The rules and messages are the same as the sign-up's: an empty field fails the same rule. They are checked in the browser before sending, so an email or password that no account can have never reaches the server. Employee and warden accounts must also have passwords of at least 8 characters, or they cannot log in.
+
+Wrong email or password (server answers `401`): alert on top, **"The email or password is wrong. Try again."** Keep the email, empty the password. The alert never says which of the two was wrong.
 
 ### Sign up
 
@@ -104,6 +115,8 @@ All rules except the `409` are checked in the browser before sending, and checke
 | Not logged in, opens a protected page | Log in to book a table. *(or the name of the page they wanted)* |
 | Hiker opens a staff page | **Staff only.** This page is for the hut team. You are logged in as a hiker. Button: Go to Book a table |
 | Server or network down | Something went wrong on our side. Try again in a minute. |
+| Log out dialog | **Log out?** You will need your email and password to log in again. Buttons: Cancel, Log out |
+| Log out failed | You are still logged in: something went wrong on our side. Try again in a minute. |
 
 ## Assumptions to confirm
 

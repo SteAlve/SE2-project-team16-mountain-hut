@@ -1,5 +1,5 @@
 /**
- * LOGIN: one login for hikers, employees and the manager (docs/mockups/login, screens 1-4).
+ * LOGIN: one login for hikers, employees and the warden (docs/mockups/login, screens 1-4).
  * After login a hiker goes to Book a table, the staff to Slots & tables. A protected page that
  * sends a visitor here passes `state: { from: '/its/path', page: 'book a table' }`: the page
  * shows "Log in to book a table." and the login goes back to `from`.
@@ -10,9 +10,8 @@ import { Alert } from '../../components/Alert/Alert.jsx';
 import { AuthLayout } from '../../components/AuthLayout/AuthLayout.jsx';
 import { TextField } from '../../components/TextField/TextField.jsx';
 import { useLoginForm } from '../../hooks/useLoginForm.js';
+import { START_PAGE } from '../../lib/roles.js';
 import styles from '../authForm.module.css';
-
-const START_PAGE = { HIKER: '/book', EMPLOYEE: '/slots', WARDEN: '/slots' };
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -28,7 +27,7 @@ export function LoginPage() {
     event.preventDefault();
     const result = await submit({ email, password });
     if (result.user) {
-      navigate(state?.from ?? START_PAGE[result.user.role] ?? '/', { replace: true });
+      navigate(state?.from ?? START_PAGE[result.user.role]?.path ?? '/', { replace: true });
     } else if (result.errors) {
       focusField(Object.keys(result.errors)[0]);
     } else if (result.status === 401) {
@@ -68,6 +67,7 @@ export function LoginPage() {
           label="Password"
           name="password"
           type="password"
+          revealable
           autoComplete="current-password"
           placeholder="Your password"
           value={password}

@@ -64,6 +64,50 @@
   pointer-events: none;
 }
 
+/* Show or hide the password: the eye at the right, the error icon (if any) on its left. */
+
+.revealable .input {
+  padding-right: 48px;
+}
+
+.revealable.invalid .input {
+  padding-right: 74px;
+}
+
+.revealable .icon {
+  right: 44px;
+}
+
+/* The browser's own reveal button (Edge) would sit next to ours. */
+.input::-ms-reveal {
+  display: none;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.reveal:hover {
+  background: var(--mist);
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+
 .helper,
 .error {
   margin: -2px 0 0;
