@@ -1,7 +1,7 @@
 /**
  * HOOKS: keeps who is logged in for the whole app. <App /> wraps the router in <AuthProvider>,
  * so every page sees the same user. At start it asks the server who the session belongs to.
- * The pages do not use this file: they use useAuth, useLogin, useRegister and useLogout.
+ * The pages do not use this file: they use useAuth, useLoginForm, useSignUpForm and useLogout.
  */
 import { createContext, createElement, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../api/auth.js';

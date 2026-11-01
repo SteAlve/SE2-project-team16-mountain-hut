@@ -94,7 +94,7 @@ Run these commands in `server`. They use the database of `DATABASE_URL`:
 
 #### Demo accounts
 
-`db:seed` creates one warden (the interface calls it Manager) and two employees. All three have the password `quota-demo-2026`. Hikers sign up from the application.
+`db:seed` creates one warden and two employees. All three have the password `quota-demo-2026`. Hikers sign up from the application.
 
 | Role | Email |
 |---|---|
