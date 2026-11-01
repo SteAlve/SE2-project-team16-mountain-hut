@@ -6,7 +6,7 @@
  * Not here: business rules, SQL, request handling.
  *
  * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
- * seating preview and the booking of a table.
+ * seating preview, the booking of a table, and the table sets and slots of the staff.
  * A story adds its own lines in each step.
  */
 
@@ -23,6 +23,7 @@ import * as tokens from './sessionTokens.js';
 import * as bookings from './dao/bookings.js';
 import * as sessions from './dao/sessions.js';
 import * as slots from './dao/slots.js';
+import * as tableSets from './dao/tableSets.js';
 import * as users from './dao/users.js';
 
 // the errors the middleware turns into status codes
@@ -39,10 +40,15 @@ import {
 import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js';
 
 // 2. use cases
+import { makeAssignTableSet } from './usecases/assignTableSet.js';
 import { makeAuthenticate } from './usecases/authenticate.js';
 import { makeCreateBooking } from './usecases/createBooking.js';
 import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
+import { makeCreateStaffSlot } from './usecases/createStaffSlot.js';
+import { makeCreateTableSet } from './usecases/createTableSet.js';
 import { makeListSlots } from './usecases/listSlots.js';
+import { makeListStaffSlots } from './usecases/listStaffSlots.js';
+import { makeListTableSets } from './usecases/listTableSets.js';
 import { makePreviewSeating } from './usecases/previewSeating.js';
 import { makeLogin } from './usecases/login.js';
 import { makeLogout } from './usecases/logout.js';
@@ -52,6 +58,13 @@ import { makeStartSession } from './usecases/startSession.js';
 // 3. controllers
 import { makeCreateBookingController } from './controllers/bookings.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
+import {
+  makeAssignTableSetController,
+  makeCreateSlotController,
+  makeCreateTableSetController,
+  makeListStaffSlotsController,
+  makeListTableSetsController,
+} from './controllers/staff.js';
 import {
   makeLoginController,
   makeLogoutController,
@@ -63,6 +76,7 @@ import {
 import { makeAuthRouter } from './routes/auth.js';
 import { makeBookingsRouter } from './routes/bookings.js';
 import { makeSlotsRouter } from './routes/slots.js';
+import { makeStaffRouter } from './routes/staff.js';
 
 // authentication
 const startSession = makeStartSession({ sessions, tokens, clock, sessionTtlMs: config.sessionTtlMs });
@@ -98,12 +112,33 @@ const bookingsRouter = makeBookingsRouter({
   requireAuth,
 });
 
+// the tables and the slots of the hut (staff)
+const staffRouter = makeStaffRouter({
+  createTableSetController: makeCreateTableSetController({
+    createTableSet: makeCreateTableSet({ tableSets }),
+  }),
+  listTableSetsController: makeListTableSetsController({
+    listTableSets: makeListTableSets({ tableSets }),
+  }),
+  createSlotController: makeCreateSlotController({
+    createStaffSlot: makeCreateStaffSlot({ slots, tableSets }),
+  }),
+  listStaffSlotsController: makeListStaffSlotsController({
+    listStaffSlots: makeListStaffSlots({ slots, tableSets }),
+  }),
+  assignTableSetController: makeAssignTableSetController({
+    assignTableSet: makeAssignTableSet({ slots, tableSets }),
+  }),
+  requireAuth,
+});
+
 export const app = express();
 app.use(express.json());
 app.use(readSessionCookie);
 app.use('/api', authRouter);
 app.use('/api', slotsRouter);
 app.use('/api', bookingsRouter);
+app.use('/api', staffRouter);
 
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
