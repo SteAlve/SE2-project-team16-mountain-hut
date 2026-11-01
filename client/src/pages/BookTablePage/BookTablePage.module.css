@@ -1,6 +1,6 @@
+/* Under the navbar of AppLayout, which already gives the full height and the background. */
 .screen {
-  min-height: 100vh;
-  background: var(--mist);
+  flex: 1;
 }
 
 .page {
