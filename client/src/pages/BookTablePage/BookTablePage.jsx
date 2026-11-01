@@ -1,9 +1,10 @@
 /**
  * BOOK A TABLE (story MH-01, mockup docs/mockups/booking): the hiker chooses the day, how many
  * they are and a time, checks the booking and confirms it.
- * The availability is public; booking needs a logged-in hiker. A visitor who is not logged in is
- * sent to the login with `state: { from, page }`, and the choices travel in the URL of `from`
- * (?date=&people=&slot=), so they are still there after the login.
+ * The availability is public; booking needs a logged-in hiker. A visitor who is not logged in
+ * chooses first and is sent to the login at Review booking, with `state: { from, page }`; the
+ * choices travel in the URL of `from` (?date=&people=&slot=), so they are still there after the login.
+ * An employee or the warden is told on arrival that only hikers can book, and Review booking is off.
  * The navbar and Log out come from AppLayout.
  */
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { TimeSlot } from '../../components/TimeSlot/TimeSlot.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useBookTable } from '../../hooks/useBookTable.js';
 import { formatTime, toDay } from '../../lib/bookingDates.js';
+import { ROLE_LABEL, STAFF_ROLES } from '../../lib/roles.js';
 import styles from './BookTablePage.module.css';
 
 // Sample data of the mockup, until the hut page story gives the real name and altitude.
@@ -38,6 +40,8 @@ export function BookTablePage() {
     slotId: positiveInt(params.get('slot')),
   });
   const { date, slot, partySize, now } = book;
+  // The server refuses a booking by the staff (403): say it now, not at Confirm.
+  const isStaff = STAFF_ROLES.includes(user?.role);
 
   const goToLogin = () => {
     const choices = new URLSearchParams({ people: String(partySize) });
@@ -47,6 +51,7 @@ export function BookTablePage() {
   };
 
   const handleReview = () => {
+    if (isStaff) return;
     if (!isLoading && !isAuthenticated) goToLogin();
     else book.review();
   };
@@ -84,6 +89,11 @@ export function BookTablePage() {
             </p>
           </header>
 
+          {isStaff && (
+            <Alert variant="info">
+              Only hikers can book a table. You are logged in as a {ROLE_LABEL[user.role].toLowerCase()}.
+            </Alert>
+          )}
           {book.alert && <Alert>{book.alert}</Alert>}
 
           <section className={styles.step}>
@@ -142,11 +152,19 @@ export function BookTablePage() {
           partySize={partySize}
           now={now}
           isPending={book.isPending}
+          canBook={!isStaff}
           onReview={handleReview}
         />
       </main>
 
-      <BookingBar date={date} slot={slot} partySize={partySize} isPending={book.isPending} onReview={handleReview} />
+      <BookingBar
+        date={date}
+        slot={slot}
+        partySize={partySize}
+        isPending={book.isPending}
+        canBook={!isStaff}
+        onReview={handleReview}
+      />
 
       <ReviewDialog
         open={book.isReviewing}

@@ -63,14 +63,14 @@ The same website opened in a phone browser, not a separate app: the React pages 
 
 - **One login for every role.** Hikers, employees and the warden log in on the same page with email and password. The navbar and the menu show the role as *Warden*, as the stories call it.
 - **Only hikers sign up.** Employee and warden accounts are created by the team (seed data in sprint 1). A hiker created by an employee over the phone is MH-7, not this page.
-- **After login:** a hiker goes to *Book a table*; an employee or the warden goes to *Slots & tables*. If the user came from a protected page (screen 4), send them back there instead.
+- **After login:** a hiker goes to *Book a table*; an employee or the warden goes to *Slots & tables*. If the user came from a protected page or from *Review booking* on Book a table (screen 4), send them back there instead.
 - **Show or hide the password:** the password field of the login has an eye button on the right (screens 1–4). The password starts hidden; a click shows it as plain text and the icon becomes the eye struck through, another click hides it again. The focus stays in the field, so on a phone the keyboard stays open. For screen readers the button reads "Show password" or "Hide password". With an error the eye sits right of the error icon.
-- **The blue note on screen 4** ("Log in to book a table.") is shown only when a user who is not logged in opens a protected page and is sent to the login. It says why they landed on the login instead of the page they clicked; without it the jump looks like an error. Opening the login page directly shows no note.
+- **The blue note on screen 4** ("Log in to book a table.") is shown only when a user who is not logged in is sent to the login: when they open a protected page, or when they press *Review booking* on Book a table (that page is public, so anyone can see the free seats first; see the [booking mockup](../booking/README.md)). It says why they landed on the login instead of the page they clicked; without it the jump looks like an error. Opening the login page directly shows no note.
 - **After sign-up:** the hiker is logged in straight away and goes to *Book a table*.
 - **No password reset:** no story asks for one, so the login page has no "Forgot password?" link. Passwords are stored only as hashes: nobody, the hut staff included, can read them. If the team wants a reset, it has to be asked to the product owner first.
 - **Log out** is in the navbar for every role. It asks first (screen 8): a dialog "Log out?" with *Cancel* and *Log out*. Cancel, Esc or a click outside the dialog closes it and nothing happens. *Log out* ends the session and goes back to the public hut page; while the request runs both buttons are disabled and the button reads "Logging out…".
 - **Log out failed** (server down or any error, screen 9): the session is still open, so the user stays logged in on the same page. The dialog stays open with an alert above the buttons, and *Log out* tries again.
-- **The navbar shows only the pages that role can use** (screen 7). A hiker who opens a staff page by URL sees the "Staff only" page.
+- **The navbar shows only the pages that role can use** (screen 7). A hiker who opens a staff page by URL sees the "Staff only" page. An employee or the warden who opens Book a table by URL sees the free seats, with a note that only hikers can book (booking mockup).
 - **While the request is running** the button is disabled and reads "Logging in…" or "Creating account…".
 
 ## Fields and rules
@@ -112,7 +112,8 @@ All rules except the `409` are checked in the browser before sending, and checke
 | Top bar, login | No account? **Sign up** |
 | Top bar, sign-up | Already registered? **Log in** |
 | Top bar, both | ← Back to the hut page |
-| Not logged in, opens a protected page | Log in to book a table. *(or the name of the page they wanted)* |
+| Not logged in, opens a protected page or presses Review booking | Log in to book a table. *(or the name of the page they wanted)* |
+| Employee or warden opens Book a table | Only hikers can book a table. You are logged in as a warden. *(or an employee)* |
 | Hiker opens a staff page | **Staff only.** This page is for the hut team. You are logged in as a hiker. Button: Go to Book a table |
 | Server or network down | Something went wrong on our side. Try again in a minute. |
 | Log out dialog | **Log out?** You will need your email and password to log in again. Buttons: Cancel, Log out |
