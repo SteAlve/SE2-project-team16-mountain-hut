@@ -1,7 +1,7 @@
 /**
  * LOGIN: one login for hikers, employees and the warden (docs/mockups/login, screens 1-4).
- * After login a hiker goes to Book a table, the staff to Slots & tables. A protected page that
- * sends a visitor here passes `state: { from: '/its/path', page: 'book a table' }`: the page
+ * After login a hiker goes to Book a table, the staff to Slots & tables. A protected page (or
+ * Book a table, at Review booking) that sends a visitor here passes `state: { from: '/its/path', page: 'book a table' }`: the page
  * shows "Log in to book a table." and the login goes back to `from`.
  */
 import { useRef, useState } from 'react';
@@ -41,7 +41,7 @@ export function LoginPage() {
     <AuthLayout
       topLink={
         <>
-          No account? <Link to="/signup">Sign up</Link>
+          No account? <Link to="/signup" state={state}>Sign up</Link>
         </>
       }
     >
@@ -84,7 +84,7 @@ export function LoginPage() {
       </form>
 
       <p className={styles.after}>
-        New here? <Link to="/signup">Create a hiker account</Link>
+        New here? <Link to="/signup" state={state}>Create a hiker account</Link>
       </p>
     </AuthLayout>
   );

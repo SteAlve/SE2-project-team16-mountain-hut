@@ -94,6 +94,10 @@ The goal of the test is to check by hand that login, sign-up and logout behave a
 | R-12 | The active page | Click each link in the navbar | The current page is highlighted | ✅ |
 | R-13 | Logged-out navbar | Logged out, open `/` | Navbar: logo, *The hut*, *Log in* | ✅ |
 
+> **Changed after this test (PR #30, Book a table).** `/book` is now public, so R-01 and R-08 no longer describe the app; they have to be run again on the new commit:
+> - **R-01:** logged out, open `/book`: the page opens and shows the free seats. Choose a day, people and a time and press *Review booking*: sent to `/login` with the blue note "Log in to book a table." R-02 and R-05 start from there and do not change.
+> - **R-08:** logged in as the warden, open `/book`: the page stays open, with the blue note "Only hikers can book a table. You are logged in as a warden." and *Review booking* disabled ("Only hikers can book.").
+
 ## Logout
 
 | # | Scenario | Steps | Expected | Result |

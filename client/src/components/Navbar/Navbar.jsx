@@ -16,7 +16,7 @@ import styles from './Navbar.module.css';
 const initials = ({ firstName, lastName }) => `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
 
 function Avatar({ user, className }) {
-  // The manager's avatar is filled, so the role stands out.
+  // The warden's avatar is filled, so the role stands out.
   const strong = user.role === ROLES.WARDEN ? styles.avatarStrong : '';
   return (
     <span className={`${styles.avatar} ${strong} ${className}`} aria-hidden="true">

@@ -1,9 +1,10 @@
 /**
  * SIGN UP: only hikers create an account here (docs/mockups/login, screens 5-6).
- * The hiker is logged in straight away and goes to Book a table.
+ * The hiker is logged in straight away and goes to Book a table, or back to `state.from` when the
+ * login page sent them here (the booking choices travel in it).
  */
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { AuthLayout } from '../../components/AuthLayout/AuthLayout.jsx';
 import { TextField } from '../../components/TextField/TextField.jsx';
@@ -21,6 +22,7 @@ const EMPTY_FORM = {
 
 export function SignUpPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { submit, submitting, fieldErrors, alert, clearFieldError } = useSignUpForm();
   const [form, setForm] = useState(EMPTY_FORM);
   const formRef = useRef(null);
@@ -41,7 +43,7 @@ export function SignUpPage() {
   const emailError =
     fieldErrors.email === EMAIL_TAKEN ? (
       <>
-        An account with this email already exists. <Link to="/login">Log in</Link> instead.
+        An account with this email already exists. <Link to="/login" state={state}>Log in</Link> instead.
       </>
     ) : (
       fieldErrors.email
@@ -51,7 +53,7 @@ export function SignUpPage() {
     event.preventDefault();
     const result = await submit(form);
     if (result.user) {
-      navigate('/book', { replace: true });
+      navigate(state?.from ?? '/book', { replace: true });
     } else if (result.errors) {
       // Focusing the first wrong field also scrolls the page to it.
       focusField(Object.keys(result.errors)[0]);
@@ -65,7 +67,7 @@ export function SignUpPage() {
       compact
       topLink={
         <>
-          Already registered? <Link to="/login">Log in</Link>
+          Already registered? <Link to="/login" state={state}>Log in</Link>
         </>
       }
     >

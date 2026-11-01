@@ -6,7 +6,7 @@
  *   fieldErrors    { field: message } to show under the fields; email may be EMAIL_TAKEN
  *   alert          message to show on top of the form, or null
  */
-import { useCallback, useRef, useState } from 'react';
+import { useState } from 'react';
 import { register as registerRequest } from '../api/auth.js';
 import { hasErrors, validateSignUp } from '../lib/validateAuthForms.js';
 import { useAuthRequest } from './useAuthRequest.js';
@@ -16,17 +16,7 @@ export const EMAIL_TAKEN = 'EMAIL_TAKEN';
 const SERVER_DOWN = 'Something went wrong on our side. Try again in a minute.';
 
 export function useSignUpForm() {
-  // useAuthRequest resolves to null on failure: keep the error to tell a 409 from the rest.
-  const failure = useRef(null);
-  const call = useCallback(async (account) => {
-    try {
-      return await registerRequest(account);
-    } catch (error) {
-      failure.current = error;
-      throw error;
-    }
-  }, []);
-  const { run, isPending } = useAuthRequest(call);
+  const { run, isPending, lastError } = useAuthRequest(registerRequest);
   const [fieldErrors, setFieldErrors] = useState({});
   const [alert, setAlert] = useState(null);
 
@@ -45,7 +35,7 @@ export function useSignUpForm() {
     });
     if (user) return { user };
 
-    const status = failure.current?.status;
+    const status = lastError.current?.status;
     if (status === 409) setFieldErrors({ email: EMAIL_TAKEN });
     else setAlert(SERVER_DOWN);
     return { status };

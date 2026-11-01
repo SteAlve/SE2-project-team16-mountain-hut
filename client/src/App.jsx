@@ -7,9 +7,9 @@
  */
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './hooks/AuthProvider.js';
-import { ROLES, STAFF_ROLES } from './lib/roles.js';
+import { STAFF_ROLES } from './lib/roles.js';
 import { AppLayout } from './pages/AppLayout/AppLayout.jsx';
-import { BookPage } from './pages/BookPage/BookPage.jsx';
+import { BookTablePage } from './pages/BookTablePage/BookTablePage.jsx';
 import { HomePage } from './pages/HomePage/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage/LoginPage.jsx';
 import { RequireRole } from './pages/RequireRole.jsx';
@@ -26,14 +26,8 @@ export default function App() {
           <Route path="/signup" element={<SignUpPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
-            <Route
-              path="/book"
-              element={
-                <RequireRole roles={[ROLES.HIKER]} page="book a table">
-                  <BookPage />
-                </RequireRole>
-              }
-            />
+            {/* Public: anyone sees the availability; the page itself asks to log in to book. */}
+            <Route path="/book" element={<BookTablePage />} />
             <Route
               path="/slots"
               element={
