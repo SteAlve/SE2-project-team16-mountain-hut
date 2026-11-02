@@ -15,6 +15,8 @@
  *   SESSION_TTL_HOURS  how long a login lasts (default 24)
  *   COOKIE_SECURE      'true' only when the site is served over HTTPS: a Secure cookie is
  *                      dropped by the browser on plain http, so the login would not work
+ *   CLIENT_DIR         the folder of the built client, which the server then serves too (set in
+ *                      the Docker image). Without it the server is only the API
  *
  * The database URL may be missing: the error comes when something really connects (dao/db.js),
  * so the tests that do not need a database still run.
@@ -52,4 +54,5 @@ export const config = {
   sessionCookieName: 'sid',
   sessionTtlMs: ttlHours * 60 * 60 * 1000,
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  clientDir: process.env.CLIENT_DIR,
 };
