@@ -5,7 +5,7 @@ const { close, inTransaction, run } = await import('../../server/src/dao/db.js')
 
 const password = 'quota-e2e-2026';
 let fixture;
-
+//
 const longDayLabel = (date) => {
   const value = new Date(`${date}T12:00:00Z`);
   const parts = new Intl.DateTimeFormat('en-GB', {
