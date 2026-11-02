@@ -1,8 +1,17 @@
 # Booking test coverage (MH-01)
 
-This report covers server unit, database and API tests for MH-01. Browser/E2E tests
-are outside this task's scope. It does not certify later stories or the team's
-YouTrack tasks, which were not accessible during review.
+This report documents the server tests for **MH-01 — Book a table**, including
+the availability checks used by the booking flow. It covers unit and integration
+tests. Browser/E2E tests are outside its scope.
+
+## Test levels
+
+- **Unit tests:** booking deadlines, seating allocation, input validation and use
+  cases with simulated dependencies.
+- **Database integration tests:** DAO operations against PostgreSQL, persistence,
+  constraints, availability calculations and concurrent booking requests.
+- **API integration tests:** HTTP requests through the Express application using
+  Supertest, with the real use cases and PostgreSQL database.
 
 ## Requirement mapping
 
@@ -13,7 +22,7 @@ YouTrack tasks, which were not accessible during review.
 | Keep a party together; best fit; split across the fewest tables | Domain seating tests, use-case tests, API tests |
 | Tables shared between parties | DAO tests and concurrent API bookings |
 | Two-hour deadline, including its exact boundary | Domain and use-case tests; closed-slot API test with a fixed clock |
-| One active booking per hiker per slot | DAO, database constraint and API tests, including concurrent requests by the same hiker |
+| One active booking per hiker per slot | DAO, database constraint and API tests, including simultaneous requests by the same hiker |
 | Independent availability when slots reuse tables | DAO test using one table set for two slots and the same hiker |
 | Staff cannot book | Employee and warden use-case checks, employee API refusal |
 | Preview makes no booking; confirmation persists the party | Use-case and API tests, database assertions |
@@ -22,36 +31,59 @@ YouTrack tasks, which were not accessible during review.
 | A party may occupy exactly all available seats | Domain, use-case and API exact-fit tests; confirmed by PO issue #12 |
 | No fixed maximum party size beyond available capacity | API test accepting a party of 100; confirmed by PO issue #27 |
 
+## Test design
+
+Seating tests check that every party member receives a seat, each table appears
+only once, and no assignment exceeds the available capacity. Generated layouts
+use a fixed seed and include full tables and non-consecutive table IDs. Optimal
+assignments are compared against all possible table subsets for those layouts.
+
+Tests accept equivalent optimal choices without requiring a particular table ID.
+Confirmation tests still require the saved assignment to match the actual seating
+preview. The closed-slot API test uses a fixed clock to avoid failures caused by
+the time of execution.
+
+## Product Owner clarifications
+
+- [Issue #12](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/12#issuecomment-6367725760):
+  the Product Owner confirms that six people can use six free seats spread over
+  three tables of two. Exact-fit bookings (`partySize <= freeSeats`) are therefore
+  accepted, consistently with the example in MH-04.
+- [Issue #27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27#issuecomment-6480843141):
+  the Product Owner specifies no fixed party-size limit. A booking for 100 people
+  is accepted when 100 seats are available. This clarification concerns party
+  size, not the advance booking window.
+
 ## Running the checks
 
-In `server`: `npm run test:coverage` and `npm run lint`.
-Coverage includes every JavaScript module under `server/src`, including startup,
-configuration, routes, controllers and DTOs. It does not measure browser code.
+Configure `TEST_DATABASE_URL` in `server/.env` to use a dedicated PostgreSQL test
+database. From `server`, run:
 
-Validation: 189 server tests passed across 20 files; server lint passed.
-Server coverage: 96.21% lines and 93.82% branches.
+```bash
+npm run test:coverage
+npm run lint
+```
 
-Seating checks accept equivalent optimal table choices. Split confirmation tests
-derive the expected assignment from the actual preview instead of assuming which
-equally suitable table receives the extra person. Confirmation must still preserve
-the preview exactly. Generated layouts also check unique table IDs, integer seat
-counts, full tables, non-consecutive IDs and preservation of the input layout.
-API test helpers assert successful login and preview responses before testing bookings.
+The test setup applies migrations automatically. Tests create and remove data,
+so the test database must not contain data that needs to be preserved.
 
-## Confirmed Product Owner clarifications
+## Validation results
 
-Although MH-01 uses "smaller than", the Product Owner explicitly confirms in
-[issue #12](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/12#issuecomment-6367725760)
-that a party of six is available when six free seats are spread over three tables
-of two. This is also recorded in MH-04. The exact-fit tests
-(`partySize <= freeSeats`) are supported by this clarification and do not require
-further confirmation.
+The latest validation completed with **189 passing tests across 20 files** and
+**no lint errors**.
 
-In [issue #27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27#issuecomment-6480843141),
-the Product Owner answers "No limit" to the question about minimum and maximum
-party size. There is no fixed maximum below the available capacity, so the API
-test accepting 100 people when 100 seats are available is valid. This answer
-concerns party size, not how far in advance a booking can be made.
+| Coverage metric | Result |
+| --- | ---: |
+| Statements | 96.23% |
+| Branches | 93.82% |
+| Functions | 97.18% |
+| Lines | 96.21% |
 
-Sources: [MH-01](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/blob/main/stories/MH-01.md),
-[MH-04](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/blob/main/stories/MH-04.md).
+Coverage includes all JavaScript modules under `server/src`, including startup,
+configuration, routes, controllers and DTOs. These figures describe the full
+server suite, not only the tests added for MH-01. They do not measure browser code.
+Uncovered code includes server startup and some configuration and database error
+handling paths.
+
+Requirements: [MH-01](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/blob/main/stories/MH-01.md)
+and [MH-04](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/blob/main/stories/MH-04.md).
