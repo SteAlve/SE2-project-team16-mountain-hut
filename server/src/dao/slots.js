@@ -1,4 +1,4 @@
-import { all, get } from './db.js';
+import { all, get, run } from './db.js';
 
 // Every slot from that date on (the day included), full or without tables too, with the free seats
 // of its tables (0 when it has no tables). Ordered by day and time.
@@ -78,3 +78,42 @@ export const findById = (slotId) => get(
   `,
   [slotId],
 );
+
+// Every slot from a day to another, both included, in order of day and time (the staff view: slots
+// without tables too). Only the slot: its table set is read with the table set dao.
+export const findBetween = (from, to) => all(
+  `
+    SELECT
+      id AS "slotId",
+      service_date AS "serviceDate",
+      starts_at AS "startsAt",
+      ends_at AS "endsAt",
+      table_set_id AS "tableSetId"
+    FROM slot
+    WHERE service_date BETWEEN $1 AND $2
+    ORDER BY service_date, starts_at
+  `,
+  [from, to],
+);
+
+// Creates a slot. Returns its id, or null when a slot starting at that time already exists that day
+// (the unique constraint decides).
+export const insert = ({ serviceDate, startsAt, endsAt, tableSetId }) => get(
+  `
+    INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT ON CONSTRAINT slot_unique_start DO NOTHING
+    RETURNING id AS "slotId"
+  `,
+  [serviceDate, startsAt, endsAt, tableSetId],
+);
+
+// Gives the table set to a slot that has none. Returns true when it did, false when the slot has a
+// table set already (the condition is in the UPDATE, so two requests cannot both win).
+export const assignTableSet = async (slotId, tableSetId) => {
+  const result = await run(
+    'UPDATE slot SET table_set_id = $2 WHERE id = $1 AND table_set_id IS NULL',
+    [slotId, tableSetId],
+  );
+  return result.rowCount === 1;
+};
