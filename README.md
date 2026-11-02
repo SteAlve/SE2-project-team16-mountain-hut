@@ -79,6 +79,7 @@ The server reads all its settings in one place, `server/src/config.js`. A settin
 | `SMTP_PORT` | `587` | The port of the email service. |
 | `SMTP_USER`, `SMTP_PASSWORD` | none | The login of the email service, if it asks for one. |
 | `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails. |
+| `CLIENT_DIR` | none | The folder of the built client, which the server then serves too. The Docker image sets it. |
 
 When `NODE_ENV` is `test` (vitest sets it by itself) the server code uses `TEST_DATABASE_URL` instead of `DATABASE_URL`, so a test never touches your data.
 
@@ -107,6 +108,26 @@ Run these commands in `server`. They use the database of `DATABASE_URL`:
 | Employee | `oliver.wilson@quota.example` |
 
 This password is public: use the seed only for development and demos, never on a real deployment.
+
+## Run with Docker
+
+The whole app runs on a machine that has only Docker. From the root of the repository:
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:3001. The first start takes a few minutes, because it builds the image. The migrations run by themselves every time the app starts.
+
+To add the demo staff accounts and slots, with the app running, in another terminal:
+
+```bash
+docker compose exec app node scripts/seed.js
+```
+
+The password of the database is `postgres`. To use another one, set `POSTGRES_PASSWORD` before the first start, with any characters: it does not go in a URL, so nothing needs encoding. PostgreSQL reads it only when it creates the data, so to change it later use `docker compose down -v` first, which deletes the data.
+
+`docker compose down` stops the app and keeps the data. `docker compose down -v` also deletes the data. If port 3001 is taken, start it with `PORT=8080 docker compose up --build`.
 
 ## Tests
 
@@ -291,7 +312,7 @@ The workflows are in [`.github/workflows`](.github/workflows).
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the branch flow |
 | `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
-| `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `deploy.yml` also builds the client |
+| `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `qa.yml` and `deploy.yml` also publish the Docker image, tagged `qa` and `latest`, and `deploy.yml` builds the client |
 
 To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
 

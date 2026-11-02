@@ -112,6 +112,13 @@ app.use('/api', bookingsRouter);
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
 
+// In Docker the server also serves the built client. Any other page gets index.html, so the
+// router of the client works when a page is reloaded or opened from a link.
+if (config.clientDir) {
+  app.use(express.static(config.clientDir));
+  app.get('/{*path}', (_req, res) => res.sendFile('index.html', { root: config.clientDir }));
+}
+
 // 5. errors
 const isBadJson = (err) => err.type === 'entity.parse.failed';
 

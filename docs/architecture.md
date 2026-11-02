@@ -67,6 +67,7 @@ The code is in `server/src`.
 | `SMTP_PORT` | `587` | The port of the email service |
 | `SMTP_USER`, `SMTP_PASSWORD` | — | The login of the email service, if it asks for one |
 | `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails |
+| `CLIENT_DIR` | — | The folder of the built client, which the server then serves too; set in the Docker image |
 
 `dao/db.js` is the only module that imports the PostgreSQL driver. It takes the database URL from `config.js` and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
 
@@ -241,13 +242,14 @@ The web client runs in the browser of each device: the visitor's, the employee's
 | The database | `DATABASE_URL` |
 | Time zone of the hut, session length, `Secure` cookie | `HUT_TIME_ZONE`, `SESSION_TTL_HOURS`, `COOKIE_SECURE` (set `COOKIE_SECURE=true` behind HTTPS) |
 | Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` |
-| Creating the tables | a migration command run before the server starts |
+| Serving the client | `CLIENT_DIR`, set in the image |
+| Creating the tables | the container runs the migrations before it starts the server |
 | Stopping | the server closes cleanly on `SIGTERM` |
 | Knowing that it is ready | Compose waits for the database with `pg_isready` and for the API on its port |
 
 **In development Docker is not needed.** Copy `server/.env.example` to `server/.env`, create the database with `npm run db:create`, apply the schema with `npm run db:migrate` (and `npm run db:seed` for the demo data). The server runs with `npm run dev` and the client with the Vite dev server, which forwards `/api` to the server.
 
-The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`.
+The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`. The commands are in the [README](../README.md#run-with-docker).
 
 ## 7. CI/CD pipelines
 
@@ -264,12 +266,12 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
 | `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
-| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa` |
+| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
-| `docker.yml` | called by `deploy.yml`, after its checks | Builds the Docker image from the verified commit and publishes it |
+| `docker.yml` | called by `qa.yml` and `deploy.yml`, after their checks | Builds the Docker image from the verified commit and publishes it, tagged `qa` or `latest` |
 
 **Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
 **Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
-**How Docker fits.** The image is built and published by its own workflow, called only on `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry.
+**How Docker fits.** The image is built and published by its own workflow, called on `qa` and `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry: `qa` for the demos, `latest` for the release.
