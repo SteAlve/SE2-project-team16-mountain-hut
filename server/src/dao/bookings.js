@@ -58,6 +58,28 @@ export const hasActiveBooking = async (hikerId, slotId) => {
   return row !== null;
 };
 
+// What the confirmation email needs (MH-03): the hiker and the slot of the booking. No table
+// numbers: the product owner does not want them in the email (issue #24).
+// Null when the booking does not exist.
+export const findConfirmationDetails = (bookingId) => get(
+  `
+    SELECT
+      booking.id AS "bookingId",
+      app_user.first_name AS "firstName",
+      app_user.last_name AS "lastName",
+      app_user.email,
+      slot.service_date::TEXT AS "date",
+      slot.starts_at::TEXT AS "startsAt",
+      slot.ends_at::TEXT AS "endsAt",
+      booking.party_size AS "partySize"
+    FROM booking
+    JOIN app_user ON app_user.id = booking.hiker_id
+    JOIN slot ON slot.id = booking.slot_id
+    WHERE booking.id = $1
+  `,
+  [bookingId],
+);
+
 export const createWithTableAssignments = async ({
   hikerId,
   slotId,

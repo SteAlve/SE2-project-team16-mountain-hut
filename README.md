@@ -75,6 +75,10 @@ The server reads all its settings in one place, `server/src/config.js`. A settin
 | `PORT` | `3001` | The port of the server. |
 | `SESSION_TTL_HOURS` | `24` | How long a login session lasts. |
 | `COOKIE_SECURE` | `false` | Set to `true` when the site is served over HTTPS, so the session cookie is sent only on HTTPS. |
+| `SMTP_HOST` | none | The email service. Without it no email is sent: the server only writes it to the log. |
+| `SMTP_PORT` | `587` | The port of the email service. |
+| `SMTP_USER`, `SMTP_PASSWORD` | none | The login of the email service, if it asks for one. |
+| `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails. |
 | `CLIENT_DIR` | none | The folder of the built client, which the server then serves too. The Docker image sets it. |
 
 When `NODE_ENV` is `test` (vitest sets it by itself) the server code uses `TEST_DATABASE_URL` instead of `DATABASE_URL`, so a test never touches your data.
