@@ -6,7 +6,9 @@ services:
   app:
     build: .
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/mountain_hut
+      # The password stays out of the URL: there, characters like # would need encoding.
+      DATABASE_URL: postgresql://postgres@db:5432/mountain_hut
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "${PORT:-3001}:3001"
     depends_on:

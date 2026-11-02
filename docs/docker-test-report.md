@@ -2,16 +2,16 @@
 
 The goal of the test is to check that the Docker setup does what [the architecture](architecture.md#6-docker) says and what [MH-75](https://polito-se2-26-16.youtrack.cloud/issue/MH-75) asks: `docker compose up` starts the whole app on a machine that has only Docker.
 
-All the scenarios run so far behaved as expected. The test on a second PC and the first run of the publishing workflow are still open (see [Not tested yet](#not-tested-yet)).
+All the scenarios behaved as expected, on two machines. The first run of the publishing workflow is still open (see [Not tested yet](#not-tested-yet)).
 
 | | |
 |---|---|
-| Tester | Roussi Hatim |
+| Testers | Roussi Hatim (Mac), Vitarelli Antonio (Windows) |
 | Date | 02/11/2026 |
 | Branch and commit | `feature/MH-75-docker`, 027ad7d |
 | Pull Request | [#37](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/37) |
-| Machine | Mac with an ARM processor, no PostgreSQL installed |
-| Docker | Docker Desktop, Engine 29.9.2, Compose v5.6.1 |
+| Machines | Mac with an ARM processor, no PostgreSQL installed; Windows PC |
+| Docker on the Mac | Docker Desktop, Engine 29.9.2, Compose v5.6.1 |
 | Images | `node:22-alpine`, `postgres:16-alpine` |
 
 ## How it was tested
@@ -21,7 +21,7 @@ All the scenarios run so far behaved as expected. The test on a second PC and th
 - **In the browser:** the steps of the [README](../README.md#run-with-docker) were followed by hand, on http://localhost:3001.
 - **After the test:** `docker compose down -v`, so no test data stayed behind.
 
-The scenarios ran before the commit. The commit also has the publishing of the `qa` image, which changes only the workflows and the documentation, not the image.
+The scenarios ran on the Mac before the commit. The commit also has the publishing of the `qa` image, which changes only the workflows and the documentation, not the image. Antonio then ran the steps of the Pull Request on Windows, on commit 412ef5e. D-16 to D-18 ran on the Mac, after the fix of the password.
 
 ## Start and contents of the image
 
@@ -53,6 +53,20 @@ The scenarios ran before the commit. The commit also has the publishing of the `
 | D-14 | Migrations at the second start | `docker compose logs app` after D-13 | `Database already up to date.` | ✅ |
 | D-15 | Clean stop | `docker compose stop app`, then the exit code of the container | Stops at once, with exit code 0 | ✅ 0.2 s, exit code 0 |
 
+## Settings
+
+| # | Scenario | Steps | Expected | Result |
+|---|---|---|---|---|
+| D-16 | A password with reserved characters | `POSTGRES_PASSWORD='pa#ss/w@rd:1?&%$x y'`, then `docker compose up --build`, the seed and a sign-up | The app connects; sign-up answers `201` | ✅ |
+| D-17 | The default password | No `POSTGRES_PASSWORD` | The app connects | ✅ |
+| D-18 | Another port | `PORT=3077` | The app answers on port 3077 | ✅ |
+
+## The second PC
+
+| Machine | Tester | Result |
+|---|---|---|
+| Windows PC | Vitarelli Antonio | ✅ All the scenarios pass with the standard configuration ([comment on #37](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/37)) |
+
 ## CI/CD
 
 | # | Check | Result |
@@ -63,17 +77,16 @@ The scenarios ran before the commit. The commit also has the publishing of the `
 
 ## Not tested yet
 
-- **A second PC.** The course asks for Docker to be tested on more than one PC. Only one machine has run it so far, an ARM Mac, so a Windows or Intel machine is the most useful.
 - **Publishing the image.** `docker.yml` runs only after a merge into `qa` or `main`, so it cannot run on a Pull Request. The first merge into `qa` is its first real test: the `qa` image has to appear in GitHub's container registry.
-- **Another port.** `PORT=8080 docker compose up --build`, written in the README, was not tried.
 - **Email in Docker.** The mailer (MH-26) is not merged yet, so the Compose file has no SMTP settings and no Mailpit. They are added with it.
 
 ## Findings
 
+- **A password with reserved characters stopped the app from connecting (fixed).** Antonio found that a `#` in the password broke `DATABASE_URL`. Encoding it was not enough, because the same value also goes to PostgreSQL, not encoded. The password is now outside the URL, in `PGPASSWORD`, which the driver reads by itself, so it can have any character (D-16).
 - **Containers left running keep answering on port 3001.** This happened during the test of the mailer: the containers were still running, a server started by hand printed `Server listening`, but the Vite client reached the app in Docker, with no error. The booking went to the database in Docker. Run `docker compose down` before going back to development without Docker.
 
 ## Result
 
-On the machine tested, `docker compose up --build` starts the whole app with only Docker: it builds, applies the migrations, serves the client and the API, keeps the data across a restart and stops cleanly.
+`docker compose up --build` starts the whole app with only Docker, on a Mac and on a Windows PC: it builds, applies the migrations, serves the client and the API, keeps the data across a restart and stops cleanly.
 
-MH-75 stays open until a second PC confirms it. The publishing of the image is confirmed by the first merge into `qa`.
+The publishing of the image is confirmed by the first merge into `qa`.

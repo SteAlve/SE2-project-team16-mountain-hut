@@ -121,6 +121,8 @@ To add the demo staff accounts and slots, with the app running, in another termi
 docker compose exec app node scripts/seed.js
 ```
 
+The password of the database is `postgres`. To use another one, set `POSTGRES_PASSWORD` before the first start, with any characters: it does not go in a URL, so nothing needs encoding. PostgreSQL reads it only when it creates the data, so to change it later use `docker compose down -v` first, which deletes the data.
+
 `docker compose down` stops the app and keeps the data. `docker compose down -v` also deletes the data. If port 3001 is taken, start it with `PORT=8080 docker compose up --build`.
 
 ## Tests
