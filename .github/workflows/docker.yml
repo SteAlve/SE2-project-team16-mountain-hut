@@ -1,0 +1,51 @@
+# Docker image
+#
+# Called by qa.yml and deploy.yml after the checks of the commit passed, so what is published is what
+# was tested. Builds the image from the Dockerfile and publishes it to GitHub's container registry,
+# tagged with the commit and with the tag of the branch: qa on qa, latest on main.
+
+name: Docker image
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag of the branch
+        type: string
+        required: true
+
+jobs:
+  publish:
+    name: Build and publish the image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Log in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The registry accepts only lowercase names: the action writes them so.
+      - name: Choose the name and the tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            type=raw,value=${{ inputs.tag }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
