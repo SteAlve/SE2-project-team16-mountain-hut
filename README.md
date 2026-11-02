@@ -111,6 +111,13 @@ This password is public: use the seed only for development and demos, never on a
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
 
+To run only the server use-case unit tests, without PostgreSQL:
+
+```powershell
+cd server
+npm run test:unit
+```
+
 The server tests that use PostgreSQL connect to `TEST_DATABASE_URL`, so set it in `server/.env`. Create that database once, and then run the tests: the tests apply the migrations by themselves, so there is no need for `db:migrate`.
 
 ```powershell

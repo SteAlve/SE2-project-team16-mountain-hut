@@ -15,7 +15,8 @@
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
     "start": "node src/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.js"
   },
   "dependencies": {
     "express": "^5.3.0",
