@@ -58,7 +58,8 @@ export const hasActiveBooking = async (hikerId, slotId) => {
   return row !== null;
 };
 
-// What the confirmation email needs (MH-03): the hiker, the slot and the tables of the booking.
+// What the confirmation email needs (MH-03): the hiker and the slot of the booking. No table
+// numbers: the product owner does not want them in the email (issue #24).
 // Null when the booking does not exist.
 export const findConfirmationDetails = (bookingId) => get(
   `
@@ -70,18 +71,11 @@ export const findConfirmationDetails = (bookingId) => get(
       slot.service_date::TEXT AS "date",
       slot.starts_at::TEXT AS "startsAt",
       slot.ends_at::TEXT AS "endsAt",
-      booking.party_size AS "partySize",
-      json_agg(
-        json_build_object('tableNumber', hut_table.table_number, 'seats', booking_table.seat_count)
-        ORDER BY hut_table.table_number
-      ) AS tables
+      booking.party_size AS "partySize"
     FROM booking
     JOIN app_user ON app_user.id = booking.hiker_id
     JOIN slot ON slot.id = booking.slot_id
-    JOIN booking_table ON booking_table.booking_id = booking.id
-    JOIN hut_table ON hut_table.id = booking_table.hut_table_id
     WHERE booking.id = $1
-    GROUP BY booking.id, app_user.id, slot.id
   `,
   [bookingId],
 );

@@ -51,8 +51,8 @@ try {
 
 const smtpPort = Number(process.env.SMTP_PORT ?? 587);
 
-if (!Number.isInteger(smtpPort) || smtpPort <= 0) {
-  throw new Error('SMTP_PORT must be a port number.');
+if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+  throw new Error('SMTP_PORT must be a port number, from 1 to 65535.');
 }
 
 const databaseUrlVariable = process.env.NODE_ENV === 'test' ? 'TEST_DATABASE_URL' : 'DATABASE_URL';

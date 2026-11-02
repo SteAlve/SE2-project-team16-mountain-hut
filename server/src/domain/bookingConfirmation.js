@@ -6,6 +6,7 @@
  * uses tables and inline styles because that is what email apps support; the colours are the
  * tokens of the client (client/src/index.css).
  *
+ * What it contains comes from the product owner (issue #24). Table numbers are left out on purpose.
  * The party requirements are not in the email yet: they arrive with MH-05.
  */
 const MONTHS = [
@@ -31,12 +32,6 @@ const day = (date) => {
 
 const reference = (bookingId) => `QUOTA-${String(bookingId).padStart(5, '0')}`;
 
-const seats = (count) => `${count} ${count === 1 ? 'seat' : 'seats'}`;
-
-const tableList = (tables) => tables
-  .map(({ tableNumber, seats: count }) => `Table ${tableNumber} (${seats(count)})`)
-  .join(', ');
-
 // A name is typed by the hiker, so it must never be read as HTML.
 const escapeHtml = (value) => value
   .replaceAll('&', '&amp;')
@@ -53,7 +48,7 @@ const row = (label, value) => `
 
 const blazeBar = (color) => `<td width="28" height="6" style="background:${color};font-size:0;line-height:0;">&nbsp;</td>`;
 
-const toHtml = ({ name, ref, date, slotTime, partySize, tables }) => `<!doctype html>
+const toHtml = ({ name, ref, date, slotTime, partySize }) => `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:${MIST};">
@@ -80,7 +75,6 @@ const toHtml = ({ name, ref, date, slotTime, partySize, tables }) => `<!doctype 
                 ${row('Date', date)}
                 ${row('Time', slotTime)}
                 ${row('Party size', partySize)}
-                ${row('Tables', tables)}
               </table>
               <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">See you at the hut!</p>
             </td>
@@ -101,7 +95,6 @@ export const bookingConfirmationEmail = ({
   startsAt,
   endsAt,
   partySize,
-  tables,
 }) => {
   const name = `${firstName} ${lastName}`;
   const ref = reference(bookingId);
@@ -120,7 +113,6 @@ export const bookingConfirmationEmail = ({
       `Date: ${day(date)}`,
       `Time: ${slotTime}`,
       `Party size: ${partySize}`,
-      `Tables: ${tableList(tables)}`,
       '',
       'See you at the hut!',
     ].join('\n'),
@@ -130,7 +122,6 @@ export const bookingConfirmationEmail = ({
       date: day(date),
       slotTime,
       partySize,
-      tables: tableList(tables),
     }),
   };
 };
