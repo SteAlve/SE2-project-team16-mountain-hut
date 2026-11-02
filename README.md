@@ -127,6 +127,8 @@ docker compose exec app node scripts/seed.js
 
 The password of the database is `postgres`. To use another one, set `POSTGRES_PASSWORD` before the first start, with any characters: it does not go in a URL, so nothing needs encoding. PostgreSQL reads it only when it creates the data, so to change it later use `docker compose down -v` first, which deletes the data.
 
+Emails do not leave your machine: **Mailpit** keeps them, and you can read them on http://localhost:8025. If that port is taken, set `MAILPIT_PORT`. To use a real email service, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` before the start.
+
 `docker compose down` stops the app and keeps the data. `docker compose down -v` also deletes the data. If port 3001 is taken, start it with `PORT=8080 docker compose up --build`.
 
 ## Tests

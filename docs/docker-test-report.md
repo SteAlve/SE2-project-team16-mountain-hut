@@ -60,6 +60,7 @@ The scenarios ran on the Mac before the commit. The commit also has the publishi
 | D-16 | A password with reserved characters | `POSTGRES_PASSWORD='pa#ss/w@rd:1?&%$x y'`, then `docker compose up --build`, the seed and a sign-up | The app connects; sign-up answers `201` | ✅ |
 | D-17 | The default password | No `POSTGRES_PASSWORD` | The app connects | ✅ |
 | D-18 | Another port | `PORT=3077` | The app answers on port 3077 | ✅ |
+| D-19 | Email in Docker | Book a table, then read the email in Mailpit on port 8025 and through its API | The booking answers `201`, and the email is there with the reference, name, date, time and party size, and no table numbers | ✅ |
 
 ## The second PC
 
@@ -78,7 +79,6 @@ The scenarios ran on the Mac before the commit. The commit also has the publishi
 ## Not tested yet
 
 - **Publishing the image.** `docker.yml` runs only after a merge into `qa` or `main`, so it cannot run on a Pull Request. The first merge into `qa` is its first real test: the `qa` image has to appear in GitHub's container registry.
-- **Email in Docker.** The mailer (MH-26) is not merged yet, so the Compose file has no SMTP settings and no Mailpit. They are added with it.
 
 ## Findings
 

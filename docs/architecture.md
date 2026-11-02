@@ -227,12 +227,13 @@ Not designed yet, to be decided when they are needed: a password reset and a lim
 
 ![Deployment](diagrams/structurizr-Deployment.png)
 
-**Two containers**, started together with Docker Compose on one host:
+**Three containers**, started together with Docker Compose on one host:
 
 - **`app`:** the API application. The image is built in two stages: the first builds the client with Vite, the second contains the server with its production dependencies and the built client. Express serves `/api` and the static client, and answers any other path with `index.html`, so the router of the client works.
 - **`db`:** the official PostgreSQL image, with a named volume so the data survives when the container is replaced.
+- **`mailpit`:** a test email service. It keeps every email and shows them on port `8025`, so no email leaves the machine. The end-to-end tests can read them through its API.
 
-The web client runs in the browser of each device: the visitor's, the employee's and the warden's. They all reach only the `app` container. The email service is outside: the API reaches it with SMTP settings given as environment variables.
+The web client runs in the browser of each device: the visitor's, the employee's and the warden's. They all reach only the `app` container. With a real email service, the API reaches it outside the host with the SMTP settings given as environment variables.
 
 **What the code offers to Docker**
 
