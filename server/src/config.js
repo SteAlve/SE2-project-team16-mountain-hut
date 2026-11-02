@@ -15,6 +15,11 @@
  *   SESSION_TTL_HOURS  how long a login lasts (default 24)
  *   COOKIE_SECURE      'true' only when the site is served over HTTPS: a Secure cookie is
  *                      dropped by the browser on plain http, so the login would not work
+ *   SMTP_HOST          the email service. Without it no email is sent: mailer.js only logs them
+ *   SMTP_PORT          its port (default 587)
+ *   SMTP_USER          the user of the email service, if it asks for one
+ *   SMTP_PASSWORD      and the password
+ *   MAIL_FROM          the sender of the emails (default QUOTA <no-reply@quota.example>)
  *
  * The database URL may be missing: the error comes when something really connects (dao/db.js),
  * so the tests that do not need a database still run.
@@ -42,6 +47,12 @@ try {
   throw new Error('HUT_TIME_ZONE must be a valid time zone name, for example Europe/Rome.');
 }
 
+const smtpPort = Number(process.env.SMTP_PORT ?? 587);
+
+if (!Number.isInteger(smtpPort) || smtpPort <= 0) {
+  throw new Error('SMTP_PORT must be a port number.');
+}
+
 const databaseUrlVariable = process.env.NODE_ENV === 'test' ? 'TEST_DATABASE_URL' : 'DATABASE_URL';
 
 export const config = {
@@ -52,4 +63,11 @@ export const config = {
   sessionCookieName: 'sid',
   sessionTtlMs: ttlHours * 60 * 60 * 1000,
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  mail: {
+    host: process.env.SMTP_HOST,
+    port: smtpPort,
+    user: process.env.SMTP_USER,
+    password: process.env.SMTP_PASSWORD,
+    from: process.env.MAIL_FROM ?? 'QUOTA <no-reply@quota.example>',
+  },
 };

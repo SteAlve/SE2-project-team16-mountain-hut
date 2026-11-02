@@ -63,6 +63,10 @@ The code is in `server/src`.
 | `HUT_TIME_ZONE` | `Europe/Rome` | The time zone of the hut (an IANA name, checked at start-up) |
 | `SESSION_TTL_HOURS` | `24` | How long a login lasts |
 | `COOKIE_SECURE` | `false` | Sets `Secure` on the session cookie; `true` when the site is served over HTTPS |
+| `SMTP_HOST` | — | The email service. Without it no email is sent: `mailer.js` only writes it to the log |
+| `SMTP_PORT` | `587` | The port of the email service |
+| `SMTP_USER`, `SMTP_PASSWORD` | — | The login of the email service, if it asks for one |
+| `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails |
 
 `dao/db.js` is the only module that imports the PostgreSQL driver. It takes the database URL from `config.js` and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
 
@@ -107,15 +111,14 @@ A booking takes two calls. First the client asks `GET /api/slots/:slotId/seating
 
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in user).
 2. The controller validates the body `{ slotId, partySize, tables: [{ tableNumber, seats }] }` (the slot already says the day and the time, so there is no date) with the DTO and calls the use case with the user and the data. Invalid input gives `400`: a missing or empty `tables`, a table twice, or seats that do not add up to `partySize`.
-3. The use case checks that the user is a hiker (`403`), then:
+3. The `createBooking` use case checks that the user is a hiker (`403`), then:
    - it reads the slot (a missing slot gives `404`, like the preview) and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a slot without tables or less than 2 hours to the meal give `422`;
    - it checks that the hiker has no active booking for the slot (`422`);
    - it reads the tables of the slot that have free seats and asks the domain where the party would sit now (the same function as the preview); if the party does not fit any more the answer is `409` with the code `NO_SEATS`; if it fits but the tables of the request are not exactly the proposal (other tables or other seats) the answer is `409` with the code `TABLES_CHANGED`;
    - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, nothing is booked and the answer is `409` with the code `TABLES_CHANGED`.
    After `TABLES_CHANGED` the client asks for a new preview; after `NO_SEATS` the hiker chooses another slot.
-4. The controller shapes the answer: `201` with the booking and the numbers of the tables.
-
-No email is sent yet. When the mailer exists, the use case will call it after the commit, and a failed email will never undo the booking.
+4. The `bookTable` use case sends the confirmation email (MH-03) after the commit. A failed email never undoes the booking: the failure is written to the log and the hiker gets the same answer.
+5. The controller shapes the answer: `201` with the booking and the numbers of the tables.
 
 Nothing is held between the preview and the booking: if someone books in between and the proposal changes, the booking fails instead of seating the party somewhere else.
 
@@ -237,7 +240,7 @@ The web client runs in the browser of each device: the visitor's, the employee's
 | The port | `PORT`, default `3001` |
 | The database | `DATABASE_URL` |
 | Time zone of the hut, session length, `Secure` cookie | `HUT_TIME_ZONE`, `SESSION_TTL_HOURS`, `COOKIE_SECURE` (set `COOKIE_SECURE=true` behind HTTPS) |
-| Email (when the mailer exists) | SMTP settings, as environment variables |
+| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` |
 | Creating the tables | a migration command run before the server starts |
 | Stopping | the server closes cleanly on `SIGTERM` |
 | Knowing that it is ready | Compose waits for the database with `pg_isready` and for the API on its port |
