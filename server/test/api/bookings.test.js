@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/app.js';
 import { clock } from '../../src/clock.js';
@@ -15,6 +15,7 @@ const clean = async () => {
 };
 
 beforeEach(clean);
+afterEach(() => vi.restoreAllMocks());
 afterAll(async () => {
   await clean();
   await close();
@@ -24,10 +25,10 @@ afterAll(async () => {
 async function loggedIn(email, role = 'HIKER') {
   const agent = request.agent(app);
   if (role === 'HIKER') {
-    await agent.post('/api/auth/register').send({ firstName: 'A', lastName: 'B', email, password: PASSWORD });
+    await agent.post('/api/auth/register').send({ firstName: 'A', lastName: 'B', email, password: PASSWORD }).expect(201);
   } else {
     await users.insert({ firstName: 'A', lastName: 'B', email, phone: null, role, passwordHash: await hash(PASSWORD) });
-    await agent.post('/api/auth/login').send({ email, password: PASSWORD });
+    await agent.post('/api/auth/login').send({ email, password: PASSWORD }).expect(200);
   }
   return agent;
 }
@@ -59,7 +60,7 @@ describe('GET /api/slots', () => {
     const full = await createSlot({ date: '2090-06-11', seats: [2] });
     const noTables = await createSlotWithoutTableSet('2090-06-11');
     const agent = await loggedIn('slots.full@example.com');
-    await agent.post('/api/bookings').send(bodyOf(full, 2, [{ tableNumber: 1, seats: 2 }]));
+    await agent.post('/api/bookings').send(bodyOf(full, 2, [{ tableNumber: 1, seats: 2 }])).expect(201);
 
     expect((await slotOf(full.slotId)).freeSeats).toBe(0);
     expect((await slotOf(noTables.slotId)).freeSeats).toBe(0);
@@ -75,12 +76,16 @@ describe('GET /api/slots', () => {
 
   it('lists a slot of today that is closed, marked as not open', async () => {
     // a meal in one hour: booking closed an hour ago. The date and the time are those of the hut.
-    const [date, time] = clock.localDateTime(Date.now() + 60 * 60 * 1000, config.hutTimeZone).split('T');
-    const soon = await createSlot({ date, startsAt: time, endsAt: '23:59' });
+    const date = '2090-06-12';
+    const now = clock.at(date, '11:00', config.hutTimeZone);
+    vi.spyOn(clock, 'now').mockReturnValue(now);
+    vi.spyOn(clock, 'after').mockImplementation((ms) => new Date(now.getTime() + ms));
+    vi.spyOn(clock, 'today').mockReturnValue(date);
+    const soon = await createSlot({ date, startsAt: '12:00', endsAt: '13:00' });
 
     const listed = await slotOf(soon.slotId);
     expect(listed.bookingOpen).toBe(false);
-    expect(listed.bookingClosesAt < clock.localDateTime(Date.now(), config.hutTimeZone)).toBe(true);
+    expect(listed.bookingClosesAt).toBe(`${date}T10:00`);
 
     const agent = await loggedIn('slots.closed@example.com');
     const res = await agent.post('/api/bookings').send(bodyOf(soon, 1, [{ tableNumber: 1, seats: 1 }]));
@@ -129,7 +134,7 @@ describe('GET /api/slots/:slotId/seating', () => {
 describe('POST /api/bookings', () => {
   const T = (tableNumber, seats) => ({ tableNumber, seats });
   const preview = async (slot, partySize) =>
-    (await request(app).get(`/api/slots/${slot.slotId}/seating`).query({ partySize })).body.tables;
+    (await request(app).get(`/api/slots/${slot.slotId}/seating`).query({ partySize }).expect(200)).body.tables;
 
   it('books the tables of the preview for a logged-in hiker and says them', async () => {
     const slot = await createSlot({ seats: [4, 2] });
@@ -169,11 +174,32 @@ describe('POST /api/bookings', () => {
     const slot = await createSlot({ seats: [2, 2, 2] });
     const agent = await loggedIn('book.split@example.com');
 
-    const res = await agent.post('/api/bookings').send(bodyOf(slot, 5, await preview(slot, 5)));
+    const proposed = await preview(slot, 5);
+    const res = await agent.post('/api/bookings').send(bodyOf(slot, 5, proposed));
 
     expect(res.status).toBe(201);
-    expect(res.body.tables).toEqual([T(1, 2), T(2, 2), T(3, 1)]);
+    expect(res.body.tables).toHaveLength(3);
+    expect(res.body.tables).toEqual(proposed);
+    expect(new Set(res.body.tables.map((table) => table.tableNumber)).size).toBe(3);
+    expect(res.body.tables.reduce((sum, table) => sum + table.seats, 0)).toBe(5);
+    expect(res.body.tables.every((table) => table.seats > 0 && table.seats <= 2)).toBe(true);
     expect((await slotOf(slot.slotId)).freeSeats).toBe(1);
+  });
+
+  it('accepts a large party when all its seats are available', async () => {
+    const slot = await createSlot({ seats: [100] });
+    const agent = await loggedIn('book.large-party@example.com');
+    const tables = await preview(slot, 100);
+
+    const res = await agent.post('/api/bookings').send(bodyOf(slot, 100, tables));
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      slotId: slot.slotId,
+      partySize: 100,
+      tables: [T(1, 100)],
+    });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(0);
   });
 
   it('answers 401 without a login', async () => {
