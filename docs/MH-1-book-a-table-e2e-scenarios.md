@@ -97,22 +97,27 @@ into Playwright tests.
 > Boundary condition: a time starting exactly two hours from the controlled
 > current time remains selectable.
 
-## Scenario 4: A user who is not logged in is sent to the login page
+## Scenario 4: An unauthenticated user is sent to login when trying to book
 
 **Given**
 
 1. The browser has no active session: there is no valid `sid` cookie and no
    authenticated client state.
-2. Valid hiker credentials are available for the login step.
+2. The **Book a table** page has an available day and time for a party of two.
+3. Valid hiker credentials are available for the login step.
 
 **When**
 
 1. The user opens **Book a table**.
+2. The user chooses the available day.
+3. The user sets the number of people to `2`.
+4. The user chooses the available time.
+5. The user selects **Review booking** to continue with the booking.
 
 **Then**
 
-1. The user is redirected to the login page immediately, before choosing a day,
-   party size, or time.
+1. The user is redirected to the login page when trying to continue with the
+   booking.
 2. The login page displays the note **Log in to book a table.**
 3. After the user logs in successfully, the user is returned to **Book a table**.
-4. The user can then start the booking flow by choosing a day.
+4. The selected day, party size, and time are restored.

@@ -247,15 +247,27 @@ test.describe('MH-1 Book a table', () => {
 
   test('a user who is not logged in is sent to the login page', async ({ page, request }) => {
     const hiker = await createHiker(request);
+    const selected = { date: fixture.date, startsAt: fixture.startsAt };
     await page.context().clearCookies();
     await page.goto('/book');
+    await chooseDay(page, selected.date);
+    await page.getByRole('button', { name: 'One more' }).click();
+    await chooseSlot(page, selected.startsAt);
+    await page.getByRole('button', { name: 'Review booking' }).click();
 
     await expect(page).toHaveURL(/\/login/);
     await expect(page.getByText('Log in to book a table.')).toBeVisible();
     await page.getByLabel('Email').fill(hiker.email);
     await page.getByRole('textbox', { name: 'Password' }).fill(hiker.password);
     await page.getByRole('button', { name: 'Log in' }).click();
-    await expect(page).toHaveURL(/\/book/);
-    await chooseDay(page, fixture.date);
+    await expect(page).toHaveURL(/\/book\?/);
+    const restored = new URL(page.url()).searchParams;
+    expect(restored.get('date')).toBe(selected.date);
+    expect(restored.get('people')).toBe('2');
+    expect(restored.get('slot')).toBe(String(fixture.slotIds[0]));
+    await expect(page.getByRole('radio', { name: new RegExp(selected.startsAt.slice(0, 5)) })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 });
