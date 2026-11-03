@@ -5,12 +5,13 @@
  * always empty, dashed, with the next number in grey: the seats typed there and Enter add the table
  * and open a new empty cell. "By size" counts the tables by seats.
  * The fields are checked here first (lib/tableSets.js); `onSave({ name, tables })` resolves to
- * { ok } or { ok: false, errors } (e.g. the name already used). Mount it with a new `key` at every
+ * { ok } or { ok: false, alert?, errors? } (e.g. the name already used). Mount it with a new `key` at every
  * opening.
  */
 import { useRef, useState } from 'react';
 import chevron from '../../assets/booking/chevron.svg';
 import { bySize, hasErrors, nextTableNumber, seatsLabel, validateTableSet } from '../../lib/tableSets.js';
+import { Alert } from '../Alert/Alert.jsx';
 import { Button } from '../Button/Button.jsx';
 import { Modal } from '../Modal/Modal.jsx';
 import { TextField } from '../TextField/TextField.jsx';
@@ -45,6 +46,7 @@ export function NewTableSetDialog({ open, tableSets, isPending, onSave, onCancel
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [errors, setErrors] = useState({ rows: {} });
   const [checked, setChecked] = useState(false);
+  const [alert, setAlert] = useState(null);
   const nextKey = useRef(0);
   const draftSeats = useRef(null);
 
@@ -93,12 +95,16 @@ export function NewTableSetDialog({ open, tableSets, isPending, onSave, onCancel
     const found = validateTableSet({ name, tables });
     setChecked(true);
     setErrors(found);
+    setAlert(null);
     if (hasErrors(found)) return;
     const result = await onSave({
       name,
       tables: tables.map((t) => ({ tableNumber: Number(t.tableNumber), capacity: Number(t.capacity) })),
     });
-    if (!result.ok) setErrors({ ...found, ...result.errors });
+    if (!result.ok) {
+      setAlert(result.alert ?? null);
+      setErrors({ ...found, ...result.errors });
+    }
   };
 
   return (
@@ -122,6 +128,8 @@ export function NewTableSetDialog({ open, tableSets, isPending, onSave, onCancel
         </>
       }
     >
+      {alert && <Alert>{alert}</Alert>}
+
       <TextField
         label="Name"
         required

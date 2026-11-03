@@ -76,7 +76,7 @@ export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelled
             >
               <span className={styles.weekday}>{weekday}</span>
               <span className={styles.number}>{day}</span>
-              <span className={styles.month}>{isEmpty ? 'no slots' : month}</span>
+              <span className={styles.month}>{isEmpty && !isSelected ? 'no slots' : month}</span>
               {date === today && (
                 <img src={todayDot} alt="today" width="6" height="6" className={styles.today} />
               )}

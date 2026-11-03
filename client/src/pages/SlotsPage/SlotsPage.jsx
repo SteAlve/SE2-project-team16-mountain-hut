@@ -1,13 +1,14 @@
 /**
  * SLOTS & TABLES (story MH-02, mockup docs/mockups/slots): the staff page where the employee or the
  * warden adds the meal slots of each day and gives each one its table set.
- * The data is sample data for now (hooks/useSlotsTables.js): nothing is sent to the server yet.
+ * The data comes from the staff endpoints (hooks/useSlotsTables.js); a 401 sends to the login,
+ * and back here after it.
  * Dialogs: Add a slot, Choose tables (a slot without tables) and New table set, which opens over
  * the first two or from the Table sets card; the set saved there is chosen in the dialog it came from.
  * The navbar and Log out come from AppLayout; RequireRole keeps hikers and visitors out.
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { AddSlotDialog } from '../../components/AddSlotDialog/AddSlotDialog.jsx';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { Button } from '../../components/Button/Button.jsx';
@@ -25,7 +26,6 @@ import styles from './SlotsPage.module.css';
 const HUT_LABEL = 'Rifugio Alpe Lunga · 2.450 m';
 
 export function SlotsPage() {
-  const navigate = useNavigate();
   const page = useSlotsTables();
   const { date, slots } = page;
   // Each dialog gets a new key at every opening, so it starts empty.
@@ -41,28 +41,21 @@ export function SlotsPage() {
     setter({ key: opened, ...value });
   };
 
-  // Once wired to the server: a 401 sends to the login, and back here after it.
-  const goToLogin = () => navigate('/login', { state: { from: '/slots', page: 'see the slots and tables' } });
-  const handle = (result) => {
-    if (result.login) goToLogin();
-    return result;
-  };
-
   const saveSlot = async (form) => {
-    const result = handle(await page.addSlot(form));
+    const result = await page.addSlot(form);
     if (result.ok) setAddSlot(null);
     return result;
   };
 
   const saveTables = async (tableSetId) => {
-    const result = handle(await page.assignTableSet(choose.slot.slotId, tableSetId));
+    const result = await page.assignTableSet(choose.slot.slotId, tableSetId);
     // A failure (the slot already has tables, or is gone) closes it too: the alert is on the page.
     setChoose(null);
     return result;
   };
 
   const saveTableSet = async (form) => {
-    const result = handle(await page.createTableSet(form));
+    const result = await page.createTableSet(form);
     if (result.ok) {
       setCreatedSetId(result.tableSet.tableSetId);
       setNewSet(null);
@@ -74,6 +67,10 @@ export function SlotsPage() {
     setOpened((n) => n + 1);
     setNewSet({ key: opened, from });
   };
+
+  if (page.needsLogin) {
+    return <Navigate to="/login" replace state={{ from: '/slots', page: 'see the slots and tables' }} />;
+  }
 
   return (
     <div className={styles.screen}>
@@ -88,6 +85,7 @@ export function SlotsPage() {
           </header>
 
           {page.alert && <Alert>{page.alert}</Alert>}
+          {page.notice && <Alert variant="info">{page.notice}</Alert>}
 
           <DayStrip
             days={page.days}
@@ -102,7 +100,7 @@ export function SlotsPage() {
           <div className={styles.dayHead}>
             <h2 id="day-title" className={styles.dayTitle}>
               {formatDay(date)}
-              {slots.length > 0 && (
+              {slots?.length > 0 && (
                 <span className={styles.daySummary}>
                   {slots.length} {slots.length === 1 ? 'slot' : 'slots'} · {seatsLabel(page.totalSeats)}
                 </span>
@@ -113,7 +111,9 @@ export function SlotsPage() {
             </Button>
           </div>
 
-          {slots.length > 0 ? (
+          {slots === null ? (
+            !page.alert && <p className={styles.loading}>Loading…</p>
+          ) : slots.length > 0 ? (
             <ul className={styles.slots} aria-labelledby="day-title">
               {slots.map((slot) => (
                 <SlotRow key={slot.slotId} slot={slot} onChooseTables={() => open(setChoose, { slot })} />
