@@ -132,6 +132,10 @@
   color: #a9b3ae;
 }
 
+.empty:not(:disabled) {
+  cursor: pointer;
+}
+
 .day:disabled:not(.empty) {
   cursor: progress;
 }

@@ -1,0 +1,11 @@
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--stone);
+}
