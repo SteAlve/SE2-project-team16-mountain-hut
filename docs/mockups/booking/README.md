@@ -13,7 +13,7 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 | Source | Rule |
 |---|---|
 | Story, [#6](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/6) | Required: date, time, number of people. Date and time are chosen from those available. |
-| MH-02, [#9](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/9) | A slot is a start and end time chosen by the staff; a day can have several (e.g. 12–13 and 13–14). Times are shown as times, not as "lunch" or "dinner". |
+| MH-02, [#9](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/9) | A slot is a start and end time chosen by the staff ([slots mockup](../slots/README.md)); a day can have several (e.g. 12–13 and 13–14). Times are shown as times, not as "lunch" or "dinner". |
 | [#17](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/17) | A day or time with no tables defined has 0 seats and cannot be booked. |
 | Story | The number of people must fit in the free seats of that time. |
 | [#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7) | Booking is possible up to 2 hours before the start of the slot. |
