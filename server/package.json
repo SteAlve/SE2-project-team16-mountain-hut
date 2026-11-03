@@ -15,7 +15,8 @@
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
     "start": "node src/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --dir test"
   },
   "dependencies": {
     "express": "^5.3.0",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "supertest": "^7.3.1",

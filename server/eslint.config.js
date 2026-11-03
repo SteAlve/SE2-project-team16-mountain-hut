@@ -25,6 +25,7 @@ const noClock = {
 };
 
 export default [
+  { ignores: ['coverage/**'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],
