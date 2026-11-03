@@ -6,7 +6,7 @@
  * Not here: business rules, SQL, request handling.
  *
  * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
- * seating preview and the booking of a table.
+ * seating preview, the booking of a table and its confirmation email.
  * A story adds its own lines in each step.
  */
 
@@ -16,6 +16,7 @@ import express from 'express';
 // settings and the services handed to the use cases
 import { config } from './config.js';
 import { clock } from './clock.js';
+import { makeMailer } from './mailer.js';
 import * as passwordHasher from './passwordHasher.js';
 import * as tokens from './sessionTokens.js';
 
@@ -40,6 +41,7 @@ import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js'
 
 // 2. use cases
 import { makeAuthenticate } from './usecases/authenticate.js';
+import { makeBookTable } from './usecases/bookTable.js';
 import { makeCreateBooking } from './usecases/createBooking.js';
 import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
 import { makeListSlots } from './usecases/listSlots.js';
@@ -88,13 +90,15 @@ const checkSlotOpen = makeCheckSlotOpen({ clock, hutTimeZone: config.hutTimeZone
 const listSlots = makeListSlots({ slots, clock, hutTimeZone: config.hutTimeZone });
 const previewSeating = makePreviewSeating({ slots, checkSlotOpen });
 const createBooking = makeCreateBooking({ slots, bookings, checkSlotOpen });
+const mailer = makeMailer(config.mail);
+const bookTable = makeBookTable({ createBooking, bookings, mailer });
 
 const slotsRouter = makeSlotsRouter({
   listSlotsController: makeListSlotsController({ listSlots }),
   seatingController: makeSeatingController({ previewSeating }),
 });
 const bookingsRouter = makeBookingsRouter({
-  createBookingController: makeCreateBookingController({ createBooking }),
+  createBookingController: makeCreateBookingController({ bookTable }),
   requireAuth,
 });
 
@@ -107,6 +111,13 @@ app.use('/api', bookingsRouter);
 
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
+
+// In Docker the server also serves the built client. Any other page gets index.html, so the
+// router of the client works when a page is reloaded or opened from a link.
+if (config.clientDir) {
+  app.use(express.static(config.clientDir));
+  app.get('/{*path}', (_req, res) => res.sendFile('index.html', { root: config.clientDir }));
+}
 
 // 5. errors
 const isBadJson = (err) => err.type === 'entity.parse.failed';

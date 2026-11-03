@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409."
   },
   "paths": {
@@ -350,7 +350,7 @@
     "/api/slots": {
       "get": {
         "summary": "List the slots from today",
-        "description": "Returns every slot from today on, in order of day and time, with its free seats. \"Today\" is the day in the time zone of the hut, decided by the server: the request has no parameters. Slots that are full, have no tables yet or are already closed are listed too, so the page can show them greyed with the reason (`freeSeats`, `bookingOpen`, `bookingClosesAt`). There is no limit on how far ahead. No login is required.",
+        "description": "Returns every slot from today on, in order of day and time, with its free seats. \"Today\" is the day in the time zone of the hut, decided by the server: the request has no parameters. Slots that are full, have no tables yet or are already closed are listed too, so the page can show them greyed with the reason (`freeSeats`, `bookingOpen`, `bookingClosesAt`). There is no limit on how far ahead. No login is required. The availability check starts from here: the page finds in this list the slot of the chosen day and time, then asks for its seating.",
         "operationId": "getSlots",
         "tags": [
           "Slots"
@@ -400,7 +400,7 @@
     "/api/bookings": {
       "post": {
         "summary": "Book the tables of the preview",
-        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent.",
+        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent. After the booking is saved, the hiker receives a confirmation email; if the email fails, the booking still stands and the response is the same.",
         "operationId": "createBooking",
         "security": [
           {
@@ -597,8 +597,8 @@
     },
     "/api/slots/{slotId}/seating": {
       "get": {
-        "summary": "Where a party would sit",
-        "description": "Tells which tables a party of that size would get in the slot, without booking anything: the proposal the client then sends to `POST /api/bookings` (the whole party at one table when a table has enough free seats, the one with the fewest free seats that fits; otherwise as few tables as possible). Nothing is held: if someone books first, the booking of those tables answers 409 and the client asks again. No login is required.",
+        "summary": "Check availability and where a party would sit",
+        "description": "Checks whether a party of that size fits in the slot and tells where it would sit, without booking anything. It is the availability check (MH-04) and also the proposal that `POST /api/bookings` then confirms (MH-01). The answer comes from the free seats of the slot and from its tables: the page finds the slot of the chosen day and time in `GET /api/slots`, then asks here with its `slotId`. The whole party is seated at one table when a table has enough free seats (the one with the fewest free seats that fits); otherwise it is split over as few tables as possible, and `tables` gives the detail, for example 2 + 3 + 1 seats. A party that does not fit is not available: 409 when the free seats are too few, 422 when the slot cannot be booked at all. No other slot is suggested: to check another time, ask again with another `slotId`. Nothing is booked or held: if someone books first, the booking of those tables answers 409 and the client asks again. No login is required.",
         "operationId": "getSeating",
         "tags": [
           "Slots"
@@ -630,25 +630,68 @@
         ],
         "responses": {
           "200": {
-            "description": "The tables of the party.",
+            "description": "Available. `tables` says where the party would sit, one entry for each table.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SeatingPlan"
                 },
-                "example": {
-                  "slotId": 12,
-                  "partySize": 6,
-                  "tables": [
-                    {
-                      "tableNumber": 3,
-                      "seats": 4
-                    },
-                    {
-                      "tableNumber": 5,
-                      "seats": 2
+                "examples": {
+                  "oneTable": {
+                    "summary": "The whole party at one table",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 3,
+                      "tables": [
+                        {
+                          "tableNumber": 3,
+                          "seats": 3
+                        }
+                      ]
                     }
-                  ]
+                  },
+                  "threeTablesOfTwo": {
+                    "summary": "Six free seats over three tables of two",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 6,
+                      "tables": [
+                        {
+                          "tableNumber": 1,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 2,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 3,
+                          "seats": 2
+                        }
+                      ]
+                    }
+                  },
+                  "twoThreeOne": {
+                    "summary": "The seats still free are 2, 3 and 1",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 6,
+                      "tables": [
+                        {
+                          "tableNumber": 1,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 2,
+                          "seats": 3
+                        },
+                        {
+                          "tableNumber": 3,
+                          "seats": 1
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }
@@ -682,7 +725,7 @@
             }
           },
           "409": {
-            "description": "The party does not fit in the free seats of the slot.",
+            "description": "Not available: the party does not fit in the free seats of the slot, even split over its tables.",
             "content": {
               "application/json": {
                 "schema": {
@@ -697,7 +740,7 @@
             }
           },
           "422": {
-            "description": "The slot cannot be booked: it has no tables, or booking is closed (less than two hours to the meal).",
+            "description": "Not available: the slot cannot be booked, because it has no tables or booking is closed (less than two hours to the meal).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1728,6 +1771,7 @@
       },
       "SeatingPlan": {
         "type": "object",
+        "description": "Where a party would sit: the answer of the availability check, and the proposal that `POST /api/bookings` confirms.",
         "required": [
           "slotId",
           "partySize",
@@ -1746,7 +1790,7 @@
           "tables": {
             "type": "array",
             "minItems": 1,
-            "description": "The tables the party would get, by table number. One table when the whole party fits at one.",
+            "description": "The tables the party would get, by table number: the detail of the answer, for example 2 + 3 + 1 seats. One table when the whole party fits at one.",
             "items": {
               "$ref": "#/components/schemas/TableSeats"
             }
@@ -1934,7 +1978,7 @@
     },
     {
       "name": "Slots",
-      "description": "Meal slots and their availability."
+      "description": "Meal slots and their availability. The availability check is public."
     },
     {
       "name": "Bookings",

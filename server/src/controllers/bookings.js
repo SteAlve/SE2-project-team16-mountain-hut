@@ -3,8 +3,8 @@
  */
 import { parseCreateBooking, toBookingDto } from '../dto/bookings.js';
 
-export const makeCreateBookingController = ({ createBooking }) => async (req, res) => {
+export const makeCreateBookingController = ({ bookTable }) => async (req, res) => {
   const input = parseCreateBooking(req.body);
-  const booking = await createBooking({ user: req.user, ...input });
+  const booking = await bookTable({ user: req.user, ...input });
   res.status(201).json(toBookingDto(booking));
 };

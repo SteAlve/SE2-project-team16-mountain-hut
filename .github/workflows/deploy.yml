@@ -1,7 +1,7 @@
 # Deploy
 #
-# Runs when main is updated: the checks one last time, then the build of what will be delivered.
-# There is no deployment target yet, so the last job is a placeholder for the Docker task.
+# Runs when main is updated: the checks one last time, the build of what will be delivered, then the
+# Docker image (docker.yml).
 
 name: Deploy
 
@@ -55,21 +55,14 @@ jobs:
           path: client/dist/
           retention-days: 30
 
-  # PLACEHOLDER: to be filled in by the Docker task.
-  #
-  # What it has to do:
-  #  - build the Docker image from the Dockerfile and publish it to the container registry;
-  #  - or call the workflow of the Docker task (docker.yml, with `on: workflow_call`), so the image is built
-  #    only after the two jobs above have passed.
-  #
-  # Where the pieces go:
-  #  - the extra permissions (for example `packages: write` to publish to GitHub's registry) go in this job,
-  #    not at the top of the file, so the other jobs keep read-only access;
-  #  - the secrets of the registry are repository secrets, used here as ${{ secrets.NAME }}.
+  # The image is built only after the two jobs above have passed. The permission to publish is given
+  # here, not at the top of the file, so the other jobs keep read-only access.
   deploy:
     name: Deploy
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Nothing to deploy yet
-        run: echo "::notice title=Deploy::No deployment target yet. See the comments of this job."
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: latest

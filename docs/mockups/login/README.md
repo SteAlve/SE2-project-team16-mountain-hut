@@ -30,7 +30,7 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 
 Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
 
-The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* for employees and the warden. Pages of later stories are added to the navbar with their story.
+The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* ([slots mockup](../slots/README.md)) for employees and the warden. Pages of later stories are added to the navbar with their story.
 
 ## On a phone
 
