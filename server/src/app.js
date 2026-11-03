@@ -6,8 +6,8 @@
  * Not here: business rules, SQL, request handling.
  *
  * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
- * seating preview, the booking of a table and its confirmation email.
- * seating preview, the booking of a table, and the table sets and slots of the staff.
+ * seating preview, the booking of a table, its confirmation email, and the table sets
+ * and slots of the staff.
  * A story adds its own lines in each step.
  */
 
