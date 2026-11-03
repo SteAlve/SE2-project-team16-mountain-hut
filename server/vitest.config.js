@@ -10,5 +10,11 @@ export default defineConfig({
     globalSetup: ['./test/globalSetup.js'],
     // Test files share one database: run them one after the other.
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      // Measure all server modules, including routes, controllers and DTOs.
+      include: ['src/**/*.js'],
+      reporter: ['text', 'html'],
+    },
   },
 });

@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.1.1",
-    "description": "API endpoints for authentication, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie."
+    "version": "1.5.1",
+    "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409."
   },
   "paths": {
     "/api/auth/register": {
@@ -349,55 +349,34 @@
     },
     "/api/slots": {
       "get": {
-        "summary": "List bookable meal slots for a date",
-        "description": "Returns slots that are still open for booking on the requested date, with their remaining free seats.",
-        "operationId": "getBookableSlots",
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": true,
-            "description": "Date for which to check bookable meal slots.",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-10-28"
-          }
+        "summary": "List the slots from today",
+        "description": "Returns every slot from today on, in order of day and time, with its free seats. \"Today\" is the day in the time zone of the hut, decided by the server: the request has no parameters. Slots that are full, have no tables yet or are already closed are listed too, so the page can show them greyed with the reason (`freeSeats`, `bookingOpen`, `bookingClosesAt`). There is no limit on how far ahead. No login is required. The availability check starts from here: the page finds in this list the slot of the chosen day and time, then asks for its seating.",
+        "operationId": "getSlots",
+        "tags": [
+          "Slots"
         ],
         "responses": {
           "200": {
-            "description": "Bookable meal slots for the requested date. An empty array means no slots can be booked.",
+            "description": "The slots from today. An empty array means the hut has none.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/BookableSlot"
+                    "$ref": "#/components/schemas/Slot"
                   }
                 },
                 "example": [
                   {
                     "slotId": 12,
+                    "date": "2026-10-28",
                     "startsAt": "12:00",
                     "endsAt": "13:00",
-                    "freeSeats": 4
+                    "freeSeats": 4,
+                    "bookingOpen": true,
+                    "bookingClosesAt": "2026-10-28T10:00"
                   }
                 ]
-              }
-            }
-          },
-          "400": {
-            "description": "The date is missing or is not a valid calendar date.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                },
-                "example": {
-                  "error": "ValidationError",
-                  "message": "date must be a valid date"
-                }
               }
             }
           },
@@ -415,16 +394,13 @@
               }
             }
           }
-        },
-        "tags": [
-          "Slots"
-        ]
+        }
       }
     },
     "/api/bookings": {
       "post": {
-        "summary": "Book a table",
-        "description": "Creates a booking for an authenticated hiker if the requested slot is offered on that date, has enough free seats and is at least two hours away.",
+        "summary": "Book the tables of the preview",
+        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent. After the booking is saved, the hiker receives a confirmation email; if the email fails, the booking still stands and the response is the same.",
         "operationId": "createBooking",
         "security": [
           {
@@ -439,9 +415,18 @@
                 "$ref": "#/components/schemas/CreateBookingRequest"
               },
               "example": {
-                "date": "2026-10-28",
                 "slotId": 12,
-                "partySize": 4
+                "partySize": 6,
+                "tables": [
+                  {
+                    "tableNumber": 3,
+                    "seats": 4
+                  },
+                  {
+                    "tableNumber": 5,
+                    "seats": 2
+                  }
+                ]
               }
             }
           }
@@ -458,13 +443,23 @@
                   "id": 45,
                   "date": "2026-10-28",
                   "slotId": 12,
-                  "partySize": 4
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 4
+                    },
+                    {
+                      "tableNumber": 5,
+                      "seats": 2
+                    }
+                  ]
                 }
               }
             }
           },
           "400": {
-            "description": "The request body is invalid or contains invalid input.",
+            "description": "The request body is invalid: a wrong or unknown field (a `date` is not accepted), `tables` missing or empty, a table twice, or seats that do not add up to `partySize`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -505,40 +500,75 @@
               }
             }
           },
-          "409": {
-            "description": "The requested slot does not have enough free seats.",
+          "404": {
+            "description": "The slot does not exist.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "example": {
-                  "error": "ConflictError",
-                  "message": "Not enough free seats"
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
                 }
               }
             }
           },
-          "422": {
-            "description": "A rule of the hut fails: the slot does not exist or is not offered on that date, or the meal starts less than two hours from now, so booking is closed.",
+          "409": {
+            "description": "The booking is refused and nothing is booked. The `code` says why: `NO_SEATS` the party does not fit in the free seats of the slot any more; `TABLES_CHANGED` the party still fits, but not at the tables sent (someone booked in between, or they are not the tables of a preview).",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "examples": {
-                  "slotNotOffered": {
-                    "summary": "The slot does not exist on that date",
+                  "noSeats": {
+                    "summary": "The party does not fit any more: choose another slot",
                     "value": {
-                      "error": "UnprocessableError",
-                      "message": "Slot 12 does not exist on 2026-10-28"
+                      "error": "ConflictError",
+                      "code": "NO_SEATS",
+                      "message": "Not enough free seats"
                     }
                   },
+                  "tablesChanged": {
+                    "summary": "The tables changed: ask for a new preview",
+                    "value": {
+                      "error": "ConflictError",
+                      "code": "TABLES_CHANGED",
+                      "message": "The chosen tables are no longer the ones proposed for this party"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rule of the hut fails: the slot cannot be booked (no tables), the meal starts less than two hours from now so booking is closed, or the hiker already has a booking for that slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
                   "bookingClosed": {
                     "summary": "Booking is closed",
                     "value": {
                       "error": "UnprocessableError",
                       "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "summary": "The slot has no tables",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  },
+                  "alreadyBooked": {
+                    "summary": "The hiker already booked this slot",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "You already have a booking for this slot"
                     }
                   }
                 }
@@ -564,6 +594,898 @@
           "Bookings"
         ]
       }
+    },
+    "/api/slots/{slotId}/seating": {
+      "get": {
+        "summary": "Check availability and where a party would sit",
+        "description": "Checks whether a party of that size fits in the slot and tells where it would sit, without booking anything. It is the availability check (MH-04) and also the proposal that `POST /api/bookings` then confirms (MH-01). The answer comes from the free seats of the slot and from its tables: the page finds the slot of the chosen day and time in `GET /api/slots`, then asks here with its `slotId`. The whole party is seated at one table when a table has enough free seats (the one with the fewest free seats that fits); otherwise it is split over as few tables as possible, and `tables` gives the detail, for example 2 + 3 + 1 seats. A party that does not fit is not available: 409 when the free seats are too few, 422 when the slot cannot be booked at all. No other slot is suggested: to check another time, ask again with another `slotId`. Nothing is booked or held: if someone books first, the booking of those tables answers 409 and the client asks again. No login is required.",
+        "operationId": "getSeating",
+        "tags": [
+          "Slots"
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the meal slot.",
+            "example": 12
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of people in the party.",
+            "example": 6
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available. `tables` says where the party would sit, one entry for each table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatingPlan"
+                },
+                "examples": {
+                  "oneTable": {
+                    "summary": "The whole party at one table",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 3,
+                      "tables": [
+                        {
+                          "tableNumber": 3,
+                          "seats": 3
+                        }
+                      ]
+                    }
+                  },
+                  "threeTablesOfTwo": {
+                    "summary": "Six free seats over three tables of two",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 6,
+                      "tables": [
+                        {
+                          "tableNumber": 1,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 2,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 3,
+                          "seats": 2
+                        }
+                      ]
+                    }
+                  },
+                  "twoThreeOne": {
+                    "summary": "The seats still free are 2, 3 and 1",
+                    "value": {
+                      "slotId": 12,
+                      "partySize": 6,
+                      "tables": [
+                        {
+                          "tableNumber": 1,
+                          "seats": 2
+                        },
+                        {
+                          "tableNumber": 2,
+                          "seats": 3
+                        },
+                        {
+                          "tableNumber": 3,
+                          "seats": 1
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The slot id or the party size is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "partySize must be a positive integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not available: the party does not fit in the free seats of the slot, even split over its tables.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "code": "NO_SEATS",
+                  "message": "Not enough free seats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not available: the slot cannot be booked, because it has no tables or booking is closed (less than two hours to the meal).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "bookingClosed": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings close two hours before the meal"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/table-sets": {
+      "post": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Create a table set",
+        "description": "Defines a set of tables, each with its number and its capacity (the seats it has). A table set is what is available in a slot: it is created once and can be given to any number of slots, so it does not have to be entered again. There is no fixed set: the hut can have a different one at lunch and at dinner, or when the weather changes. Only an employee or the warden can create a set.",
+        "operationId": "createTableSet",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTableSetRequest"
+              },
+              "example": {
+                "name": "Lunch, main room",
+                "tables": [
+                  {
+                    "tableNumber": 1,
+                    "capacity": 4
+                  },
+                  {
+                    "tableNumber": 2,
+                    "capacity": 4
+                  },
+                  {
+                    "tableNumber": 3,
+                    "capacity": 6
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Table set created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableSet"
+                },
+                "example": {
+                  "tableSetId": 3,
+                  "name": "Lunch, main room",
+                  "tables": [
+                    {
+                      "tableNumber": 1,
+                      "capacity": 4
+                    },
+                    {
+                      "tableNumber": 2,
+                      "capacity": 4
+                    },
+                    {
+                      "tableNumber": 3,
+                      "capacity": 6
+                    }
+                  ],
+                  "totalSeats": 14
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: the name is empty, there is no table, a number or a capacity is not a positive integer, or two tables have the same number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "tableNumber values must be unique"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A table set with this name already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "A table set named Lunch, main room already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "List the table sets",
+        "description": "Returns every table set, with its tables, so that one can be given to a new slot.",
+        "operationId": "listTableSets",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The table sets. An empty array means none was created yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TableSet"
+                  }
+                },
+                "example": [
+                  {
+                    "tableSetId": 3,
+                    "name": "Lunch, main room",
+                    "tables": [
+                      {
+                        "tableNumber": 1,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 2,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 3,
+                        "capacity": 6
+                      }
+                    ],
+                    "totalSeats": 14
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/slots": {
+      "post": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Create a slot",
+        "description": "Creates a meal slot on a date. The start time and the duration are free, and a day can have more than one slot (for example 12:00-13:00 and 13:00-14:00). A slot with a table set can be booked; without one it has no seats, so nothing can be booked until a table set is given to it. Only an employee or the warden can create a slot.",
+        "operationId": "createSlot",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSlotRequest"
+              },
+              "example": {
+                "date": "2026-10-28",
+                "startsAt": "12:00",
+                "endsAt": "13:00",
+                "tableSetId": 3
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Slot created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSlot"
+                },
+                "example": {
+                  "slotId": 12,
+                  "date": "2026-10-28",
+                  "startsAt": "12:00",
+                  "endsAt": "13:00",
+                  "tableSet": {
+                    "tableSetId": 3,
+                    "name": "Lunch, main room",
+                    "tables": [
+                      {
+                        "tableNumber": 1,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 2,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 3,
+                        "capacity": 6
+                      }
+                    ],
+                    "totalSeats": 14
+                  },
+                  "totalSeats": 14
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: a date or a time is not valid, or the slot does not end after it starts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "endsAt must be after startsAt"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The table set does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Table set 3 does not exist"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A slot starting at the same time already exists on that date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "A slot starting at 12:00 already exists on 2026-10-28"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "List the slots of a period",
+        "description": "Returns every slot between two dates, both included, in order of date and time. It is the staff view: it also returns the slots without a table set and the ones that are full or no longer open for booking, and it shows the table set of each slot. It is also how to find a previous slot whose table set can be reused.",
+        "operationId": "listStaffSlots",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "First date of the period.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-10-01"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "Last date of the period.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-10-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The slots of the period. An empty array means there is none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffSlot"
+                  }
+                },
+                "example": [
+                  {
+                    "slotId": 12,
+                    "date": "2026-10-28",
+                    "startsAt": "12:00",
+                    "endsAt": "13:00",
+                    "tableSet": {
+                      "tableSetId": 3,
+                      "name": "Lunch, main room",
+                      "tables": [
+                        {
+                          "tableNumber": 1,
+                          "capacity": 4
+                        },
+                        {
+                          "tableNumber": 2,
+                          "capacity": 4
+                        },
+                        {
+                          "tableNumber": 3,
+                          "capacity": 6
+                        }
+                      ],
+                      "totalSeats": 14
+                    },
+                    "totalSeats": 14
+                  },
+                  {
+                    "slotId": 13,
+                    "date": "2026-10-28",
+                    "startsAt": "13:00",
+                    "endsAt": "14:00",
+                    "tableSet": null,
+                    "totalSeats": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "A date is missing or is not a valid calendar date, or `to` is before `from`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "to must not be before from"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/slots/{slotId}/table-set": {
+      "put": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Give a table set to a slot",
+        "description": "Gives a table set to a slot that has none, so that the slot can be booked. The request can be repeated: giving the slot the table set it already has changes nothing and is answered with 200. The same set can be given to many slots. Giving a different table set to a slot that already has one is a 409, because changing it is not done here: it is the modification of the slot, and the bookings it has must be kept.",
+        "operationId": "assignTableSet",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "description": "Identifier of the slot.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 13
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTableSetRequest"
+              },
+              "example": {
+                "tableSetId": 3
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The slot, now with its table set. Also the answer when the slot already had that very table set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSlot"
+                },
+                "example": {
+                  "slotId": 12,
+                  "date": "2026-10-28",
+                  "startsAt": "12:00",
+                  "endsAt": "13:00",
+                  "tableSet": {
+                    "tableSetId": 3,
+                    "name": "Lunch, main room",
+                    "tables": [
+                      {
+                        "tableNumber": 1,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 2,
+                        "capacity": 4
+                      },
+                      {
+                        "tableNumber": 3,
+                        "capacity": 6
+                      }
+                    ],
+                    "totalSeats": 14
+                  },
+                  "totalSeats": 14
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "tableSetId must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist, or the table set does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "slotNotFound": {
+                    "summary": "The slot does not exist",
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Slot 13 does not exist"
+                    }
+                  },
+                  "tableSetNotFound": {
+                    "summary": "The table set does not exist",
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Table set 3 does not exist"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The slot already has a different table set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "Slot 13 already has a different table set"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -575,52 +1497,15 @@
       }
     },
     "schemas": {
-      "BookableSlot": {
-        "type": "object",
-        "required": [
-          "slotId",
-          "startsAt",
-          "endsAt",
-          "freeSeats"
-        ],
-        "properties": {
-          "slotId": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "Identifier of the meal slot."
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "time",
-            "description": "Local start time of the meal slot."
-          },
-          "endsAt": {
-            "type": "string",
-            "format": "time",
-            "description": "Local end time of the meal slot."
-          },
-          "freeSeats": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Number of seats still available in the slot."
-          }
-        }
-      },
       "CreateBookingRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "date",
           "slotId",
-          "partySize"
+          "partySize",
+          "tables"
         ],
         "properties": {
-          "date": {
-            "type": "string",
-            "format": "date",
-            "description": "Date of the meal."
-          },
           "slotId": {
             "type": "integer",
             "format": "int64",
@@ -631,6 +1516,14 @@
             "type": "integer",
             "minimum": 1,
             "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables of the seating preview, unchanged. Each table appears once and the seats add up to `partySize`.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
           }
         }
       },
@@ -640,7 +1533,8 @@
           "id",
           "date",
           "slotId",
-          "partySize"
+          "partySize",
+          "tables"
         ],
         "properties": {
           "id": {
@@ -664,6 +1558,14 @@
             "type": "integer",
             "minimum": 1,
             "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables chosen for the party, by table number.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
           }
         }
       },
@@ -681,6 +1583,14 @@
           "message": {
             "type": "string",
             "description": "Human-readable error description, in English, written by the server. The client can show it as it is."
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "NO_SEATS",
+              "TABLES_CHANGED"
+            ],
+            "description": "Present on some 409 answers only, so the client can tell the cases apart: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview)."
           }
         }
       },
@@ -691,7 +1601,7 @@
           "EMPLOYEE",
           "WARDEN"
         ],
-        "description": "Role of the user. The interface calls the warden \"Manager\"."
+        "description": "Role of the user."
       },
       "User": {
         "type": "object",
@@ -790,6 +1700,274 @@
             "description": "Password."
           }
         }
+      },
+      "Slot": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "date",
+          "startsAt",
+          "endsAt",
+          "freeSeats",
+          "bookingOpen",
+          "bookingClosesAt"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the meal slot."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Day of the meal."
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "Local start time of the meal, as HH:MM (the time of the hut).",
+            "example": "12:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Local end time of the meal, as HH:MM (the time of the hut).",
+            "example": "13:00"
+          },
+          "freeSeats": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seats still free in the slot. 0 when it is full or has no tables yet. A party up to this number can be seated: it is split over tables when no single table is big enough."
+          },
+          "bookingOpen": {
+            "type": "boolean",
+            "description": "True while a hiker can still book this slot: booking closes two hours before the meal."
+          },
+          "bookingClosesAt": {
+            "type": "string",
+            "description": "When booking closes (or closed), as the local date and time of the hut, without time zone: YYYY-MM-DDTHH:MM.",
+            "example": "2026-10-28T10:00"
+          }
+        }
+      },
+      "TableSeats": {
+        "type": "object",
+        "required": [
+          "tableNumber",
+          "seats"
+        ],
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The number of the table, as the hiker reads it (not an internal id)."
+          },
+          "seats": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Seats of the party at that table."
+          }
+        }
+      },
+      "SeatingPlan": {
+        "type": "object",
+        "description": "Where a party would sit: the answer of the availability check, and the proposal that `POST /api/bookings` confirms.",
+        "required": [
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables the party would get, by table number: the detail of the answer, for example 2 + 3 + 1 seats. One table when the whole party fits at one.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
+          }
+        }
+      },
+      "Table": {
+        "type": "object",
+        "required": [
+          "tableNumber",
+          "capacity"
+        ],
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of the table, unique in its table set."
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Capacity of the table: the number of seats it has."
+          }
+        }
+      },
+      "TableSet": {
+        "type": "object",
+        "required": [
+          "tableSetId",
+          "name",
+          "tables",
+          "totalSeats"
+        ],
+        "properties": {
+          "tableSetId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the table set."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the table set, unique."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Table"
+            },
+            "description": "The tables of the set."
+          },
+          "totalSeats": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sum of the capacities of all the tables."
+          }
+        }
+      },
+      "CreateTableSetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "tables"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the table set, for example \"Lunch, main room\"."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Table"
+            },
+            "description": "The tables of the set. Two tables cannot have the same number."
+          }
+        }
+      },
+      "CreateSlotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "date",
+          "startsAt",
+          "endsAt"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the slot."
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "time",
+            "description": "Local start time of the slot."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "time",
+            "description": "Local end time of the slot, after the start."
+          },
+          "tableSetId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Table set of the slot. Without it the slot has no seats and cannot be booked yet."
+          }
+        }
+      },
+      "AssignTableSetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tableSetId"
+        ],
+        "properties": {
+          "tableSetId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Table set to give to the slot."
+          }
+        }
+      },
+      "StaffSlot": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "date",
+          "startsAt",
+          "endsAt",
+          "tableSet",
+          "totalSeats"
+        ],
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the slot."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the slot."
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "time",
+            "description": "Local start time of the slot."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "time",
+            "description": "Local end time of the slot."
+          },
+          "tableSet": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TableSet"
+              }
+            ],
+            "description": "The table set of the slot, or null if it has none yet."
+          },
+          "totalSeats": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seats of the slot: 0 when it has no table set."
+          }
+        }
       }
     }
   },
@@ -800,11 +1978,15 @@
     },
     {
       "name": "Slots",
-      "description": "Meal slots and their availability."
+      "description": "Meal slots and their availability. The availability check is public."
     },
     {
       "name": "Bookings",
       "description": "Table bookings."
+    },
+    {
+      "name": "Staff",
+      "description": "Employee and warden: the table sets and the slots of the hut."
     }
   ]
 }

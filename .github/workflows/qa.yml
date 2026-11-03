@@ -1,7 +1,8 @@
 # QA
 #
 # Runs when qa is updated, and checks the merged result again: lint, tests, build and the
-# end-to-end tests. The checks are the ones of ci.yml.
+# end-to-end tests. The checks are the ones of ci.yml. Then it publishes the qa Docker image
+# (docker.yml), which the demos run on.
 
 name: QA
 
@@ -19,3 +20,14 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       e2e: true
+
+  # The permission to publish is given here, so the checks keep read-only access.
+  image:
+    name: Docker image
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: qa

@@ -1,0 +1,49 @@
+# The whole app on a machine that has only Docker: docker compose up --build
+# Then open http://localhost:3001. The database port stays inside Docker, so it cannot clash with
+# a PostgreSQL already running on the machine.
+# No email leaves the machine: Mailpit keeps them, and shows them on http://localhost:8025
+
+services:
+  app:
+    build: .
+    environment:
+      # The password stays out of the URL: there, characters like # would need encoding.
+      DATABASE_URL: postgresql://postgres@db:5432/mountain_hut
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # For a real email service, set these before the start.
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-QUOTA <no-reply@quota.example>}
+    ports:
+      - "${PORT:-3001}:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.29
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mountain_hut
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mountain_hut"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data:

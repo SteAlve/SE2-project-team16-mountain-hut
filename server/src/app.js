@@ -5,7 +5,8 @@
  * turns domain errors into status codes.
  * Not here: business rules, SQL, request handling.
  *
- * Wired so far: the authentication (sign up, login, logout, who am I).
+ * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
+ * seating preview, the booking of a table and its confirmation email.
  * A story adds its own lines in each step.
  */
 
@@ -15,11 +16,14 @@ import express from 'express';
 // settings and the services handed to the use cases
 import { config } from './config.js';
 import { clock } from './clock.js';
+import { makeMailer } from './mailer.js';
 import * as passwordHasher from './passwordHasher.js';
 import * as tokens from './sessionTokens.js';
 
 // the dao
+import * as bookings from './dao/bookings.js';
 import * as sessions from './dao/sessions.js';
+import * as slots from './dao/slots.js';
 import * as users from './dao/users.js';
 
 // the errors the middleware turns into status codes
@@ -37,12 +41,19 @@ import { makeReadSessionCookie, makeRequireAuth } from './middleware/session.js'
 
 // 2. use cases
 import { makeAuthenticate } from './usecases/authenticate.js';
+import { makeBookTable } from './usecases/bookTable.js';
+import { makeCreateBooking } from './usecases/createBooking.js';
+import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
+import { makeListSlots } from './usecases/listSlots.js';
+import { makePreviewSeating } from './usecases/previewSeating.js';
 import { makeLogin } from './usecases/login.js';
 import { makeLogout } from './usecases/logout.js';
 import { makeRegister } from './usecases/register.js';
 import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
+import { makeCreateBookingController } from './controllers/bookings.js';
+import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
   makeLoginController,
   makeLogoutController,
@@ -52,6 +63,8 @@ import {
 
 // 4. routers
 import { makeAuthRouter } from './routes/auth.js';
+import { makeBookingsRouter } from './routes/bookings.js';
+import { makeSlotsRouter } from './routes/slots.js';
 
 // authentication
 const startSession = makeStartSession({ sessions, tokens, clock, sessionTtlMs: config.sessionTtlMs });
@@ -72,13 +85,39 @@ const authRouter = makeAuthRouter({
   requireAuth,
 });
 
+// slots and bookings
+const checkSlotOpen = makeCheckSlotOpen({ clock, hutTimeZone: config.hutTimeZone });
+const listSlots = makeListSlots({ slots, clock, hutTimeZone: config.hutTimeZone });
+const previewSeating = makePreviewSeating({ slots, checkSlotOpen });
+const createBooking = makeCreateBooking({ slots, bookings, checkSlotOpen });
+const mailer = makeMailer(config.mail);
+const bookTable = makeBookTable({ createBooking, bookings, mailer });
+
+const slotsRouter = makeSlotsRouter({
+  listSlotsController: makeListSlotsController({ listSlots }),
+  seatingController: makeSeatingController({ previewSeating }),
+});
+const bookingsRouter = makeBookingsRouter({
+  createBookingController: makeCreateBookingController({ bookTable }),
+  requireAuth,
+});
+
 export const app = express();
 app.use(express.json());
 app.use(readSessionCookie);
 app.use('/api', authRouter);
+app.use('/api', slotsRouter);
+app.use('/api', bookingsRouter);
 
 // an /api path no router answers
 app.use('/api', (_req, _res, next) => next(new NotFoundError('Resource not found')));
+
+// In Docker the server also serves the built client. Any other page gets index.html, so the
+// router of the client works when a page is reloaded or opened from a link.
+if (config.clientDir) {
+  app.use(express.static(config.clientDir));
+  app.get('/{*path}', (_req, res) => res.sendFile('index.html', { root: config.clientDir }));
+}
 
 // 5. errors
 const isBadJson = (err) => err.type === 'entity.parse.failed';
@@ -102,5 +141,7 @@ app.use((err, _req, res, _next) => {
   if (isBadJson(err)) {
     return res.status(400).json({ error: 'ValidationError', message: 'Request body must be valid JSON' });
   }
-  res.status(status).json({ error: err.name, message: err.message });
+  const body = { error: err.name, message: err.message };
+  if (err.code !== undefined) body.code = err.code;
+  res.status(status).json(body);
 });

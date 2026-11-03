@@ -47,7 +47,7 @@
   .logout { font-weight: 600; font-size: 15px; padding: 8px 14px; }
 
   /* page */
-  .page { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 40px; padding: 32px 64px 40px; min-height: 0; }
+  .page { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; padding: 32px 64px 40px; min-height: 0; }
   .eyebrow { font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--pine); }
   h1.title { font-family: var(--f-display); font-weight: 700; font-size: 48px; line-height: 1; margin: 6px 0 6px; }
   .sub { color: var(--stone); font-size: 16px; margin: 0 0 22px; }
@@ -68,6 +68,11 @@
   .day.off { background: transparent; border-style: dashed; color: #A9B3AE; }
   .day.off .mo, .day.off .wd { color: #A9B3AE; }
   .day .today { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--blaze); }
+  /* on a computer the strip has arrows; it has no end, so the next days wait past the edge */
+  .dstrip { display: flex; align-items: center; gap: 8px; }
+  .dstrip .clip { flex: 1; min-width: 0; overflow: hidden; }
+  .arrow { width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--snow); border: 1px solid var(--line); display: grid; place-items: center; }
+  .arrow.off { opacity: .4; }
 
   /* people stepper */
   .people { display: flex; align-items: center; gap: 16px; }
@@ -114,6 +119,8 @@
   .alert::before { content: ""; width: 4px; flex: none; }
   .alert span { padding: 12px 14px; }
   .alert.error { background: var(--error-soft); color: var(--error); } .alert.error::before { background: var(--error); }
+  .alert.info { background: var(--info-soft); color: var(--info); } .alert.info::before { background: var(--info); }
+  .avatar.dark { background: var(--pine); color: var(--snow); }
 
   /* review dialog */
   .scrim { position: absolute; inset: 68px 0 0 0; background: rgba(14,32,25,.55); display: grid; place-items: center; z-index: 2; }
@@ -205,13 +212,18 @@
 // Every screen is built from the same small helpers, so desktop and phone stay in step.
 const MARK = `<svg width="34" height="34" viewBox="0 0 48 48"><circle cx="21" cy="21" r="15" fill="none" stroke="#1D4A3A" stroke-width="5.5"/><path d="M10 29.5 L17.5 17 L22.2 24 L25.8 19.2 L32 29.5 Z" fill="#1D4A3A"/><g transform="rotate(28 35 34)"><rect x="24" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/><rect x="32" y="30.5" width="6" height="7" fill="#FFFFFF"/><rect x="38" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/></g></svg>`;
 // Sprint 1 navbar: only pages that exist after MH-01..MH-04 (the public hut page and booking).
-const nav = () => `<div class="nav"><div class="brand">${MARK}QUOTA</div>
-  <div class="links"><a>The hut</a><a class="on">Book a table</a></div>
-  <div class="user"><div class="avatar">GR</div><div class="who"><b>Giulia Rossi</b><span>Hiker</span></div></div><div class="logout">Log out</div></div>`;
+// The warden has a dark avatar and the staff pages, as in the login mockup (screen 7).
+const nav = (warden) => `<div class="nav"><div class="brand">${MARK}QUOTA</div>
+  <div class="links">${warden ? "<a>The hut</a><a>Slots &amp; tables</a>" : '<a>The hut</a><a class="on">Book a table</a>'}</div>
+  <div class="user">${warden ? '<div class="avatar dark">AV</div><div class="who"><b>Anna Verdi</b><span>Warden</span></div>' : '<div class="avatar">GR</div><div class="who"><b>Giulia Rossi</b><span>Hiker</span></div>'}</div><div class="logout">Log out</div></div>`;
+const STAFF_NOTE = `<div class="alert info" style="margin-bottom:20px"><span>Only hikers can book a table. You are logged in as a warden.</span></div>`;
 
 // Days with no slot defined have 0 seats (issue #17), so they cannot be picked.
-const DAYS = [["Wed", 14], ["Thu", 15], ["Fri", 16, "off"], ["Sat", 17], ["Sun", 18], ["Mon", 19], ["Tue", 20]];
+const DAYS = [["Wed", 14], ["Thu", 15], ["Fri", 16, "off"], ["Sat", 17], ["Sun", 18], ["Mon", 19], ["Tue", 20], ["Wed", 21], ["Thu", 22], ["Fri", 23]];
 const days = (sel, today) => `<div class="days">${DAYS.map(([wd, d, off]) => `<div class="day ${off ? "off" : ""} ${d === sel ? "sel" : ""}">${d === today ? '<i class="today"></i>' : ""}<div class="wd">${wd}</div><div class="d">${d}</div><div class="mo">${off ? "no slots" : "Jul"}</div></div>`).join("")}</div>`;
+// On a computer the arrows scroll the strip; Earlier is off at the start, Later never is (no end).
+const arrow = (d, off) => `<span class="arrow ${off ? "off" : ""}"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1D4A3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></span>`;
+const dayStrip = (sel, today) => `<div class="dstrip">${arrow("M12.5 4.5L7 10l5.5 5.5", true)}<div class="clip">${days(sel, today)}</div>${arrow("M7.5 4.5L13 10l-5.5 5.5")}</div>`;
 
 // A slot is shown as its time. It can be picked only if the party fits in its free seats
 // and it starts in more than 2 hours (issue #7).
@@ -245,27 +257,27 @@ const ticket = (cls) => `<div class="ticket">
   <div class="foot"><div class="${cls}"><button class="btn primary">Back to the hut page</button><button class="btn outline">Book another table</button></div></div></div>`;
 
 const screens = [
-  { n: "01", title: "Book a table", notes: ["Day, then party size, then time: the times that cannot fit the party are already greyed out, so the hiker never picks one that fails.", "Only days and times the staff defined can be picked (PO, issue #6). Fri 16 has no slots."],
+  { n: "01", title: "Book a table", notes: ["Day, then party size, then time: the times that cannot fit the party are already greyed out, so the hiker never picks one that fails.", "Only days and times the staff defined can be picked (PO, issue #6). Fri 16 has no slots.", "The days have no end: the strip scrolls sideways, with the arrows on a computer, and loads the next days as it goes."],
     html: nav() + page(
-      step(1, "Day", days(17, 14)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`),
+      step(1, "Day", dayStrip(17, 14)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`),
       summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "4"], ["Tables", "chosen for you", "muted"]],
         note: "You can book this time until <b>11:00 on Sat 17 Jul</b>." })) },
 
   { n: "02", title: "Party bigger than a time's free seats", notes: ["The party must fit in the free seats of the time (story Clarifications).", "12:00 has only 5 free seats: it stays visible but cannot be picked, and says why."],
     html: nav() + page(
-      step(1, "Day", days(17, 14)) + step(2, "How many people", people(8, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(8, "")}</div>`, "", true),
+      step(1, "Day", dayStrip(17, 14)) + step(2, "How many people", people(8, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(8, "")}</div>`, "", true),
       summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "—", "muted"], ["People", "8"], ["Tables", "chosen for you", "muted"]], disabled: true, after: "Choose a time to continue." })) },
 
   { n: "03", title: "Too late for a time", notes: ["Booking closes 2 hours before the start (PO, issue #7). It is 11:15 today, so 12:00 and 13:00 are closed.", "The hiker can still pick the evening time."],
     html: nav() + page(
-      step(1, "Day", days(14, 14)) + step(2, "How many people", people(2, "Including you.")) +
+      step(1, "Day", dayStrip(14, 14)) + step(2, "How many people", people(2, "Including you.")) +
       step(3, "Time", `<div class="slots">${slot({ time: "12:00 – 13:00", why: "Closed at 10:00" })}${slot({ time: "13:00 – 14:00", why: "Closed at 11:00" })}${slot({ time: "19:00 – 21:00", free: 18, sel: true })}</div>`, '<span class="clock">Now 11:15</span>'),
       summary({ rows: [["Day", "Today, Wed 14 Jul"], ["Time", "19:00 – 21:00", "mono"], ["People", "2"], ["Tables", "chosen for you", "muted"]],
         note: "You can book this time until <b>17:00 today</b>." })) },
 
   { n: "04", title: "Check and confirm", notes: ["The system chooses the tables: it keeps the party together where it can and uses the fewest free seats (PO, issue #11). Tables can be shared with other parties.", "No single table has 6 free seats here, so the seats are split 4 + 2. They are shown as one party in one bar, not as two separate bookings. Back keeps every choice."],
     html: nav() + page(
-      step(1, "Day", days(17, 14)) + step(2, "How many people", people(6, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(6, "13:00 – 14:00")}</div>`),
+      step(1, "Day", dayStrip(17, 14)) + step(2, "How many people", people(6, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(6, "13:00 – 14:00")}</div>`),
       summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "6"], ["Tables", "chosen for you", "muted"]] })) +
       `<div class="scrim"><div class="dialog"><h3>Check your booking</h3>${rowsHtml([["Day", "Saturday 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}
         ${party([[3, 4], [5, 2]])}
@@ -275,12 +287,17 @@ const screens = [
   { n: "05", title: "Seats taken meanwhile", notes: ["Another hiker booked first, so the server refuses (409). The free seats are reloaded and the choices are kept.", "The same happens if the 2-hour limit passes while the hiker is on the page."],
     html: nav() + page(
       `<div class="alert error" style="margin-bottom:20px"><span>Those seats were just taken. 13:00 now has 4 free seats. Choose another time or fewer people.</span></div>` +
-      step(1, "Day", days(17, 14)) + step(2, "How many people", people(6, "Including you.")) +
+      step(1, "Day", dayStrip(17, 14)) + step(2, "How many people", people(6, "Including you.")) +
       step(3, "Time", `<div class="slots">${slot({ time: "12:00 – 13:00", why: "Only 5 seats free" })}${slot({ time: "13:00 – 14:00", why: "Only 4 seats free" })}${slot({ time: "19:00 – 21:00", free: 22 })}</div>`, "", true),
       summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "—", "muted"], ["People", "6"], ["Tables", "chosen for you", "muted"]], disabled: true, after: "Choose a time to continue." })) },
 
   { n: "06", title: "Table booked", notes: ["Shown when the server saves the booking (201).", "Shows what was booked and where the party sits. Nothing else: email (MH-03), change (MH-06) and cancel (MH-08) come with their own stories."],
     html: nav() + `<div class="done">${ticket("actions")}</div>` },
+
+  { n: "07", title: "Staff on Book a table", notes: ["Only hikers can book (#13, #15). An employee or the warden who opens /book by URL is told as soon as the page opens, not after Confirm.", "They can still look at the days, times and free seats; Review booking stays disabled. The server refuses a staff booking anyway (403)."],
+    html: nav(true) + page(
+      STAFF_NOTE + step(1, "Day", dayStrip(17, 14)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`),
+      summary({ rows: [["Day", "Sat 17 Jul"], ["Time", "13:00 – 14:00", "mono"], ["People", "4"], ["Tables", "chosen for you", "muted"]], disabled: true, after: "Only hikers can book." })) },
 ];
 
 // ---------- phone version ----------
@@ -294,7 +311,7 @@ const mPage = (body) => `<div class="content"><h1 class="title">Book a table</h1
 const bar = ({ what, when, disabled }) => `<div class="bottombar"><div class="what"><b>${what}</b><span>${when}</span></div><button class="btn primary" ${disabled ? "disabled" : ""}>Review booking</button></div>`;
 
 const phones = [
-  { n: "M1", title: "Book a table", notes: ["Same three steps, one column. The days scroll sideways.", "The summary becomes a bar at the bottom, always in reach of the thumb."],
+  { n: "M1", title: "Book a table", notes: ["Same three steps, one column. The days scroll sideways and have no end; no arrows, the strip is swiped.", "The summary becomes a bar at the bottom, always in reach of the thumb."],
     html: mTop() + mPage(step(1, "Day", mDays(17, 14, 30)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`))
       + bar({ what: "Sat 17 Jul · 13:00 · 4", when: "book until 11:00" }) },
   { n: "M2", title: "Party bigger than free seats", notes: ["12:00 cannot fit 8 people and says why.", "No time picked yet, so the button waits."],
@@ -311,6 +328,9 @@ const phones = [
       + bar({ what: "Sat 17 Jul · 6 people", when: "choose a time", disabled: true }) },
   { n: "M5", title: "Table booked", notes: ["Same content as desktop screen 06, in a 2 × 2 grid."],
     html: mTop() + `<div class="mdone">${ticket("stack")}</div>` },
+  { n: "M6", title: "Staff on Book a table", notes: ["Same note as desktop screen 07, on top of the page.", "The bar says why the button is disabled."],
+    html: mTop() + mPage(STAFF_NOTE.replace(' style="margin-bottom:20px"', "") + step(1, "Day", mDays(17, 14, 30)) + step(2, "How many people", people(4, "Including you.")) + step(3, "Time", `<div class="slots">${SAT(4, "13:00 – 14:00")}</div>`))
+      + bar({ what: "Sat 17 Jul · 13:00 · 4", when: "only hikers can book", disabled: true }) },
 ];
 
 const ul = (notes) => `<ul>${notes.map((n) => `<li>${n}</li>`).join("")}</ul>`;
@@ -323,6 +343,7 @@ document.getElementById("sheet").innerHTML = `<div class="intro"><h1>MH-01 Book 
     <tr><td>Story</td><td>The number of people must fit in the free seats of that time.</td></tr>
     <tr><td>#7</td><td>Booking is possible up to 2 hours before the start.</td></tr>
     <tr><td>Story, #11</td><td>The system chooses the tables: party together where possible, fewest free seats used, tables can be shared, a big party can be split.</td></tr>
+    <tr><td>#13, #15</td><td>Only a logged-in hiker can book. Anyone can see the free seats; a visitor who is not logged in chooses first and is sent to the login at Review booking (login mockup, screen 4), then comes back with the same choices. An employee or the warden sees "Only hikers can book a table." as soon as the page opens, and Review booking stays disabled.</td></tr>
   </table>
   <p style="margin-top:12px">Left out on purpose (other stories): dietary needs and allergies (MH-05), confirmation email (MH-03), my bookings, change and cancel (MH-06, MH-08), menus and meal names (MH-10, MH-11), waiting list (MH-16). Open PO questions we do not decide here: how far ahead one can book (#26), party size limits (#27), several bookings in one slot (#25), private tables (#21).</p></div>
   <h2 class="group-h">Desktop</h2>
