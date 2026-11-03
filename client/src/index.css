@@ -1,0 +1,48 @@
+/* QUOTA tokens: same names and values as the Figma variables (page "Components"). */
+:root {
+  --ink: #10201a;
+  --pine: #1d4a3a;
+  --pine-hover: #163a2d;
+  --pine-deep: #0e2019;
+  --moss-soft: #e3ece6;
+  --snow: #ffffff;
+  --mist: #eef2ef;
+  --stone: #66736d;
+  --line: #d8dfda;
+  --input-border: #c3ccc6;
+  --blaze: #e0352b; /* brand only, never for errors */
+  --error: #b42318;
+  --error-soft: #fef3f2;
+  --info: #175cd3;
+  --info-soft: #eff8ff;
+  --on-dark: #f3f6f4;
+  --on-dark-muted: #9db3a9;
+
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --radius: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--snow);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--pine);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
