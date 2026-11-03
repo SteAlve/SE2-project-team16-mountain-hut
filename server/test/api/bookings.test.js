@@ -129,6 +129,13 @@ describe('GET /api/slots/:slotId/seating', () => {
     expect(noSeats.body.code).toBe('NO_SEATS');
     expect((await request(app).get(`/api/slots/${noTables.slotId}/seating`).query({ partySize: 1 })).status).toBe(422);
   });
+
+  it('answers 404 for a slot id above the largest integer of the database', async () => {
+    const res = await request(app).get('/api/slots/3000000000/seating').query({ partySize: 1 });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'NotFoundError', message: 'Slot 3000000000 not found' });
+  });
 });
 
 describe('POST /api/bookings', () => {
@@ -295,6 +302,15 @@ describe('POST /api/bookings', () => {
     const res = await agent.post('/api/bookings').send(bodyOf(slot, 1, [T(1, 1)]));
     expect(res.status).toBe(422);
     expect(res.body).toEqual({ error: 'UnprocessableError', message: 'Bookings close two hours before the meal' });
+  });
+
+  it('answers 404 for a slot id above the largest integer of the database', async () => {
+    const agent = await loggedIn('book.huge@example.com');
+
+    const res = await agent.post('/api/bookings').send({ slotId: 3000000000, partySize: 1, tables: [T(1, 1)] });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'NotFoundError', message: 'Slot 3000000000 not found' });
   });
 
   it('answers 422 for a second booking of the same slot, and a different hiker can still book', async () => {
