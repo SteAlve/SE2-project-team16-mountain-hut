@@ -14,15 +14,15 @@ form so they can be translated directly into Playwright tests.
    test cannot satisfy the assertions.
 3. The test waits by polling Mailpit for the message. A fixed sleep is not
    sufficient because sending the email is asynchronous.
-4. The test records the selected date, time, party size, and allocated tables
-   from the booking flow before checking the email. It must compare those
-   values with the message instead of relying on hardcoded dates or tables.
+4. The test records the booking reference, hiker name, selected date, time, and
+   party size from the booking flow before checking the email. It must compare
+   those values with the message instead of relying on hardcoded values.
 5. The booking must be committed successfully before the confirmation email is
    expected. A failed or rejected booking must not be treated as successful
    merely because an old message exists in Mailpit.
 6. The email content is checked semantically: insignificant whitespace and HTML
-   markup may be normalized, but the date, time, party size, and every assigned
-   table must be present and unambiguous.
+   markup may be normalized, but the booking reference, hiker name, date, time,
+   and party size must be present and unambiguous.
 7. The Mailpit UI or API may be used to inspect the message. The test must
    verify the recipient and message body, not only that Mailpit is reachable.
 
@@ -76,8 +76,8 @@ form so they can be translated directly into Playwright tests.
 
 **When**
 
-1. The hiker completes the booking flow and records the selected date, time,
-   party size, and allocated tables from the review.
+1. The hiker completes the booking flow and records the booking reference, hiker
+   name, selected date, time, and party size from the booking.
 2. The test waits for the new confirmation message addressed to the hiker in
    Mailpit.
 3. The test opens the message and reads its plain-text or rendered body.
@@ -88,9 +88,9 @@ form so they can be translated directly into Playwright tests.
 2. The message contains the booked date.
 3. The message contains the booked start time.
 4. The message contains the party size, `2`.
-5. The message contains every table allocated to the booking.
-6. If the party is split across multiple tables, every allocated table is
-   listed and no table from the booking is omitted.
+5. The message contains the booking reference and the hiker's name.
+6. The message contains the booked date, start time, and party size, matching
+   the values recorded from the booking.
 7. The values in the email correspond to the values recorded from the booking
    review, regardless of the email's whitespace or HTML formatting.
 
