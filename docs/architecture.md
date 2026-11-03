@@ -14,7 +14,7 @@ Four kinds of people use one system:
 
 - **User:** anyone who opens the public pages: the hut, the menus, the availability of tables. No login.
 - **Hiker:** a registered user. Books, changes and cancels table bookings, gives the dietary requirements of the party, joins the waiting list. A party is not a role: one hiker is its contact point.
-- **Employee:** a member of the hut team. Defines slots, tables and menus, reserves for a hiker who phones or arrives at the hut, monitors the occupancy, changes reservations.
+- **Employee:** a member of the hut team. Defines slots, tables and menus (the tables and the slots are in [section 3](#the-tables-and-the-slots-of-the-hut-staff)), reserves for a hiker who phones or arrives at the hut, monitors the occupancy, changes reservations.
 - **Warden:** manages the hut. Does everything an employee does, and also cancels reservations and closes slots.
 
 The system has **one external dependency**, the **email service**. It delivers the confirmation of a booking, the news about a changed reservation and the offers made from the waiting list.
@@ -103,6 +103,19 @@ Layer folders may have an `example.js` while they have no real implementation; t
 - **Booking window.** A booking is open until **2 hours before** the start of the slot, the limit included (`domain/bookingWindow.js`). There is no limit on how far ahead a hiker can book.
 - **One booking per hiker per slot.** Cancelled bookings do not count.
 - **Seating** (`domain/seating.js`, pure functions). The whole party goes to **one table** when one has enough free seats: the one with the fewest free seats that is enough (a tie goes to the lowest table number). Otherwise the party is split over **as few tables as possible**, choosing the group of tables that leaves the fewest seats free. The proposal is made by `GET /api/slots/:slotId/seating`; the hiker does not pick tables.
+
+### The tables and the slots of the hut (staff)
+
+The employees and the warden define what can be booked (`/api/staff/...`, every route behind `requireAuth`; the use cases refuse a hiker with `403`, through `usecases/requireStaff.js` and `isStaff` in `domain/roles.js`):
+
+- `POST` and `GET /api/staff/table-sets`: a **table set** is a list of tables, each with its number and its capacity (`capacity`, the seats of the table), and a unique name. It is created once and given to any number of slots, so it is never typed twice. `dao/tableSets.js` creates the set and its tables in one transaction; the unique name decides a duplicate (`409`).
+- `POST /api/staff/slots`: a slot has a day, a start and an end (`HH:MM`), with no fixed duration, and a day can have more than one. The table set is optional: a slot without one has no seats and cannot be booked. A set that does not exist gives `404`; a second slot starting at the same time on the same day gives `409` (the unique constraint `slot_unique_start` decides).
+- `GET /api/staff/slots?from=&to=`: the slots between two days, both included, with their table set. Unlike the public list, it also shows the slots without tables.
+- `PUT /api/staff/slots/:slotId/table-set`: gives a set to a slot that has none. Giving the set it has already answers `200` again; another one gives `409`, because changing the tables of a slot is its modification (story MH-19). The `UPDATE` carries the condition `table_set_id IS NULL`, so two requests cannot both win.
+
+An id that does not exist gives `404` everywhere, in the path or in the body. The staff endpoints use `capacity` for the seats of a table; `seats` is only used in a booking and in the seating preview, where it is the seats of the party at that table.
+
+Not decided yet (questions for the product owners): whether two slots can overlap in time (today only the same start is refused, so overlapping slots with the same tables could be booked twice), and whether a slot can be created, or given tables, in the past.
 
 ### Example: a request, start to finish: `POST /api/bookings`
 
