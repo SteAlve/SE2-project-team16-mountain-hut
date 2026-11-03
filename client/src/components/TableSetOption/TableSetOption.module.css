@@ -1,0 +1,57 @@
+.option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+  cursor: pointer;
+}
+
+.option:hover:not(.checked) {
+  border-color: var(--pine);
+}
+
+.checked {
+  border-color: var(--pine);
+  box-shadow: 0 0 0 1px var(--pine);
+}
+
+.radio {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--pine);
+  cursor: pointer;
+}
+
+.radio:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.seats {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--stone);
+  white-space: nowrap;
+}
+
+.checked .seats {
+  color: var(--pine);
+}
