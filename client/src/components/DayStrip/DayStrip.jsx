@@ -1,6 +1,7 @@
 /**
  * The day strip of the booking page (Figma "Day"). `days` is [{ date, hasSlots }]: a day without
- * slots is shown as "no slots" and cannot be picked. `today` gets the red dot.
+ * slots is shown as "no slots" and cannot be picked, unless `pickEmpty` is set (the staff page, where
+ * a day without slots is where slots are added). `today` gets the red dot.
  * The strip scrolls sideways and has no end: `onReachEnd` is called when its last day comes near,
  * to add the next days. On a computer the arrows scroll it too.
  */
@@ -13,7 +14,7 @@ import styles from './DayStrip.module.css';
 // How early, before the last day is in view, the next days are asked for.
 const REACH_END_MARGIN = '0px 300px 0px 0px';
 
-export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelledBy }) {
+export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelledBy, pickEmpty = false }) {
   const stripRef = useRef(null);
   const endRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
@@ -69,13 +70,13 @@ export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelled
               type="button"
               role="radio"
               aria-checked={isSelected}
-              disabled={!hasSlots}
+              disabled={pickEmpty ? hasSlots === undefined : !hasSlots}
               className={`${styles.day} ${state}`}
               onClick={() => onSelect(date)}
             >
               <span className={styles.weekday}>{weekday}</span>
               <span className={styles.number}>{day}</span>
-              <span className={styles.month}>{isEmpty ? 'no slots' : month}</span>
+              <span className={styles.month}>{isEmpty && !isSelected ? 'no slots' : month}</span>
               {date === today && (
                 <img src={todayDot} alt="today" width="6" height="6" className={styles.today} />
               )}
