@@ -48,10 +48,12 @@ form so they can be translated directly into Playwright tests.
 3. The hiker sets the number of people to `2`.
 4. The hiker chooses the available time.
 5. The hiker selects **Review booking**.
-6. The test records the selected date, time, party size, and tables shown in the
+6. The test records the selected date, time, and party size shown in the
    review.
 7. The hiker selects **Confirm booking**.
 8. The test waits for a new message addressed to the hiker in Mailpit.
+9. The test records the booking reference and hiker name from the booking
+   confirmation details.
 
 **Then**
 
