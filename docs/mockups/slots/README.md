@@ -69,7 +69,9 @@ In New table set, the number field and the seats field share the width of the ro
 | Day | yes | a valid date; starts at the day picked in the strip | Choose a day. |
 | Starts at | yes | a valid time, `HH:MM` | Enter the start time. |
 | Ends at | yes | a valid time, after Starts at | The slot must end after it starts. |
-| Tables | no | one of the table sets, or *No tables for now* (default: the first set) | – |
+| Tables | no | one of the table sets, or *No tables for now* (default: the first set; with no table set yet, *No tables for now*) | – |
+
+**No table set yet** (e.g. the first time the page is used): *Tables* shows only *No tables for now*, already chosen, with the note "No table sets yet. Make one with + New table set, or add the slot now and give it its tables later." Both ways work: *+ New table set* opens New table set, and after saving the new set is chosen here. *Add slot* saves a slot with 0 seats, as on screen 7.
 
 ### New table set
 
@@ -103,7 +105,7 @@ All the rules above are checked in the browser before sending, and checked again
 | Table set name already used (`409`) | Under the name: "A table set with this name already exists. Choose another name." |
 | Slot already has tables (`409`, e.g. a colleague gave them meanwhile) | The dialog closes, the day is reloaded, alert on top: "This slot already has its tables." |
 | Slot or table set not found (`404`) | The day is reloaded, alert on top: "That slot or table set no longer exists." |
-| Not logged in (`401`) | The login page with the blue note "Log in to see Slots & tables." (login mockup, screen 4). |
+| Not logged in (`401`) | The login page with the blue note "Log in to see the slots and tables." (login mockup, screen 4). |
 | A hiker opens the page (`403`) | The "Staff only" page (login mockup, screen 7). |
 | Server or network down | Something went wrong on our side. Try again in a minute. |
 
