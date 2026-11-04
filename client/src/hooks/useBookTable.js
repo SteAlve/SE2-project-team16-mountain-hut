@@ -25,9 +25,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createBooking } from '../api/bookings.js';
 import { getSeating, getSlots } from '../api/slots.js';
 import { daysBetween, formatClosingTime, formatTime, nextDays, toDay } from '../lib/bookingDates.js';
-import { largestParty, seats, slotAvailability } from '../lib/slotAvailability.js';
+import { seats, slotAvailability } from '../lib/slotAvailability.js';
 
-// The strip has no end: it grows by this many days as the hiker scrolls (open question #26).
+// The strip grows in pages; restoring a distant day does not render every date from today.
 const DAYS_PER_PAGE = 14;
 const TICK_MS = 30 * 1000;
 const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
@@ -48,17 +48,25 @@ const byDate = (slots) =>
 
 export function useBookTable(initial = {}) {
   const now = useNow();
-  const [start] = useState(() => new Date());
-  // A restored day further ahead is already in the strip.
-  const [dayCount, setDayCount] = useState(() => {
-    const ahead = daysBetween(toDay(start), initial.date);
-    return ahead >= 0 ? (Math.floor(ahead / DAYS_PER_PAGE) + 1) * DAYS_PER_PAGE : DAYS_PER_PAGE;
+  const [start, setStart] = useState(() => {
+    const today = new Date();
+    const ahead = daysBetween(toDay(today), initial.date);
+    if (ahead >= DAYS_PER_PAGE || ahead < 0) {
+      const requested = new Date(`${initial.date}T12:00:00`);
+      requested.setDate(requested.getDate() - (ahead > 0 ? 7 : 0));
+      return requested;
+    }
+    return today;
   });
+  // Restore distant days with a bounded window rather than rendering every intervening date.
+  const [dayCount, setDayCount] = useState(DAYS_PER_PAGE);
   const dates = useMemo(() => nextDays(start, dayCount), [start, dayCount]);
   const [slotsByDate, setSlotsByDate] = useState(null); // null while loading
+  const [loadError, setLoadError] = useState(false);
   const [chosenDate, setChosenDate] = useState(initial.date ?? null);
   const [chosenPartySize, setChosenPartySize] = useState(initial.partySize ?? 1);
-  const [slotId, setSlotId] = useState(initial.slotId ?? null);
+  // Undefined means an untouched search: select its only matching slot automatically.
+  const [slotId, setSlotId] = useState(initial.slotId ?? (initial.from ? undefined : null));
   const [isReviewing, setIsReviewing] = useState(false);
   const [tables, setTables] = useState(null);
   const [reviewNotice, setReviewNotice] = useState(null);
@@ -70,21 +78,45 @@ export function useBookTable(initial = {}) {
   const loadSlots = useCallback(async () => {
     const loaded = byDate(await getSlots());
     setSlotsByDate(loaded);
+    setLoadError(false);
     return loaded;
+  }, []);
+  const updateSlots = useCallback((slots) => {
+    setSlotsByDate(byDate(slots));
+    setLoadError(false);
   }, []);
 
   useEffect(() => {
+    let active = true;
     getSlots().then(
-      (slots) => setSlotsByDate(byDate(slots)),
+      (slots) => { if (active) setSlotsByDate(byDate(slots)); },
       () => {
+        if (!active) return;
         // Without the slots every day counts as a day with no slots.
         setSlotsByDate({});
+        setLoadError(true);
         setAlert(GENERIC_ERROR);
       },
     );
+    return () => { active = false; };
   }, []);
 
+  // The hut's server decides the deadline in its own time zone; a visitor's browser clock cannot.
+  useEffect(() => {
+    if (booking) return;
+    const timer = setInterval(() => { loadSlots().catch(() => {}); }, TICK_MS);
+    return () => clearInterval(timer);
+  }, [loadSlots, booking]);
+
   const showMoreDays = useCallback(() => setDayCount((count) => count + DAYS_PER_PAGE), []);
+  const earliestSlotDay = slotsByDate ? Object.keys(slotsByDate).sort()[0] : null;
+  const minimumDay = earliestSlotDay && earliestSlotDay < toDay(now) ? earliestSlotDay : toDay(now);
+  const showEarlierDays = () => {
+    const earlier = new Date(start);
+    earlier.setDate(earlier.getDate() - Math.min(DAYS_PER_PAGE, daysBetween(minimumDay, toDay(start))));
+    setDayCount((count) => count + daysBetween(toDay(earlier), toDay(start)));
+    setStart(earlier);
+  };
 
   const days = dates.map((date) => ({ date, hasSlots: slotsByDate ? Boolean(slotsByDate[date]?.length) : undefined }));
 
@@ -95,18 +127,24 @@ export function useBookTable(initial = {}) {
     ?? days.find((day) => day.hasSlots)?.date
     ?? null;
 
+  const from = initial.from;
+  const to = initial.to;
+  const isSearch = Boolean(from && to);
   const daySlots = useMemo(() => (date && slotsByDate?.[date]) || [], [date, slotsByDate]);
-  const maxPartySize = largestParty(daySlots, date, now);
-  const partySize = Math.min(chosenPartySize, maxPartySize);
+  const matches = isSearch ? daySlots.filter((s) => s.startsAt.slice(0, 5) >= from && s.startsAt.slice(0, 5) <= to) : [];
+  // The PO sets no party-size limit. Never silently reduce the user's choice to today's capacity.
+  const maxPartySize = Number.MAX_SAFE_INTEGER;
+  const partySize = chosenPartySize;
 
   const slots = daySlots.map((s) => ({ ...s, ...slotAvailability(s, date, partySize, now) }));
   // While the check dialog is open the slot stays chosen even if the clock closes it: the server
   // answers the confirm, and the dialog does not go blank under the hiker.
-  const slot = slots.find((s) => s.slotId === slotId && (s.bookable || isReviewing)) ?? null;
+  const selectedId = slotId === undefined && matches.length === 1 ? matches[0].slotId : slotId;
+  const slot = slots.find((s) => s.slotId === selectedId && (isSearch || s.bookable || isReviewing)) ?? null;
 
   const chooseDate = (next) => {
     setChosenDate(next);
-    setSlotId(null);
+    setSlotId(isSearch ? undefined : null);
   };
 
   // The seats are gone, the time closed or the slot is no more: reload, keep the day and the party.
@@ -123,7 +161,8 @@ export function useBookTable(initial = {}) {
     } else if (error.status === 404 || !latest) {
       setAlert(`${formatTime(failed.startsAt)} cannot be booked any more. Choose another time.`);
     } else if (!latest.bookingOpen) {
-      setAlert(`Booking for ${formatTime(failed.startsAt)} closed at ${formatClosingTime(date, failed.startsAt)}. Choose another time.`);
+      const closesAt = latest.bookingClosesAt?.slice(11, 16) || formatClosingTime(date, failed.startsAt);
+      setAlert(`Booking for ${formatTime(failed.startsAt)} closed at ${closesAt}. Choose another time.`);
     } else {
       // e.g. the hiker already has a booking for this time: the server says it.
       setAlert(error.message);
@@ -194,12 +233,18 @@ export function useBookTable(initial = {}) {
   return {
     days,
     showMoreDays,
+    showEarlierDays,
+    canShowEarlierDays: toDay(start) > minimumDay,
     date,
     chooseDate,
     partySize,
     maxPartySize,
     setPartySize: (n) => setChosenPartySize(Math.max(1, Math.min(n, maxPartySize))),
     slots,
+    updateSlots,
+    loadError,
+    matchingCount: matches.length,
+    isLoading: slotsByDate === null,
     slot,
     chooseSlot: setSlotId,
     now,

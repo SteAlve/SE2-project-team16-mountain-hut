@@ -6,5 +6,6 @@ test('the app opens in the browser', async ({ page }) => {
   await page.goto('/');
 
   await expect(page).toHaveTitle('QUOTA · Mountain Hut');
-  await expect(page.getByRole('heading', { name: 'Mountain Hut' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /A table waits/ })).toBeVisible();
+  await expect(page.getByRole('form', { name: 'Check table availability' })).toBeVisible();
 });

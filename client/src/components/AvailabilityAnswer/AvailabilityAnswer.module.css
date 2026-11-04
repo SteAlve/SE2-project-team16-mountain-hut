@@ -1,0 +1,6 @@
+.answer { display: flex; flex-direction: column; gap: 10px; color: var(--ink); }
+.answer > p { margin: 0; font-size: 15px; color: var(--stone); }
+.title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--font-display); }
+.yes, .no { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border-radius: 50%; font: 600 21px var(--font-body); }
+.yes { background: var(--pine); color: white; }
+.no { border: 1px solid var(--input-border); color: var(--stone); }

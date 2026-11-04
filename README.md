@@ -138,6 +138,9 @@ Emails do not leave your machine: **Mailpit** keeps them, and you can read them 
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
 
+Use a dedicated migrated `E2E_DATABASE_URL`, not a database with manual test data; some older
+E2E fixtures assume their dates are empty.
+
 The server tests that use PostgreSQL connect to `TEST_DATABASE_URL`, so set it in `server/.env`. Create that database once, and then run the tests: the tests apply the migrations by themselves, so there is no need for `db:migrate`.
 
 ```powershell

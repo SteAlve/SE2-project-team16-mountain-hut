@@ -7,13 +7,15 @@ import { formatClosingTime, isClosed } from './bookingDates.js';
 // '1 seat', '3 seats'
 export const seats = (n) => `${n} ${n === 1 ? 'seat' : 'seats'}`;
 
-// Closed when the server said so when it listed it, or when the clock has passed 2 hours before since.
-const isOpen = (slot, day, now) => slot.bookingOpen !== false && !isClosed(day, slot.startsAt, now);
+// Server DTOs are authoritative in the hut's time zone. Local calculation is only for legacy data
+// without bookingOpen; the page refreshes server slots every 30 seconds and before confirmation.
+const isOpen = (slot, day, now) => typeof slot.bookingOpen === 'boolean' ? slot.bookingOpen : !isClosed(day, slot.startsAt, now);
 
 // { bookable, label } for a slot { startsAt, freeSeats, bookingOpen } of `day`.
 export function slotAvailability(slot, day, partySize, now) {
   if (!isOpen(slot, day, now)) {
-    return { bookable: false, label: `Closed at ${formatClosingTime(day, slot.startsAt)}` };
+    const closesAt = slot.bookingClosesAt?.slice(11, 16) || formatClosingTime(day, slot.startsAt);
+    return { bookable: false, label: `Closed at ${closesAt}` };
   }
   if (slot.freeSeats === 0) {
     return { bookable: false, label: 'Full' };

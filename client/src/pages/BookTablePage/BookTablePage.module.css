@@ -68,6 +68,7 @@
 
 .people {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
 }
@@ -77,6 +78,9 @@
   font-size: 14px;
   color: var(--stone);
 }
+
+.headingRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.headingRow > a { font-size: 14px; flex: none; }
 
 .slots {
   display: grid;
@@ -95,7 +99,7 @@
 @media (max-width: 991.98px) {
   .page {
     flex-direction: column;
-    padding: 20px 20px 160px;
+    padding: 20px 20px 330px;
   }
 
   .steps {
@@ -121,7 +125,7 @@
   }
 
   .slots {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
     gap: 10px;
   }
 

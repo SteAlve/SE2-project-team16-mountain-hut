@@ -72,11 +72,12 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 | The time has no tables yet (`422`) | **Not available.** This time has no free seats. *Review booking* is disabled |
 | Employee or warden | The same answer, and `/book` says that only hikers can book (booking mockup, screen 7) |
 
-## What changes in the code
+## Implementation (MH-63 / MH-65)
 
-- `/` is a placeholder today: this page replaces it.
-- `/book` already reads `?date=&people=&slot=` from the URL, and the login and the sign-up already go back to it.
-- Changes on `/book`: it also reads `from` and `to`, and matches them to the slots of the day; the card shows the answer; a time too small stays marked when the user arrives with it; *Check your booking* opens by itself after the login or the sign-up.
+- `/` loads the days with slots from the public API. The search keeps the party size, including when it is too large, and passes `date`, `people`, `from` and `to` to `/book`.
+- `/book` matches slot start times to the inclusive From/To range. One match is selected automatically, several require a choice, and no matches give a not-available message. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested. An unavailable slot selected by a search stays visible with its answer.
+- The desktop card and the mobile bottom bar show the public seating answer and its split detail. Checking does not reserve seats. Review booking is enabled only after a successful check and only for hikers or visitors who can log in.
+- Login and sign-up preserve the choices in the return URL. `review=1` reopens *Check your booking* after authentication; confirmation still requires the hiker's explicit action and obtains a fresh seating proposal.
 - The check needs no new endpoint.
 
 ## Open points
@@ -86,7 +87,7 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 - **The scenarios of MH-04** say "opens the availability check" and "asks for the availability". Here those steps are the search bar with From and To, and *Check availability*. They also use the words **available** and **not available** and the detail `2 + 3 + 1` seats, which this mockup keeps.
 - **The picture.** It is a stand-in, not our hut. A photo of the real hut can replace it, or we keep it with its credit (see below).
 - **The slogan and the three short texts** are proposals.
-- **Party size.** There is no limit until the product owner answers [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27).
+- **Party size.** The PO answered "No limit" in [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27). The form keeps oversized parties and reports unavailability instead of silently reducing the requested number.
 
 ## Left out on purpose
 

@@ -43,7 +43,7 @@ const linkClass =
 
 export function Navbar({ user, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const pages = user ? NAV_PAGES[user.role] ?? [PAGES.hut] : [PAGES.hut];
+  const pages = user ? NAV_PAGES[user.role] ?? [PAGES.hut] : [PAGES.hut, PAGES.book];
   const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
@@ -68,8 +68,8 @@ export function Navbar({ user, onLogout }) {
         ))}
       </nav>
 
-      {user ? (
-        <>
+      <>
+        {user ? <>
           <div className={styles.user}>
             <Avatar user={user} />
             <Who user={user} />
@@ -77,6 +77,7 @@ export function Navbar({ user, onLogout }) {
           <button type="button" className={`${styles.ghost} ${styles.desktopOnly}`} onClick={onLogout}>
             Log out
           </button>
+        </> : <Link to="/login" className={`${styles.ghost} ${styles.login} ${styles.desktopOnly}`}>Log in</Link>}
 
           <button
             type="button"
@@ -93,10 +94,10 @@ export function Navbar({ user, onLogout }) {
             <>
               <div className={styles.scrim} onClick={closeMenu} aria-hidden="true" />
               <div id="navbar-menu" className={styles.menu}>
-                <div className={styles.me}>
+                {user && <div className={styles.me}>
                   <Avatar user={user} className={styles.avatarLarge} />
                   <Who user={user} />
-                </div>
+                </div>}
                 <nav className={styles.menuLinks} aria-label="Pages">
                   {pages.map(({ path, label }) => (
                     <NavLink
@@ -110,7 +111,7 @@ export function Navbar({ user, onLogout }) {
                     </NavLink>
                   ))}
                 </nav>
-                <button
+                {user ? <button
                   type="button"
                   className={styles.menuLogout}
                   onClick={() => {
@@ -119,16 +120,11 @@ export function Navbar({ user, onLogout }) {
                   }}
                 >
                   Log out
-                </button>
+                </button> : <Link to="/login" className={styles.menuLink} onClick={closeMenu}>Log in</Link>}
               </div>
             </>
           )}
-        </>
-      ) : (
-        <Link to="/login" className={styles.ghost}>
-          Log in
-        </Link>
-      )}
+      </>
     </header>
   );
 }

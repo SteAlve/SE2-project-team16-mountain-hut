@@ -175,7 +175,9 @@ The code is in `client/src`.
 
 As in the backend, ESLint enforces the table (`client/eslint.config.js`). It also forbids `fetch` anywhere but `api/`.
 
-**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/slots?date=...`; the answer contains the bookable slots and their free seats, and comes back as plain data; a component draws each slot, using `lib/` to write its time as `12:00–13:00`. The page needs no login, so no route guard is involved.
+**A screen, start to finish: the availability (MH-04).** The home page uses `useAvailabilityDays` to load the days with slots through `GET /api/slots`. A search passes the date, people and From/To range to `/book`. `useBookTable` keeps the choices and identifies matching slot start times; all times of the chosen day remain visible. `usePublicAvailability` calls `GET /api/slots/:slotId/seating?partySize=N` for the selected time and refreshes the slot list, so the answer and the free-seat labels follow current server data. `AvailabilityAnswer` displays available/not available and the seat allocation, without creating or holding a booking. These calls go through `api/`; the pages need no login or route guard. Only Review booking asks a visitor to authenticate, preserving the choices and reopening the review afterward.
+
+The server's `bookingOpen` and `bookingClosesAt` decide availability and the deadline in the hut's time zone; a visitor's browser time zone does not override them. While the form is open the slots are refreshed every 30 seconds. URL choices are validated, and restoring a distant day starts with a bounded calendar window that can extend in either direction, without imposing a booking horizon. Client-side history remounts the form for the choices in the restored URL.
 
 ### Why it is built this way
 
