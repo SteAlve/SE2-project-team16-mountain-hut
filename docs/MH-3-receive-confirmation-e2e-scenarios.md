@@ -127,3 +127,32 @@ form so they can be translated directly into Playwright tests.
 > The email polling timeout used for this negative assertion is a test setting,
 > not a business rule. It must be long enough for the application to deliver a
 > normal confirmation email in the E2E environment.
+
+## Scenario 4: A booking rejected after the review does not send a confirmation email
+
+**Given**
+
+1. Mailpit is running and there are no previous messages for the two hikers'
+   unique email addresses.
+2. Two hiker accounts exist with valid credentials, and both hikers are logged
+   in or can log in.
+3. The booking page has a slot with enough free seats for the first hiker's
+   party.
+4. The first hiker has selected the day, party size, and time and has opened
+   the booking review.
+
+**When**
+
+1. The second hiker books the same available seats and the booking succeeds.
+2. The first hiker confirms the booking from the already-open review.
+3. The test waits for a response to the first hiker's booking request.
+4. The test checks Mailpit for a message addressed to the first hiker during
+   the configured email polling window.
+
+**Then**
+
+1. The first hiker's booking request is rejected with `409 Conflict`.
+2. The first hiker's booking is not created.
+3. The first hiker receives no booking confirmation email.
+4. The second hiker's successful booking and any confirmation email are not
+   counted as a result for the first hiker.
