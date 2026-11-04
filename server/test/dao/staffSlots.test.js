@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { close, get } from '../../src/dao/db.js';
+import { close, get, run } from '../../src/dao/db.js';
 import * as slots from '../../src/dao/slots.js';
 import * as tableSets from '../../src/dao/tableSets.js';
 import { cleanBookingData } from '../helpers/bookingFixtures.js';
@@ -42,13 +42,6 @@ describe('slots dao, creating a slot', () => {
     expect(await newSlot('2090-05-02', '12:00', '14:00')).toBeNull();
   });
 
-  it('keeps only one slot when two slots with the same start are created at the same time', async () => {
-    const results = await Promise.all([newSlot('2090-05-15', '12:00', '13:00'), newSlot('2090-05-15', '12:00', '14:00')]);
-
-    expect(results.filter((slot) => slot === null)).toHaveLength(1);
-    expect((await get('SELECT COUNT(*)::INT AS n FROM slot WHERE service_date = $1', ['2090-05-15'])).n).toBe(1);
-  });
-
   it('allows slots that follow each other, and the same start time on another day', async () => {
     expect(await newSlot('2090-05-03', '12:00', '13:00')).not.toBeNull();
     expect(await newSlot('2090-05-03', '13:00', '14:00')).not.toBeNull();
@@ -62,6 +55,75 @@ describe('slots dao, creating a slot', () => {
 
   it('refuses a table set that does not exist', async () => {
     await expect(newSlot('2090-05-06', '12:00', '13:00', 999999999)).rejects.toMatchObject({ code: '23503' });
+  });
+});
+
+describe('slots dao, slots that overlap', () => {
+  const countSlotsOf = async (day) =>
+    (await get('SELECT COUNT(*)::INT AS n FROM slot WHERE service_date = $1', [day])).n;
+
+  it.each([
+    ['starts inside the other', '12:30', '13:30'],
+    ['ends inside the other', '11:30', '12:30'],
+    ['is inside the other', '12:15', '12:45'],
+    ['contains the other', '11:00', '14:00'],
+    ['starts at the same time', '12:00', '14:00'],
+    ['ends at the same time', '11:00', '13:00'],
+  ])('answers null for a slot that %s, and creates nothing', async (_label, startsAt, endsAt) => {
+    await newSlot('2090-05-10', '12:00', '13:00');
+
+    expect(await newSlot('2090-05-10', startsAt, endsAt)).toBeNull();
+
+    expect(await countSlotsOf('2090-05-10')).toBe(1);
+  });
+
+  it('refuses an overlap with a slot that has no table set, and the other way round', async () => {
+    const tableSetId = await newSet();
+    await newSlot('2090-05-11', '12:00', '13:00');
+    await newSlot('2090-05-11', '19:00', '21:00', tableSetId);
+
+    expect(await newSlot('2090-05-11', '12:30', '13:30', tableSetId)).toBeNull();
+    expect(await newSlot('2090-05-11', '20:00', '22:00')).toBeNull();
+  });
+
+  it('allows a slot that starts when another one ends, and one that ends when another starts', async () => {
+    await newSlot('2090-05-12', '12:00', '13:00');
+
+    expect(await newSlot('2090-05-12', '13:00', '14:00')).not.toBeNull();
+    expect(await newSlot('2090-05-12', '11:00', '12:00')).not.toBeNull();
+  });
+
+  it('allows the same times on another day', async () => {
+    await newSlot('2090-05-13', '12:00', '13:00');
+
+    expect(await newSlot('2090-05-14', '12:00', '13:00')).not.toBeNull();
+  });
+
+  it('keeps only one slot when two overlapping slots are created at the same time', async () => {
+    const results = await Promise.all([newSlot('2090-05-15', '12:00', '13:00'), newSlot('2090-05-15', '12:30', '13:30')]);
+
+    expect(results.filter((slot) => slot === null)).toHaveLength(1);
+    expect(await countSlotsOf('2090-05-15')).toBe(1);
+  });
+
+  it('is protected by the database too: no overlapping slot even without the check', async () => {
+    await newSlot('2090-05-16', '12:00', '13:00');
+
+    await expect(run(
+      "INSERT INTO slot (service_date, starts_at, ends_at) VALUES ('2090-05-16', '12:30', '13:30')",
+    )).rejects.toMatchObject({ code: '23P01' });
+  });
+
+  it('finds the slot in the way, and nothing for a slot that only touches another one', async () => {
+    const existing = await newSlot('2090-05-17', '12:00', '13:00');
+
+    expect(await slots.findOverlapping({ serviceDate: '2090-05-17', startsAt: '12:30', endsAt: '14:00' })).toEqual({
+      slotId: existing.slotId,
+      startsAt: '12:00:00',
+      endsAt: '13:00:00',
+    });
+    expect(await slots.findOverlapping({ serviceDate: '2090-05-17', startsAt: '13:00', endsAt: '14:00' })).toBeNull();
+    expect(await slots.findOverlapping({ serviceDate: '2090-05-18', startsAt: '12:00', endsAt: '13:00' })).toBeNull();
   });
 });
 
