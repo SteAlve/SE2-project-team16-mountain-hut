@@ -88,11 +88,10 @@ describe('seedSlots', () => {
     await bookings.createWithTableAssignments({
       hikerId: hiker.id, slotId: slot.id, partySize: 1, tableAssignments: [{ tableId: table.id, seatCount: 1 }],
     });
-    // A shorter slot: a longer one would overlap the next slot of the day, which the database refuses.
-    await run("UPDATE slot SET ends_at = '12:30' WHERE id = $1", [slot.id]);
+    await run("UPDATE slot SET ends_at = '23:30' WHERE id = $1", [slot.id]);
 
     await seedSlots(TODAY);
 
-    expect(await get('SELECT ends_at::TEXT AS "endsAt" FROM slot WHERE id = $1', [slot.id])).toEqual({ endsAt: '12:30:00' });
+    expect(await get('SELECT ends_at::TEXT AS "endsAt" FROM slot WHERE id = $1', [slot.id])).toEqual({ endsAt: '23:30:00' });
   });
 });

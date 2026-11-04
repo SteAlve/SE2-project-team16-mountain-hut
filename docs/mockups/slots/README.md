@@ -118,7 +118,7 @@ These belong to other stories and are added with them: changing the time or the 
 Not asked to the product owner; the mockup works either way:
 
 - Table sets have a name, unique, so the employee can recognise them when reusing them (the stories only say the tables are reused).
-- Two slots of a day cannot overlap: one after the other is fine (12:00–13:00 and 13:00–14:00), 12:00–13:00 and 12:30–13:30 are not. The server answers `409` for a slot that starts at the same time and for one that overlaps; the mockup shows the message only for the same start (screen 4).
+- Two slots of a day cannot start at the same time; slots that overlap (e.g. 12:00–13:00 and 12:30–13:30) are not refused.
 - A slot can be added on any day, also a past one; the strip starts at today.
 
 Sample data (hut, names, dates, tables) is invented for the mockup.

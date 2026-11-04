@@ -206,59 +206,20 @@ describe('POST /api/staff/slots', () => {
     expect(await listStaffSlots(employee)).toHaveLength(1);
   });
 
-  it('answers 409 for a slot that overlaps another one, and says which one is in the way', async () => {
-    const employee = await loggedIn('slots.overlap@example.com');
-    await createSlot(employee, slotBody('12:00', '13:00'));
-
-    const res = await employee.post('/api/staff/slots').send(slotBody('12:30', '13:30'));
-
-    expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: 'ConflictError', message: `The slot overlaps the slot from 12:00 to 13:00 on ${DAY}` });
-    expect(await listStaffSlots(employee)).toHaveLength(1);
-  });
-
-  it.each([
-    ['starts inside the other', '12:30', '13:30'],
-    ['ends inside the other', '11:30', '12:30'],
-    ['is inside the other', '12:15', '12:45'],
-    ['contains the other', '11:00', '14:00'],
-    ['ends at the same time', '11:00', '13:00'],
-  ])('answers 409 for a slot that %s', async (_label, startsAt, endsAt) => {
-    const employee = await loggedIn('slots.overlaps@example.com');
-    await createSlot(employee, slotBody('12:00', '13:00'));
-
-    const res = await employee.post('/api/staff/slots').send(slotBody(startsAt, endsAt));
-
-    expect(res.status).toBe(409);
-    expect(await listStaffSlots(employee)).toHaveLength(1);
-  });
-
-  it('answers 409 for an overlap with a slot that has no table set, and with one that has', async () => {
-    const employee = await loggedIn('slots.overlap2@example.com');
-    const tableSet = await createSet(employee);
-    await createSlot(employee, slotBody('12:00', '13:00'));
-    await createSlot(employee, slotBody('19:00', '21:00', { tableSetId: tableSet.tableSetId }));
-
-    expect((await employee.post('/api/staff/slots').send(slotBody('12:30', '13:30', { tableSetId: tableSet.tableSetId }))).status).toBe(409);
-    expect((await employee.post('/api/staff/slots').send(slotBody('20:00', '22:00'))).status).toBe(409);
-  });
-
-  it('allows the same times on another day, and a slot that starts when another one ends', async () => {
-    const employee = await loggedIn('slots.touch@example.com');
+  it('allows the same start time on another day', async () => {
+    const employee = await loggedIn('slots.otherday@example.com');
     await createSlot(employee, slotBody('12:00', '13:00'));
 
     expect((await employee.post('/api/staff/slots').send({ ...slotBody('12:00', '13:00'), date: '2090-08-11' })).status).toBe(201);
-    expect((await employee.post('/api/staff/slots').send(slotBody('13:00', '14:00'))).status).toBe(201);
-    expect((await employee.post('/api/staff/slots').send(slotBody('11:00', '12:00'))).status).toBe(201);
   });
 
-  it('creates one slot and answers 409 to the other when two overlapping slots arrive at the same time', async () => {
+  it('creates one slot and answers 409 to the other when two slots with the same start arrive at the same time', async () => {
     const employee = await loggedIn('slots.race1@example.com');
     const warden = await loggedIn('slots.race2@example.com', 'WARDEN');
 
     const results = await Promise.all([
       employee.post('/api/staff/slots').send(slotBody('12:00', '13:00')),
-      warden.post('/api/staff/slots').send(slotBody('12:30', '13:30')),
+      warden.post('/api/staff/slots').send(slotBody('12:00', '14:00')),
     ]);
 
     expect(results.map((res) => res.status).sort()).toEqual([201, 409]);
