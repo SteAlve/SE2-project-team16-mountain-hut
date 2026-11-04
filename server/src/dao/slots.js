@@ -98,16 +98,30 @@ export const findBetween = (from, to) => all(
   [from, to],
 );
 
-// Creates a slot. Returns its id, or null when a slot starting at that time already exists that day
-// (the unique constraint decides).
+// Creates a slot. Returns its id, or null when another slot of that day overlaps it, one starting at
+// the same time included (the constraints slot_unique_start and slot_no_overlap decide, so two requests
+// at the same time cannot both succeed). A slot that starts when another ends does not overlap it.
 export const insert = ({ serviceDate, startsAt, endsAt, tableSetId }) => get(
   `
     INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
     VALUES ($1, $2, $3, $4)
-    ON CONFLICT ON CONSTRAINT slot_unique_start DO NOTHING
+    ON CONFLICT DO NOTHING
     RETURNING id AS "slotId"
   `,
   [serviceDate, startsAt, endsAt, tableSetId],
+);
+
+// The first slot of that day that overlaps the times, or null. One that starts when the other ends
+// does not overlap it.
+export const findOverlapping = ({ serviceDate, startsAt, endsAt }) => get(
+  `
+    SELECT id AS "slotId", starts_at::TEXT AS "startsAt", ends_at::TEXT AS "endsAt"
+    FROM slot
+    WHERE service_date = $1 AND starts_at < $3::TIME AND ends_at > $2::TIME
+    ORDER BY starts_at
+    LIMIT 1
+  `,
+  [serviceDate, startsAt, endsAt],
 );
 
 // Gives the table set to a slot that has none. Returns true when it did, false when the slot has a

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.5.1",
+    "version": "1.6.0",
     "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409."
   },
   "paths": {
@@ -1020,7 +1020,7 @@
           "Staff"
         ],
         "summary": "Create a slot",
-        "description": "Creates a meal slot on a date. The start time and the duration are free, and a day can have more than one slot (for example 12:00-13:00 and 13:00-14:00). A slot with a table set can be booked; without one it has no seats, so nothing can be booked until a table set is given to it. Only an employee or the warden can create a slot.",
+        "description": "Creates a meal slot on a date. The start time and the duration are free, and a day can have more than one slot (for example 12:00-13:00 and 13:00-14:00). The slots of a day cannot overlap: one that starts when the previous one ends is fine, one that starts before it ends is not. A slot with a table set can be booked; without one it has no seats, so nothing can be booked until a table set is given to it. Only an employee or the warden can create a slot.",
         "operationId": "createSlot",
         "security": [
           {
@@ -1137,15 +1137,27 @@
             }
           },
           "409": {
-            "description": "A slot starting at the same time already exists on that date.",
+            "description": "Another slot of that date overlaps it, one starting at the same time included.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
-                "example": {
-                  "error": "ConflictError",
-                  "message": "A slot starting at 12:00 already exists on 2026-10-28"
+                "examples": {
+                  "sameStart": {
+                    "summary": "A slot starting at the same time",
+                    "value": {
+                      "error": "ConflictError",
+                      "message": "A slot starting at 12:00 already exists on 2026-10-28"
+                    }
+                  },
+                  "overlap": {
+                    "summary": "A slot that starts before another one ends",
+                    "value": {
+                      "error": "ConflictError",
+                      "message": "The slot overlaps the slot from 12:00 to 13:00 on 2026-10-28"
+                    }
+                  }
                 }
               }
             }
