@@ -65,6 +65,8 @@ export const findAvailableTablesBySlotId = (slotId) => all(
 
 // The slot with that id, or null. Dates and times are read as text: the driver would turn a DATE
 // into a JavaScript Date at local midnight, which moves the day on a server in another time zone.
+// The id is compared as a BIGINT: the API ids are int64 and the column is an INTEGER, so an id
+// above 2147483647 must be a slot that does not exist, not an "out of range" error (500).
 export const findById = (slotId) => get(
   `
     SELECT
@@ -74,7 +76,7 @@ export const findById = (slotId) => get(
       ends_at::TEXT AS "endsAt",
       table_set_id AS "tableSetId"
     FROM slot
-    WHERE id = $1
+    WHERE id = $1::BIGINT
   `,
   [slotId],
 );

@@ -26,8 +26,10 @@ const SET_COLUMNS = 'id AS "tableSetId", name';
 
 export const findAll = async () => withTables(await all(`SELECT ${SET_COLUMNS} FROM table_set ORDER BY id`));
 
+// The ids are compared as BIGINT: the API ids are int64 and the column is an INTEGER, so an id above
+// 2147483647 must be a set that does not exist, not an "out of range" error (500).
 export const findByIds = async (ids) => withTables(
-  await all(`SELECT ${SET_COLUMNS} FROM table_set WHERE id = ANY($1::INTEGER[]) ORDER BY id`, [ids]),
+  await all(`SELECT ${SET_COLUMNS} FROM table_set WHERE id = ANY($1::BIGINT[]) ORDER BY id`, [ids]),
 );
 
 export const findById = async (tableSetId) => (await findByIds([tableSetId]))[0] ?? null;
