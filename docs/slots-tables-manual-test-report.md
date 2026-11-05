@@ -11,14 +11,18 @@ Manual checks of **MH-02 - Define slot capacity**, performed by Antonio on
 The successful repeats in ST-21, ST-24 and ST-29 are included in the 33 passes;
 their earlier unexplained outcomes remain open observations O-01/O-02.
 
-**1 known defect: ST-31**, confirmed by a separate controlled browser
-reproduction. A fix is proposed in [PR #64](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64),
-which is still open as checked on 05/11/2026. No post-fix manual retest is claimed.
+**1 defect found on the tested version: ST-31**, confirmed by a separate
+controlled browser reproduction. The fix in
+[PR #64](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64)
+was merged into dev on 05/11/2026. The fixed head `4b44bd7` passed all 16 MH-02
+automated tests on an isolated empty database; the regression failed with the
+pre-fix hook. This supplementary verification does not change the manual counts.
+No post-fix manual retest is claimed.
 ST-38 passed only in a separate automated check and is excluded from manual passes.
 
 **This is evidence for the tested dev version, not certification of qa.** The
-Slots & tables frontend is not present on qa at the review date. The report should
-accompany that implementation on dev; if integrated into qa later, the QA
+Slots & tables frontend is not present on qa at the review date. This report
+targets dev, where that implementation is present; if integrated into qa later, the QA
 integration must be checked separately. None of the corrections below represents
 a new manual test run.
 
@@ -100,7 +104,7 @@ Fixture notes:
 | ST-28 | Session loss redirects to login with return context | Partial | Deleting sid while Add a slot was open and submitting 2026-11-15 12:00–13:00 redirected to /login with Log in to see the slots and tables. Login and return to /slots were not verified; return-context restoration remains to be checked. |
 | ST-29 | Concurrent assignment in two sessions: second assignment reports conflict and refreshes | Pass (repeat); O-02 open | Guided repeat on 2026-11-15 18:30–19:30: James and Emily opened Choose tables before saving. James assigned Manual Lunch 20261103 (14 seats); Emily attempted Manual Copy 20261103, received the already-has-tables alert and saw James's set / 14 seats without reload. The first 17:00–18:00 attempt remains inconclusive with no established cause (O-02). |
 | ST-30 | Slow network: pending save visible, repeated submission prevented | Partial | With network throttling, creating Manual Slow 20261103 with one 3-seat table showed a disabled Saving… button, prevented repeated submission and created one set. Slot creation and table assignment under a pending save were not exercised; the full case is not passed. |
-| ST-31 | Background slot GET overlapping a save: saved slot/assignment remains visible | Inconclusive (manual); known defect | Manual Slow 3G attempts did not obtain a GET/save overlap. A separate controlled browser reproduction confirmed a stale-read display defect on the tested dev commit. Fix proposed in PR #64; it is still open and has not been manually retested in this run. See ST-31 evidence below. |
+| ST-31 | Background slot GET overlapping a save: saved slot/assignment remains visible | Inconclusive (manual); fix verified automatically | Manual Slow 3G attempts did not obtain a GET/save overlap. A separate controlled browser reproduction confirmed the defect on the original tested commit. PR #64 is now merged into dev; its head 4b44bd7 passed the automated regression and all 16 MH-02 tests. The regression failed with the pre-fix hook. No post-fix manual pass is claimed; see supplementary evidence below. |
 | ST-32 | Network unavailable: readable error, preserved form and successful retry after reconnecting | Pass | Using Chrome DevTools Offline before saving Manual Network 20261103 (one 3-seat table), tester confirmed the generic error and preserved form. After restoring No throttling, retry closes the dialog and creates exactly one set with 1 table / 3 seats. Backend shutdown was not exercised. |
 | ST-33 | Add a slot outside current date range; selected day and saved data visible | Pass | Tester confirmed creating 2026-12-10 slot 12:00–13:00 with Manual Lunch 20261103 closes the dialog, selects the date, displays 14 seats and keeps the selected day visible in the extended date strip. |
 | ST-34 | Past-day creation displays notice identifying saved date | Pass | Tester confirmed saving 2026-11-01 slot 15:00–16:00 with Manual Draft 20261103 closes the dialog and displays a notice identifying 1 November as before today. |
@@ -124,8 +128,9 @@ Fixture notes:
   /slots and the intended return context.
 - **ST-30:** repeat the pending-save/repeated-click check for slot creation and
   table assignment; only table-set creation has been verified.
-- **ST-31:** retest the stale-read scenario after the fix is integrated, naming
-  the exact tested commit; PR #64 alone is not evidence of a successful retest.
+- **ST-31:** the fix is merged and verified automatically at `4b44bd7`, as
+  detailed below. A manual post-fix retest remains outstanding if a manual result
+  is required; do not turn the automated result into a manual Pass.
 - **ST-38:** perform the empty-state flow manually if a manual result is required.
 - **QA integration:** not tested in this report.
 
@@ -175,7 +180,30 @@ mutations; that additional ordering was not exercised by this reproduction.
 Possible remedies are invalidating stale reads when mutations succeed or
 refetching authoritative data after writes with request ordering protection.
 
-Tracking/fix: [PR #64 - fix(slots): keep saved slots when an older read answers late (ST-31)](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64), head `4b44bd7`, targets `dev`. As checked on 05/11/2026, the PR is open and unmerged. This report does not mark the defect resolved and contains no post-fix manual retest.
+Tracking/fix: [PR #64 - fix(slots): keep saved slots when an older read answers late (ST-31)](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64),
+head `4b44bd7`, merged into `dev` as `142cef0` on 05/11/2026.
+
+### ST-31: post-fix automated verification
+
+Executed on 05/11/2026 using an isolated checkout of PR #64 at `4b44bd7`,
+Chromium, the real React/Vite UI, Express and PostgreSQL. The database was newly
+created and migrated, without demo slots; it was separate from every manual-run
+database. The API ran on port 13064 and the client on port 15164, with the same
+isolated database selected for the backend and test fixtures.
+
+- All **16 MH-02 E2E tests passed**, including the stale-read regression and
+  the warden scenario that had failed against pre-existing demo data.
+- Client lint and production build passed.
+- Negative control: keeping the new regression test but restoring only
+  `useSlotsTables.js` from `4b44bd7^` caused the regression to fail: the old GET
+  hid the saved slot and the page displayed `No slots on ...`. The fixed hook
+  was restored afterwards. This confirms that the test distinguishes the fix
+  from the previous implementation.
+- The temporary database, processes and checkout were removed after verification.
+
+These are automated post-fix results, not additional manual passes and not a
+verification of the QA integration. The original manual version and counts above
+remain unchanged.
 
 ### ST-38: isolated empty-state check (automated only)
 Executed by the agent with Playwright headless Chromium on 03/11/2026 against
