@@ -65,6 +65,11 @@ export function NewTableSetDialog({ open, tableSets, isPending, onSave, onCancel
   const copy = (event) => {
     const id = event.target.value;
     setCopyFrom(id);
+    if (!id) {
+      update(name, []);
+      setDraft(EMPTY_DRAFT);
+      return;
+    }
     const set = tableSets.find((s) => String(s.tableSetId) === id);
     if (set) {
       update(name, withKeys(set.tables.map((t) => ({ tableNumber: String(t.tableNumber), capacity: String(t.capacity) }))));
