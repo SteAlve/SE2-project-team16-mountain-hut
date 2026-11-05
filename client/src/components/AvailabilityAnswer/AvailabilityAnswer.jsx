@@ -15,7 +15,14 @@ export function AvailabilityAnswer({ answer, partySize }) {
           : `This time has ${freeSeats} free seats, not enough for ${partySize} people.`);
   return (
     <div className={styles.answer} role="status" aria-label="Table availability" aria-live="polite">
-      {status === 'loading' && <p>Checking availability…</p>}
+      {status === 'loading' && <>
+        <strong className={`${styles.title} ${styles.statusTitle}`}><span className={styles.loadingIcon} aria-hidden="true" />Checking…</strong>
+        <div className={styles.seatsPlaceholder} aria-hidden="true">
+          <span className={styles.placeholderHeading} />
+          <span className={styles.placeholderSeats}><i /><i /><i /></span>
+          <span className={styles.placeholderDetail} />
+        </div>
+      </>}
       {status === 'error' && <p>Unable to check availability. Please try again.</p>}
       {status === 'choice' && <Alert variant="info">{message}</Alert>}
       {status === 'unavailable' && <>
@@ -24,7 +31,7 @@ export function AvailabilityAnswer({ answer, partySize }) {
       </>}
       {error && <Button size="small" variant="outline" onClick={answer.retry}>Check again</Button>}
       {status === 'available' && <>
-        <strong className={styles.title}><span className={styles.yes} aria-hidden="true"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 4 4 8-9" /></svg></span>Available</strong>
+        <strong className={`${styles.title} ${styles.statusTitle}`}><span className={styles.yes} aria-hidden="true"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 4 4 8-9" /></svg></span>Available</strong>
         <PartySeats partySize={partySize} tables={tables} heading={`${tables.map(({ seats }) => seats).join(' + ')} seats`} />
       </>}
     </div>
