@@ -186,6 +186,13 @@ cd e2e && npm install && npx playwright install chromium
 
 Then, from the `e2e` directory, run `npm run e2e`. Ports 3001 and 5173 must be free, so stop your own server and client first. To see the report of the last run, use `npx playwright show-report`.
 
+The tests of the confirmation email (MH-3) read the emails from [Mailpit](https://mailpit.axllent.org), and are skipped without it. To run them, start Mailpit and give the server and the tests its addresses:
+
+```bash
+docker run -d --rm --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.29
+SMTP_HOST=localhost SMTP_PORT=1025 MAILPIT_URL=http://localhost:8025 npm run e2e
+```
+
 Lint: `npm run lint`, in `server` and in `client`.
 
 ## Feedback and bugs
