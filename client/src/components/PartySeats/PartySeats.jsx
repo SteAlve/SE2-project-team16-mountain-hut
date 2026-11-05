@@ -9,12 +9,12 @@ import styles from './PartySeats.module.css';
 
 const tableWord = (n) => `${n} ${n === 1 ? 'table' : 'tables'}`;
 
-export function PartySeats({ partySize, tables }) {
+export function PartySeats({ partySize, tables, heading }) {
   const groups = tables?.length ? tables.map((t) => t.seats) : [partySize];
   return (
     <div className={styles.card}>
       <div className={styles.head}>
-        <p className={styles.title}>{seats(partySize)} for your party</p>
+        <p className={styles.title}>{heading ?? `${seats(partySize)} for your party`}</p>
         {tables?.length > 0 && <span className={styles.chip}>{tableWord(tables.length)}</span>}
       </div>
       <div className={styles.seats} aria-hidden="true">

@@ -114,7 +114,7 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    white-space: nowrap;
+    flex-wrap: wrap;
   }
 
   .barChoices {

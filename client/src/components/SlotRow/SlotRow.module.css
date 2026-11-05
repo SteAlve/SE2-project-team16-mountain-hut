@@ -1,0 +1,107 @@
+.row {
+  display: grid;
+  grid-template-columns: 174px 1fr auto auto;
+  grid-template-areas: 'when tables choose seats';
+  align-items: center;
+  gap: 4px 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--snow);
+}
+
+.noTables {
+  border-style: dashed;
+  border-color: var(--input-border);
+  background: transparent;
+}
+
+.when {
+  grid-area: when;
+  display: flex;
+  flex-direction: column;
+}
+
+.time {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.duration,
+.unit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--stone);
+}
+
+.tables {
+  grid-area: tables;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.setName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.missing {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--error);
+}
+
+.note {
+  font-size: 14px;
+  color: var(--stone);
+}
+
+.choose {
+  grid-area: choose;
+}
+
+.seats {
+  grid-area: seats;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.total {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.noTables .total {
+  color: var(--error);
+}
+
+/* On a phone: time and seats on top, the tables below. */
+@media (max-width: 991.98px) {
+  .row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'when seats'
+      'tables tables'
+      'choose choose';
+    gap: 10px 12px;
+    padding: 16px;
+  }
+
+  .seats {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .choose {
+    justify-self: start;
+  }
+}
