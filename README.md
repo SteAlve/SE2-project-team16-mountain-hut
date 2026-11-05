@@ -42,7 +42,7 @@ cp .env.example .env      # PowerShell: Copy-Item .env.example .env
 # edit .env: put the URL of your PostgreSQL in DATABASE_URL and TEST_DATABASE_URL
 npm run db:create         # creates the empty database
 npm run db:migrate        # creates the tables
-npm run db:seed           # creates the demo staff accounts
+npm run db:seed           # creates the demo accounts
 ```
 
 Start the server:
@@ -93,19 +93,20 @@ Run these commands in `server`. They use the database of `DATABASE_URL`:
 |---|---|
 | `npm run db:create` | Creates the empty database, if it does not exist. The user of the URL needs the permission to create databases. |
 | `npm run db:migrate` | Applies the migrations not applied yet. Safe to run again. |
-| `npm run db:seed` | Creates the demo staff accounts below. Safe to run again. |
+| `npm run db:seed` | Creates the demo accounts below, the demo tables and the demo slots. Safe to run again. |
 | `npm run db:drop` | Deletes every table and all the data, and leaves the database empty. It refuses to run when `NODE_ENV` is `production`. |
 | `npm run db:reset` | `db:drop` and then `db:migrate`: the tables are created again from the migrations. Run `db:seed` after it. |
 
 #### Demo accounts
 
-`db:seed` creates one warden and two employees. All three have the password `quota-demo-2026`. Hikers sign up from the application.
+`db:seed` creates one warden, two employees and one hiker. Other hikers can sign up from the application.
 
-| Role | Email |
-|---|---|
-| Warden | `emily.parker@quota.example` |
-| Employee | `james.taylor@quota.example` |
-| Employee | `oliver.wilson@quota.example` |
+| Role | Name | Email | Password |
+|---|---|---|---|
+| Warden | Emily Parker | `emily.parker@quota.example` | `quota-demo-2026` |
+| Employee | James Taylor | `james.taylor@quota.example` | `quota-demo-2026` |
+| Employee | Oliver Wilson | `oliver.wilson@quota.example` | `quota-demo-2026` |
+| Hiker | Lucas Bennett | `lucas.bennett@quota.example` | `quota-demo-2026` |
 
 This password is public: use the seed only for development and demos, never on a real deployment.
 
@@ -119,7 +120,7 @@ docker compose up --build
 
 Open http://localhost:3001. The first start takes a few minutes, because it builds the image. The migrations run by themselves every time the app starts.
 
-To add the demo staff accounts and slots, with the app running, in another terminal:
+To add the demo accounts and slots, with the app running, in another terminal:
 
 ```bash
 docker compose exec app node scripts/seed.js
@@ -127,9 +128,28 @@ docker compose exec app node scripts/seed.js
 
 The password of the database is `postgres`. To use another one, set `POSTGRES_PASSWORD` before the first start, with any characters: it does not go in a URL, so nothing needs encoding. PostgreSQL reads it only when it creates the data, so to change it later use `docker compose down -v` first, which deletes the data.
 
-Emails do not leave your machine: **Mailpit** keeps them, and you can read them on http://localhost:8025. If that port is taken, set `MAILPIT_PORT`. To use a real email service, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` before the start.
+Emails do not leave your machine: **Mailpit** keeps them, and you can read them on http://localhost:8025. See [Emails](#emails).
 
 `docker compose down` stops the app and keeps the data. `docker compose down -v` also deletes the data. If port 3001 is taken, start it with `PORT=8080 docker compose up --build`.
+
+## Emails
+
+The app sends one email: the **booking confirmation**, to the hiker who booked a table (MH-03). It leaves right after the booking is saved. If the email cannot be sent, the booking still stands; the error is only written to the server log.
+
+During development no email reaches a real inbox. The demo accounts use `@quota.example` addresses, which do not exist, so the emails are caught on your machine:
+
+- **With Docker**, `docker compose up` also starts **Mailpit**, a local email inbox. The app sends every email to it (`SMTP_HOST=mailpit`, port `1025`). Open **http://localhost:8025** to read them: each email shows its recipient, subject and content, whatever address it was sent to. If port 8025 is taken, start with `MAILPIT_PORT=8026 docker compose up --build` and open that port.
+- **Without Docker** (`npm run dev`), when `SMTP_HOST` is not set nothing is sent: the server writes the email (recipient, subject and text) to its terminal. To see it as a real email, start Mailpit alone and point the server to it:
+
+  ```bash
+  docker run --rm -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.29
+  ```
+
+  Then set `SMTP_HOST=localhost` and `SMTP_PORT=1025` in `server/.env`, restart the server and open http://localhost:8025.
+
+To try it: log in as the demo hiker (`lucas.bennett@quota.example`), book a table, then open Mailpit. The confirmation is there, with the booking code (for example `QUOTA-00004`), the date, the time and the number of people.
+
+To send real emails, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` (see [Configuration](#configuration)) for an email service you own, and book with an account whose address is a real inbox. Never commit these values.
 
 ## Tests
 
