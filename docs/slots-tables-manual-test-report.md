@@ -1,48 +1,70 @@
-# MH-02 — Slots & tables manual test report
+# MH-02 - Slots & tables manual test report
 
-Status: **36 manual checks passed; ST-31 remains manually inconclusive.**
-Additional agent-run browser checks reproduced the ST-31 stale-response defect
-with controlled API responses and passed ST-38 against an isolated real backend.
-These automated checks are not counted as Antonio's manual results.
+## Scope and result
+
+Manual checks of **MH-02 - Define slot capacity**, performed by Antonio on
+03/11/2026 against **dev commit a8e53fd** and the
+[Slots & tables mockup](mockups/slots/README.md).
+
+**38 checklist cases: 33 Pass, 2 Partial (ST-28, ST-30), 2 Inconclusive
+(ST-06, ST-31), and 1 Not executed manually (ST-38).**
+The successful repeats in ST-21, ST-24 and ST-29 are included in the 33 passes;
+their earlier unexplained outcomes remain open observations O-01/O-02.
+
+**1 known defect: ST-31**, confirmed by a separate controlled browser
+reproduction. A fix is proposed in [PR #64](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64),
+which is still open as checked on 05/11/2026. No post-fix manual retest is claimed.
+ST-38 passed only in a separate automated check and is excluded from manual passes.
+
+**This is evidence for the tested dev version, not certification of qa.** The
+Slots & tables frontend is not present on qa at the review date. The report should
+accompany that implementation on dev; if integrated into qa later, the QA
+integration must be checked separately. None of the corrections below represents
+a new manual test run.
 
 | Run detail | Value |
 | --- | --- |
 | Tester | Antonio Vitarelli |
-| Preparation date | 2026-11-03 |
+| Date | 03/11/2026 |
+| Task | [MH-83 - MH-02 frontend testing](https://polito-se2-26-16.youtrack.cloud/issue/MH-83) |
+| Documentation revision | 05/11/2026, responding to the [PR #57 review](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/57#issuecomment-6660952655) |
 | Report branch | `test/slots-tables-manual-report` |
-| Initial QA base | `5955cdcdba6122a45270b86c4388c216faaa9cad` |
-| Tested version | `origin/dev` at `a8e53fdf29c5598fb2d10ed7d1e97cd8500884d6` (PR #56 merged) |
-| Browser / viewport | Google Chrome on Windows PC; responsive checks at 390 × 844 |
-| Database | `mountain_hut_test`, selected with `NODE_ENV=test`, as in the booking manual run |
+| Tested version | `dev@a8e53fdf29c5598fb2d10ed7d1e97cd8500884d6` (PR #56 merged) |
+| Browser / viewport | Google Chrome on Windows PC; responsive checks at 390 x 844 |
+| Database | `mountain_hut_test`, selected with `NODE_ENV=test` |
 | Client / API | `http://localhost:5173` / `http://localhost:3001` |
 
-## Method
+## Method and data
 
-Antonio performs the browser interactions and reports the observed results.
-Only observations confirmed during this manual run count as Pass or Fail.
-Previous code-review reproductions and automated checks are not manual results.
-Results distinguish Pass, Fail, Inconclusive and Not executed.
+Antonio performed the browser interactions and confirmed the observations.
+Only those observations count as manual results. Pass applies to the complete
+recorded check; Partial means some required actions were not checked;
+Inconclusive means the evidence could not establish the result. Controlled
+reproductions and automated checks are recorded separately.
 
-References: [MH-02 scenarios](MH-2-define-tables-and-slots-e2e-scenarios.md)
-and the [Slots & tables mockup](mockups/slots/README.md) in the tested dev commit.
-The checklist uses the labels introduced by PR #56.
+The run used the real React frontend, Express backend and PostgreSQL, with
+DevTools for Network, Console, throttling and responsive checks. The database
+had one table set and two slots at setup. Migrations were already up to date;
+demo staff already existed and slot seeding was not run. Existing manual data
+was preserved. No automated suite that cleans this database was run as part of
+the manual session.
 
-By the tester's choice, this run exercises the dev commit above, not the QA
-integration. Only this report will be submitted from the QA-based report branch.
-During execution the working tree is temporarily detached at that dev commit;
-the report remains untracked until returning to the report branch.
+References: [MH-02 scenarios](MH-2-define-tables-and-slots-e2e-scenarios.md) and the
+[Slots & tables mockup](mockups/slots/README.md). The checklist uses the labels
+introduced by PR #56.
 
-Use the same setup as the booking manual run: real React frontend, Express
-backend started with `NODE_ENV=test`, PostgreSQL database `mountain_hut_test`
-and browser DevTools for Network, Console, throttling and responsive checks.
-The connection to this database has been verified. Preserve its existing data;
-do not run automated tests that clean it during the manual session.
-Migration check on the tested dev commit found no pending migrations. Demo staff
-already existed; no accounts were added. Existing data at setup: one table set
-and two slots. Slot seeding was not run, preserving the existing fixtures.
+Fixture notes:
 
-An unused database `mountain_hut_manual_slots_20261103` was created during
-initial preparation. It is not used for this run. No database was reset or deleted.
+- **ST-06:** the starting set is not identified in the session notes. The numbers
+  cannot be reconciled with Manual Lunch (4/4/6); no replacement starting state is
+  inferred. A repeat is needed before marking this case Pass.
+- **ST-25:** an additional unassigned slot, 2026-11-13 17:00–18:00, was present
+  when the public check was performed. Its creation is not covered by earlier
+  checklist steps; this case verifies the observed unassigned-to-assigned
+  transition, not that fixture's creation.
+- **ST-22/ST-24 literal name:** the saved set name was
+  `Manual Choose Flow 20261103,`, including the trailing comma. The checklist
+  uses the readable label without that comma; it refers to the same saved set.
 
 ## Checklist
 
@@ -53,7 +75,7 @@ initial preparation. It is not used for this run. No database was reset or delet
 | ST-03 | Table-set card shows summary; individual table numbers/capacities and totals agree in copy dialog or assigned slot | Pass | Tester confirmed with screenshots: existing set shows 1 table / 4 seats; copy dialog contains table 1 with capacity 4, total 1 table / 4 seats and By size: 1 × 4 seats. Empty draft row is excluded from the total. |
 | ST-04 | Create `Manual Lunch 20261103`: tables 1/4, 2/4, 3/6; total 14 seats | Pass | Tester confirmed tables 1–3 with capacities 4, 4, 6; total 3 tables / 14 seats; By size: 2 × 4 seats · 1 × 6. Save closes the dialog and updates the card without reload. |
 | ST-05 | New-table draft: Enter adds a row; automatic next number; save includes typed draft | Pass | Enter and automatic numbering confirmed during ST-04. Tester saved Manual Draft 20261103 with capacity 2 in the draft without Enter; card shows 1 table / 2 seats. |
-| ST-06 | Edit and remove table rows; totals and By size update correctly | Pass | Tester confirmed totals 10 → 14 → 8 seats after editing table 1 from 4 to 8 and removing table 2 (6 seats); row count and By size update correctly. Dialog cancelled without saving. |
+| ST-06 | Edit and remove table rows; totals and By size update correctly | Inconclusive | The recorded sequence is 10 -> 14 -> 8 seats after changing table 1 from 4 to 8 and removing table 2 described as 6 seats. The starting set was not recorded, and these capacities do not match Manual Lunch (4/4/6). Editing and removal were observed, but this evidence cannot validate the full expected totals. Cancelled without saving; repeat with a named starting set and explicit row capacities. |
 | ST-07 | Copy a set, edit the copy; source stays unchanged | Pass | Tester confirmed copying Manual Lunch 20261103 (4, 4, 6 seats), changing table 1 to 8 and saving Manual Copy 20261103: copy shows 3 tables / 18 seats; original remains 3 tables / 14 seats. |
 | ST-08 | Empty or whitespace-only name and empty table list rejected | Pass | Tester confirmed empty-form errors, rejection of whitespace-only name and rejection of named set without tables. Dialog stays open; cancelling creates no set. |
 | ST-09 | Zero, negative, fractional and nonnumeric table numbers/capacities rejected | Pass | Tester confirmed rejection of 0, -1, 1.5 and abc in both table number and capacity, with the expected field messages and no saved set. |
@@ -68,40 +90,49 @@ initial preparation. It is not used for this run. No database was reset or delet
 | ST-18 | Same start on a different day allowed | Pass | Tester confirmed creation of 12:00–13:30 on 2026-11-11 with Manual Lunch 20261103 and 14 seats. Returning to 2026-11-10 preserves 4 slots / 60 seats. |
 | ST-19 | Create slot without tables: zero seats and Choose tables action | Pass | Tester confirmed 2026-11-11 slot 17:00–18:00 saved with No tables for now. Card shows No tables yet, zero-seat booking explanation, 0 seats, dashed border and Choose tables. Day summary is 2 slots / 14 seats. |
 | ST-20 | Assign existing set; slot updates without reload | Pass | Tester confirmed assigning Manual Copy 20261103 to 2026-11-11 slot 17:00–18:00 via Give tables. Dialog closes; slot updates without reload to capacities 8, 4, 6 and 18 seats; No tables yet and Choose tables disappear. Day summary becomes 2 slots / 32 seats. |
-| ST-21 | Create a set from Add a slot; original form preserved and new set selected | Pass | Guided re-run: tester created Manual Nested Retry 20261103 with one 6-seat table from Add a slot, confirmed return with date/time preserved and new set selected, then explicitly clicked Add slot and confirmed 2026-11-12 slot 12:00–13:00 visible with that set and 6 seats. Earlier attempt created Manual Nested Add 20261103 but had no stored slot; cause unconfirmed, not classified as a defect. |
+| ST-21 | Create a set from Add a slot; original form preserved and new set selected | Pass (repeat); O-01 open | Guided repeat: created Manual Nested Retry 20261103 with one 6-seat table from Add a slot, returned with date/time preserved and the new set selected, then explicitly saved 2026-11-12 12:00–13:00. The slot was visible with 6 seats. The earlier attempt created Manual Nested Add 20261103 without a stored slot; its cause remains an open observation (O-01). |
 | ST-22 | Create a set from Choose tables; original slot preserved and new set selected | Pass | Tester confirmed opening Choose tables for the unassigned 2026-11-12 slot 18:00–19:00, creating Manual Choose Flow 20261103 with one 8-seat table from that dialog, returning with the new set selected, then Give tables closing the dialog and displaying the set and 8 seats. No tables yet and Choose tables disappear. Earlier attempts created sets from Add a slot; the final guided sequence verified the intended Choose tables flow. |
 | ST-23 | Cancel nested New table set; original dialog values preserved | Pass | Tester confirmed cancelling nested creation of Manual Nested Cancel (3-seat table) returns to Add a slot with 2026-11-13, 15:00–16:00 and Manual Lunch 20261103 preserved. Cancelled set is absent from the options. |
-| ST-24 | Reload preserves saved slots, sets and assignments | Pass | After the guided ST-21 re-run, tester confirmed Ctrl+R preserves both 2026-11-12 slots: 12:00–13:00 with Manual Nested Retry 20261103 (6 seats), and 18:00–19:00 with Manual Choose Flow 20261103, (8 seats; actual set name has trailing comma). Summary remains 2 slots / 14 seats; 2026-11-10 remains 4 slots / 60 seats. Earlier absent slot was not stored; no persistence defect established. |
-| ST-25 | Public booking availability reflects unassigned versus assigned future slots | Pass | Tester confirmed anonymous /book in Incognito shows 2026-11-13 slot 17:00–18:00 without tables as Full and unselectable for one person. After staff assigns Manual Lunch 20261103 and visitor reloads/reselects date, slot shows 14 free seats and is selectable. |
+| ST-24 | Reload preserves saved slots, sets and assignments | Pass (repeat); O-01 open | After the ST-21 repeat, Ctrl+R preserved the 2026-11-12 slots: 12:00–13:00 with Manual Nested Retry 20261103 (6 seats), and 18:00–19:00 with Manual Choose Flow 20261103 (8 seats; see literal-name fixture note). Totals remained 2 slots / 14 seats; 2026-11-10 remained 4 slots / 60 seats. The earlier missing slot remains part of O-01; this pass covers the repeat only. |
+| ST-25 | Public booking availability reflects unassigned versus assigned future slots | Pass | Additional fixture observed for this check: 2026-11-13 17:00–18:00 without a table set. Its creation step was not recorded in the earlier checklist. In an anonymous Incognito /book session it appeared Full and unselectable for one person. After staff assigned Manual Lunch 20261103 and the visitor reloaded/reselected the day, it showed 14 free seats and became selectable. |
 | ST-26 | Warden can create sets, slots and assignments | Pass | Tester confirmed Emily Parker / Warden login opens Slots & tables; created Manual Warden 20261103 with one 5-seat table, then unassigned 2026-11-14 slot 12:00–13:00 and assigned that set via Give tables. Slot updates to 5 seats without errors. |
 | ST-27 | Hiker denied staff page; anonymous visitor redirected to login | Pass | Tester confirmed anonymous /slots redirects to /login with Log in to see the slots and tables. Logging in as manual.slots.hiker@example.com (test HIKER account created through the real registration API) and opening /slots shows Staff only without setup controls. |
-| ST-28 | Session loss redirects to login with return context | Pass | Tester confirmed deleting sid in Chrome DevTools while Add a slot is open, then submitting 2026-11-15 12:00–13:00, redirects to /login with Log in to see the slots and tables. |
-| ST-29 | Concurrent assignment in two sessions: second assignment reports conflict and refreshes | Pass | Guided re-run on 2026-11-15 slot 18:30–19:30: James and Emily opened Choose tables before either saved. James assigned Manual Lunch 20261103 (14 seats). Emily then attempted Manual Copy 20261103, received the already-has-tables alert and confirmed the slot displays James's set and 14 seats without reload. Initial attempt on 17:00–18:00 was inconclusive; no defect confirmed. |
-| ST-30 | Slow network: pending save visible, repeated submission prevented | Pass | Tester confirmed throttled creation of Manual Slow 20261103 with one 3-seat table shows disabled Saving… button, prevents repeated submission and creates a single set. |
-| ST-31 | Background slot GET overlapping a save: saved slot/assignment remains visible | Inconclusive | Manual Slow 3G attempts did not obtain the required overlap: GET staff/slots completed before submission. A Pending POST observed by the tester was the save itself, not a pending background GET. This does not confirm or disprove the code-review reproduction with simulated API responses. |
+| ST-28 | Session loss redirects to login with return context | Partial | Deleting sid while Add a slot was open and submitting 2026-11-15 12:00–13:00 redirected to /login with Log in to see the slots and tables. Login and return to /slots were not verified; return-context restoration remains to be checked. |
+| ST-29 | Concurrent assignment in two sessions: second assignment reports conflict and refreshes | Pass (repeat); O-02 open | Guided repeat on 2026-11-15 18:30–19:30: James and Emily opened Choose tables before saving. James assigned Manual Lunch 20261103 (14 seats); Emily attempted Manual Copy 20261103, received the already-has-tables alert and saw James's set / 14 seats without reload. The first 17:00–18:00 attempt remains inconclusive with no established cause (O-02). |
+| ST-30 | Slow network: pending save visible, repeated submission prevented | Partial | With network throttling, creating Manual Slow 20261103 with one 3-seat table showed a disabled Saving… button, prevented repeated submission and created one set. Slot creation and table assignment under a pending save were not exercised; the full case is not passed. |
+| ST-31 | Background slot GET overlapping a save: saved slot/assignment remains visible | Inconclusive (manual); known defect | Manual Slow 3G attempts did not obtain a GET/save overlap. A separate controlled browser reproduction confirmed a stale-read display defect on the tested dev commit. Fix proposed in PR #64; it is still open and has not been manually retested in this run. See ST-31 evidence below. |
 | ST-32 | Network unavailable: readable error, preserved form and successful retry after reconnecting | Pass | Using Chrome DevTools Offline before saving Manual Network 20261103 (one 3-seat table), tester confirmed the generic error and preserved form. After restoring No throttling, retry closes the dialog and creates exactly one set with 1 table / 3 seats. Backend shutdown was not exercised. |
 | ST-33 | Add a slot outside current date range; selected day and saved data visible | Pass | Tester confirmed creating 2026-12-10 slot 12:00–13:00 with Manual Lunch 20261103 closes the dialog, selects the date, displays 14 seats and keeps the selected day visible in the extended date strip. |
 | ST-34 | Past-day creation displays notice identifying saved date | Pass | Tester confirmed saving 2026-11-01 slot 15:00–16:00 with Manual Draft 20261103 closes the dialog and displays a notice identifying 1 November as before today. |
 | ST-35 | Mobile: navbar, day scrolling, slot cards and fixed Add a slot bar usable | Pass | Tester confirmed Chrome responsive view at 390 × 844: navbar menu opens/closes, one-column page has no page-wide horizontal overflow, day strip scrolls sideways, slot details remain readable without overlaps and fixed Add a slot action is clickable. |
 | ST-36 | Mobile dialogs: scrolling, actions, table editing and validation usable | Pass | Tester confirmed at 390 × 844: bottom-sheet Add a slot scrolls and actions are reachable; required-time errors are readable; copied table rows use one column with usable number/capacity/remove controls; zero-capacity validation is visible without overlaps; Cancel closes dialogs. |
 | ST-37 | Keyboard: labels, focus, tab navigation, Enter and Escape usable | Pass | Tester confirmed desktop Tab/Shift+Tab navigation with visible focus confined to New table set, Enter in draft Seats adds a row without saving, keyboard activation of Cancel closes without saving, and Add a slot fields/options/actions are keyboard reachable with Escape closing. This was a keyboard usability check, not a screen-reader audit. |
-| ST-38 | No table sets yet: empty state, unassigned creation and first-set flow | Pass (agent-run browser check) | Executed separately with Playwright/Chromium and real Express/PostgreSQL using mountain_hut_st38_20261103 on API port 3002. Initial counts: 0 sets / 0 slots. Empty state, default unassigned choice, unassigned slot creation, nested first-set creation/selection, assignment and persistence confirmed. Not a manual result from Antonio; see procedure below. |
+| ST-38 | No table sets yet: empty state, unassigned creation and first-set flow | Not executed (manual) | No manual empty-state run was performed. A separate automated Playwright check passed against the isolated real backend/database on port 3002; see supplementary automated evidence. Excluded from the manual Pass count. |
 
-## Issues and evidence
+## Open observations and remaining checks
 
-No manual failures confirmed. ST-31 remains manually inconclusive; a separate
-controlled browser reproduction confirmed the defect again on 2026-11-03.
-ST-38 was subsequently covered by an agent-run browser check with real backend
-and an isolated empty-state database, preserving mountain_hut_test.
+- **O-01 - ST-21/ST-24:** the first nested creation produced a set but no stored
+  slot. The cause was not established. The guided repeat passed, including
+  explicit slot submission and reload persistence; that does not explain or
+  dismiss the first outcome. Keep this observation open for investigation.
+- **O-02 - ST-29:** the first concurrent-assignment attempt on 17:00–18:00 was
+  inconclusive. Its cause remains unknown. The controlled manual repeat on
+  18:30–19:30 passed; the first attempt remains a separate open observation.
+- **ST-06:** repeat editing/removal from a named set with explicit starting rows
+  and arithmetic; current evidence is inconsistent.
+- **ST-28:** after the verified redirect, log in as staff and verify return to
+  /slots and the intended return context.
+- **ST-30:** repeat the pending-save/repeated-click check for slot creation and
+  table assignment; only table-set creation has been verified.
+- **ST-31:** retest the stale-read scenario after the fix is integrated, naming
+  the exact tested commit; PR #64 alone is not evidence of a successful retest.
+- **ST-38:** perform the empty-state flow manually if a manual result is required.
+- **QA integration:** not tested in this report.
 
-Two initially unclear observations were retried step by step: nested slot
-creation (ST-21/ST-24) and concurrent assignment (ST-29). The confirmed results
-of those repetitions are recorded in the checklist; no defect was established
-from the earlier inconclusive attempts.
+## Known defect and supplementary automated evidence
 
 ### ST-31: repeatable controlled browser reproduction
-
-Re-executed on 2026-11-03 against dev commit
+Re-executed on 03/11/2026 against dev commit
 `a8e53fdf29c5598fb2d10ed7d1e97cd8500884d6`, using the real Vite/React UI
 at http://localhost:5173 and Playwright headless Chromium on Windows.
 Playwright intercepted only URLs whose pathname starts with `/api/`.
@@ -144,11 +175,10 @@ mutations; that additional ordering was not exercised by this reproduction.
 Possible remedies are invalidating stale reads when mutations succeed or
 refetching authoritative data after writes with request ordering protection.
 
-This finding is documented here only; no GitHub issue was created.
+Tracking/fix: [PR #64 - fix(slots): keep saved slots when an older read answers late (ST-31)](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/64), head `4b44bd7`, targets `dev`. As checked on 05/11/2026, the PR is open and unmerged. This report does not mark the defect resolved and contains no post-fix manual retest.
 
-### ST-38: isolated empty-state check
-
-Executed by the agent with Playwright headless Chromium on 2026-11-03 against
+### ST-38: isolated empty-state check (automated only)
+Executed by the agent with Playwright headless Chromium on 03/11/2026 against
 the same dev commit. A separate Express process ran on port 3002 with database
 `mountain_hut_st38_20261103`. Migrations and `seedStaff()` were applied, but
 `seedSlots()` was not. A read-only count verified zero sets and zero slots.
@@ -168,9 +198,17 @@ The browser used the real UI on port 5173; API routes were forwarded to port
 7. Reload, then start a fresh browser session and log in again. Verify the set
    appears in the card and both slots; both assignments persisted.
 
-All behaviour assertions passed. The first harness attempt needed an accessible
-name locator correction for the required Name field. A later runner shutdown
-interrupted an in-flight GET after assertions completed; a clean fresh-browser
-verification waited for route completion and exited successfully. Neither
-harness issue is reported as an application defect. The temporary database was
-retained; the existing manual-run database was not changed by ST-38.
+All behaviour assertions passed in the separate automated check. This is supplementary evidence only, not a manual Pass and not a QA integration test.
+
+## Temporary test databases
+
+The two databases below were created for this review activity and are listed for
+removal. Their presence does not change the original manual-run database
+`mountain_hut_test`, which must be preserved.
+
+| Database | Purpose | Cleanup status |
+| --- | --- | --- |
+| `mountain_hut_manual_slots_20261103` | Unused preparation database | Present on 05/11/2026; listed for removal, with no test evidence depending on its contents |
+| `mountain_hut_st38_20261103` | Separate ST-38 automated empty-state check | Present on 05/11/2026; listed for removal after any needed evidence retention |
+
+No database deletion is claimed by this documentation revision.
