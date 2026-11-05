@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "start": "node src/index.js",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --dir test"
+    "test:coverage": "vitest run --coverage --dir test",
+    "test:unit": "vitest run --config vitest.unit.config.js"
   },
   "dependencies": {
     "express": "^5.3.0",
@@ -28,6 +29,8 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
+    "mailparser": "^3.10.0",
+    "smtp-server": "^3.20.2",
     "supertest": "^7.3.1",
     "vitest": "^5.0.5"
   }

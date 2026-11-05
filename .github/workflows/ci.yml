@@ -132,8 +132,17 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Receives the emails of the server; the MH-3 tests read them through its API.
+      mailpit:
+        image: axllent/mailpit:v1.29
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_e2e
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      MAILPIT_URL: http://localhost:8025
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
