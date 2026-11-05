@@ -109,6 +109,8 @@
 
 /* Small ghost button: Log out, Log in */
 
+.ghost.login { background: var(--pine); color: var(--snow); }
+
 .ghost {
   flex: none;
   padding: 8px 14px;

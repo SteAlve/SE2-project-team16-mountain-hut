@@ -74,7 +74,15 @@ export const isClosed = (day, startsAt, now) => now.getTime() > closingTime(day,
 export const formatClosingTime = (day, startsAt) => timeOfDate(closingTime(day, startsAt));
 
 // '17:00 today' or '11:00 on Sat 17 Jul', for "You can book this time until ...".
-export const formatBookUntil = (day, startsAt, now) => {
+export const formatBookUntil = (day, startsAt, now, bookingClosesAt) => {
+  // The API already calculated this in the hut's time zone, including daylight-saving changes.
+  if (bookingClosesAt) {
+    const closesDay = bookingClosesAt.slice(0, 10);
+    const closesTime = bookingClosesAt.slice(11, 16);
+    return closesDay === toDay(now)
+      ? `${closesTime} today`
+      : `${closesTime} on ${formatDay(closesDay)}`;
+  }
   const closes = closingTime(day, startsAt);
   const closesDay = toDay(closes);
   return closesDay === toDay(now)

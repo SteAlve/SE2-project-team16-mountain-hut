@@ -136,7 +136,13 @@ Emails do not leave your machine: **Mailpit** keeps them, and you can read them 
 | What | Where | How |
 |---|---|---|
 | Server | `server/test`, one folder per layer | `npm test` in `server` |
+| Client unit tests | `client/test`, pure search, selection, URL and message rules | `npm test` in `client` (Node's built-in runner, no browser or database) |
 | End to end | `e2e/tests` | `npm run e2e` in `e2e` |
+
+Use a dedicated migrated `E2E_DATABASE_URL`, not a database with manual test data.
+In `e2e/tests/mh-2-define-tables-and-slots.spec.js`, `newDay()` chooses fixture dates,
+the tests count slots on those dates, and `cleanup()` deletes every slot on them.
+Existing manual data could therefore affect the assertions or be deleted by that cleanup.
 
 The server tests that use PostgreSQL connect to `TEST_DATABASE_URL`, so set it in `server/.env`. Create that database once, and then run the tests: the tests apply the migrations by themselves, so there is no need for `db:migrate`.
 
@@ -316,7 +322,7 @@ The workflows are in [`.github/workflows`](.github/workflows).
 | `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
 | `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `qa.yml` and `deploy.yml` also publish the Docker image, tagged `qa` and `latest`, and `deploy.yml` builds the client |
 
-To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
+To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint`, `npm test` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
 
 ## Commit convention
 
