@@ -1,5 +1,5 @@
 /**
- * SEED: creates the demo hut staff (one warden, two employees) and the demo table sets and meal
+ * SEED: creates the demo accounts (one warden, two employees, one hiker) and the demo table sets and meal
  * slots (the next three weeks, counted from the day it runs), so that the app can be tried and demoed without a sign up page for staff.
  * Run it with `npm run db:seed`, after `npm run db:migrate`.
  * It is safe to run again: an account whose email already exists is left untouched, and a slot
@@ -20,6 +20,11 @@ export const DEMO_STAFF = [
   { firstName: 'Emily', lastName: 'Parker', email: 'emily.parker@quota.example', role: 'WARDEN' },
   { firstName: 'James', lastName: 'Taylor', email: 'james.taylor@quota.example', role: 'EMPLOYEE' },
   { firstName: 'Oliver', lastName: 'Wilson', email: 'oliver.wilson@quota.example', role: 'EMPLOYEE' },
+];
+
+// A hiker can sign up from the app; this one is ready for demos, with the same password.
+export const DEMO_HIKERS = [
+  { firstName: 'Lucas', lastName: 'Bennett', email: 'lucas.bennett@quota.example', role: 'HIKER' },
 ];
 
 // Demo layouts vary the number and capacity of tables from service to service.
@@ -51,15 +56,19 @@ export const demoSlots = (today) => {
   });
 };
 
-export async function seedStaff() {
+// Returns the emails of the accounts it created; an account whose email exists is left untouched.
+async function seedAccounts(accounts) {
   const passwordHash = await hash(DEMO_PASSWORD);
   const created = [];
-  for (const staff of DEMO_STAFF) {
-    const user = await users.insert({ ...staff, phone: null, passwordHash });
-    if (user) created.push(staff.email);
+  for (const account of accounts) {
+    const user = await users.insert({ ...account, phone: null, passwordHash });
+    if (user) created.push(account.email);
   }
   return created;
 }
+
+export const seedStaff = () => seedAccounts(DEMO_STAFF);
+export const seedHikers = () => seedAccounts(DEMO_HIKERS);
 
 // `today` is a parameter so that a test can fix it; by default it is today in the time zone of the hut.
 export async function seedSlots(today = clock.today(config.hutTimeZone)) {
@@ -105,8 +114,10 @@ export async function seedSlots(today = clock.today(config.hutTimeZone)) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const staffCreated = await seedStaff();
+    const hikersCreated = await seedHikers();
     const { tablesCreated, slotsSeeded } = await seedSlots();
     console.log(staffCreated.length > 0 ? `Created staff: ${staffCreated.join(', ')}` : 'Demo staff already present.');
+    console.log(hikersCreated.length > 0 ? `Created hikers: ${hikersCreated.join(', ')}` : 'Demo hiker already present.');
     console.log(`Added ${tablesCreated} demo tables and seeded ${slotsSeeded} demo slots.`);
   } catch (error) {
     console.error(error);
