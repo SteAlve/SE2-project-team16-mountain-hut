@@ -26,6 +26,7 @@ import { createBooking } from '../api/bookings.js';
 import { getSeating, getSlots } from '../api/slots.js';
 import { daysBetween, formatClosingTime, formatTime, nextDays, toDay } from '../lib/bookingDates.js';
 import { seats, slotAvailability } from '../lib/slotAvailability.js';
+import { findSearchSlots } from '../lib/availabilitySlots.js';
 
 // The strip grows in pages; restoring a distant day does not render every date from today.
 const DAYS_PER_PAGE = 14;
@@ -33,25 +34,16 @@ const TICK_MS = 30 * 1000;
 const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
 const TABLES_CHANGED = 'The free tables changed just now. Check where your party sits and confirm again.';
 
-function useNow() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), TICK_MS);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
 // { 'YYYY-MM-DD': [slot, ...] }, in the order of the server.
 const byDate = (slots) =>
   slots.reduce((days, slot) => ({ ...days, [slot.date]: [...(days[slot.date] ?? []), slot] }), {});
 
 export function useBookTable(initial = {}) {
-  const now = useNow();
+  const [now, setNow] = useState(() => new Date());
   const [start, setStart] = useState(() => {
     const today = new Date();
     const ahead = daysBetween(toDay(today), initial.date);
-    if (ahead >= DAYS_PER_PAGE || ahead < 0) {
+    if (ahead >= DAYS_PER_PAGE) {
       const requested = new Date(`${initial.date}T12:00:00`);
       requested.setDate(requested.getDate() - (ahead > 0 ? 7 : 0));
       return requested;
@@ -104,13 +96,15 @@ export function useBookTable(initial = {}) {
   // The hut's server decides the deadline in its own time zone; a visitor's browser clock cannot.
   useEffect(() => {
     if (booking) return;
-    const timer = setInterval(() => { loadSlots().catch(() => {}); }, TICK_MS);
+    const timer = setInterval(() => {
+      setNow(new Date());
+      loadSlots().catch(() => {});
+    }, TICK_MS);
     return () => clearInterval(timer);
   }, [loadSlots, booking]);
 
   const showMoreDays = useCallback(() => setDayCount((count) => count + DAYS_PER_PAGE), []);
-  const earliestSlotDay = slotsByDate ? Object.keys(slotsByDate).sort()[0] : null;
-  const minimumDay = earliestSlotDay && earliestSlotDay < toDay(now) ? earliestSlotDay : toDay(now);
+  const minimumDay = toDay(now);
   const showEarlierDays = () => {
     const earlier = new Date(start);
     earlier.setDate(earlier.getDate() - Math.min(DAYS_PER_PAGE, daysBetween(minimumDay, toDay(start))));
@@ -131,18 +125,18 @@ export function useBookTable(initial = {}) {
   const to = initial.to;
   const isSearch = Boolean(from && to);
   const daySlots = useMemo(() => (date && slotsByDate?.[date]) || [], [date, slotsByDate]);
-  // The PO sets no party-size limit. Never silently reduce the user's choice to today's capacity.
+  // PO clarification #27: no business limit. This cap only preserves exact JavaScript integers;
+  // it is also used by the stepper to disable incrementing beyond representable party sizes.
   const maxPartySize = Number.MAX_SAFE_INTEGER;
   const partySize = chosenPartySize;
 
   const slots = daySlots.map((s) => ({ ...s, ...slotAvailability(s, date, partySize, now) }));
-  // Match positive overlaps, then count only slots with enough free seats for this party.
-  const overlappingSlots = isSearch ? slots.filter((s) => s.startsAt.slice(0, 5) < to && s.endsAt.slice(0, 5) > from) : [];
-  const matches = overlappingSlots.filter((s) => s.bookable);
+  const { overlapping: overlappingSlots, candidates: matches, automatic } = isSearch
+    ? findSearchSlots(slots, from, to)
+    : { overlapping: [], candidates: [], automatic: null };
   // While the check dialog is open the slot stays chosen even if the clock closes it: the server
   // answers the confirm, and the dialog does not go blank under the hiker.
-  const autoSelected = matches.length === 1 ? matches[0] : matches.length === 0 && overlappingSlots.length === 1 ? overlappingSlots[0] : null;
-  const selectedId = slotId === undefined ? autoSelected?.slotId : slotId;
+  const selectedId = slotId === undefined ? automatic?.slotId : slotId;
   const slot = slots.find((s) => s.slotId === selectedId && (isSearch || s.bookable || isReviewing)) ?? null;
 
   const chooseDate = (next) => {

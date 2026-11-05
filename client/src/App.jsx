@@ -8,6 +8,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/AuthProvider.js';
 import { STAFF_ROLES } from './lib/roles.js';
+import { bookingRouteKey } from './lib/availabilitySearch.js';
 import { AppLayout } from './pages/AppLayout/AppLayout.jsx';
 import { BookTablePage } from './pages/BookTablePage/BookTablePage.jsx';
 import { HomePage } from './pages/HomePage/HomePage.jsx';
@@ -19,7 +20,7 @@ import { StaffOnlyPage } from './pages/StaffOnlyPage/StaffOnlyPage.jsx';
 
 function BookTableRoute() {
   const location = useLocation();
-  return <BookTablePage key={location.search} />;
+  return <BookTablePage key={bookingRouteKey(location.search)} />;
 }
 
 export default function App() {

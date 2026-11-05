@@ -21,7 +21,7 @@ import { useAuth } from '../../hooks/useAuth.js';
 import { useBookTable } from '../../hooks/useBookTable.js';
 import { usePublicAvailability } from '../../hooks/usePublicAvailability.js';
 import { formatTime, toDay } from '../../lib/bookingDates.js';
-import { readBookingSearch } from '../../lib/availabilitySearch.js';
+import { readBookingSearch, withoutReviewFlag } from '../../lib/availabilitySearch.js';
 import { ROLE_LABEL, STAFF_ROLES } from '../../lib/roles.js';
 import styles from './BookTablePage.module.css';
 
@@ -30,7 +30,7 @@ const HUT_LABEL = 'Rifugio Alpe Lunga · 2.450 m';
 
 export function BookTablePage() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { user, isLoading, isAuthenticated } = useAuth();
   const initial = readBookingSearch(params);
   const { from, to, isSearch } = initial;
@@ -47,13 +47,14 @@ export function BookTablePage() {
       : { status: 'choice', message: `${book.matchingCount} overlapping ${book.matchingCount === 1 ? 'slot is' : 'slots are'} currently bookable for ${partySize} people. Choose one to check availability.` }
     : null;
   const availability = seatingAnswer ?? searchMessage;
-  const canReview = !isLoading && !isStaff && availability?.status === 'available';
+  const canReview = !isLoading && !isStaff && availability?.status === 'available' && !availability.isRefreshing;
   const resume = useRef(false);
   useEffect(() => {
     if (params.get('review') !== '1' || resume.current || !isAuthenticated || !canReview) return;
     resume.current = true;
+    setParams(withoutReviewFlag(params), { replace: true });
     book.review();
-  }, [params, isAuthenticated, canReview, book]);
+  }, [params, setParams, isAuthenticated, canReview, book]);
 
   const goToLogin = () => {
     const choices = new URLSearchParams({ people: String(partySize) });

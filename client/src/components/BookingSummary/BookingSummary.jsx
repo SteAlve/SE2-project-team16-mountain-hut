@@ -6,6 +6,7 @@
  * while the server says where the party would sit. `canBook` is false for the staff: Review booking
  * stays disabled, because only hikers can book.
  */
+import { useLayoutEffect, useRef } from 'react';
 import {
   formatBookUntil,
   formatDay,
@@ -65,11 +66,28 @@ export function BookingSummary({ date, slot, partySize, now, isPending, canBook 
 }
 
 export function BookingBar({ date, slot, partySize, now, isPending, canBook = true, onReview, availability, isAvailable = true, searchRange }) {
+  const barRef = useRef(null);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const screen = bar.parentElement;
+    // Seating rows, banners, font loading and orientation can all change the fixed bar's height.
+    const updateSpace = () => {
+      const height = Math.ceil(bar.getBoundingClientRect().height);
+      screen.style.setProperty('--booking-bar-space', `${height + 16}px`);
+    };
+    updateSpace();
+    const observer = new ResizeObserver(updateSpace);
+    observer.observe(bar, { box: 'border-box' });
+    return () => {
+      observer.disconnect();
+      screen.style.removeProperty('--booking-bar-space');
+    };
+  }, []);
   const summary = [date && formatDay(date), slot ? formatTime(slot.startsAt) : searchRange || '—', partySize]
     .filter(Boolean)
     .join(' · ');
   return (
-    <div className={styles.bar}>
+    <div ref={barRef} className={styles.bar}>
       <div className={styles.barSummary}>
         <span className={styles.barChoices}>{summary}</span>
         <span className={styles.barUntil}>
@@ -81,7 +99,7 @@ export function BookingBar({ date, slot, partySize, now, isPending, canBook = tr
               : 'choose a time'}
         </span>
       </div>
-      <AvailabilityAnswer answer={availability} partySize={partySize} compact />
+      <AvailabilityAnswer answer={availability} partySize={partySize} />
       <Button block disabled={!canBook || !slot || !isAvailable || isPending} onClick={onReview}>
         {isPending ? 'Checking…' : 'Review booking'}
       </Button>

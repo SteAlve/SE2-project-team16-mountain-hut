@@ -25,9 +25,3 @@ export function slotAvailability(slot, day, partySize, now) {
   }
   return { bookable: true, label: `${seats(slot.freeSeats)} free` };
 }
-
-// The stepper goes up to the most free seats of any open time of the day (at least 1).
-export function largestParty(slots, day, now) {
-  const open = slots.filter((slot) => isOpen(slot, day, now));
-  return Math.max(1, ...open.map((slot) => slot.freeSeats));
-}
