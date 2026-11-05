@@ -12,6 +12,10 @@ Manual checks of **MH-02 - Define slot capacity**, performed by Antonio on
 05/11/2026 at `1a03843`, using a fresh isolated database and the real backend.**
 The original manual classifications remain unchanged; these three functional
 coverage gaps now have explicit automated evidence below.
+**ST-28 and ST-30 also passed supplementary automated checks at `760dc59` on
+05/11/2026. All five cases originally Partial, Inconclusive or Not executed
+manually now have additional passing automated evidence.** This does not
+reclassify the original manual run or explain historical observations O-01/O-02.
 The successful repeats in ST-21, ST-24 and ST-29 are included in the 33 passes;
 their earlier unexplained outcomes remain open observations O-01/O-02.
 
@@ -106,9 +110,9 @@ Fixture notes:
 | ST-25 | Public booking availability reflects unassigned versus assigned future slots | Pass | Additional fixture observed for this check: 2026-11-13 17:00–18:00 without a table set. Its creation step was not recorded in the earlier checklist. In an anonymous Incognito /book session it appeared Full and unselectable for one person. After staff assigned Manual Lunch 20261103 and the visitor reloaded/reselected the day, it showed 14 free seats and became selectable. |
 | ST-26 | Warden can create sets, slots and assignments | Pass | Tester confirmed Emily Parker / Warden login opens Slots & tables; created Manual Warden 20261103 with one 5-seat table, then unassigned 2026-11-14 slot 12:00–13:00 and assigned that set via Give tables. Slot updates to 5 seats without errors. |
 | ST-27 | Hiker denied staff page; anonymous visitor redirected to login | Pass | Tester confirmed anonymous /slots redirects to /login with Log in to see the slots and tables. Logging in as manual.slots.hiker@example.com (test HIKER account created through the real registration API) and opening /slots shows Staff only without setup controls. |
-| ST-28 | Session loss redirects to login with return context | Partial | Deleting sid while Add a slot was open and submitting 2026-11-15 12:00–13:00 redirected to /login with Log in to see the slots and tables. Login and return to /slots were not verified; return-context restoration remains to be checked. |
+| ST-28 | Session loss redirects to login with return context | Partial (original manual); Pass (supplementary automated) | The original manual run verified only the redirect and login message. The automated check at 760dc59 deleted the real sid cookie while Add a slot was open, obtained HTTP 401 with no saved slot, verified return context from=/slots and the login message, then logged in on that same page and returned successfully to /slots with staff controls enabled. |
 | ST-29 | Concurrent assignment in two sessions: second assignment reports conflict and refreshes | Pass (repeat); O-02 open | Guided repeat on 2026-11-15 18:30–19:30: James and Emily opened Choose tables before saving. James assigned Manual Lunch 20261103 (14 seats); Emily attempted Manual Copy 20261103, received the already-has-tables alert and saw James's set / 14 seats without reload. The first 17:00–18:00 attempt remains inconclusive with no established cause (O-02). |
-| ST-30 | Slow network: pending save visible, repeated submission prevented | Partial | With network throttling, creating Manual Slow 20261103 with one 3-seat table showed a disabled Saving… button, prevented repeated submission and created one set. Slot creation and table assignment under a pending save were not exercised; the full case is not passed. |
+| ST-30 | Slow network: pending save visible, repeated submission prevented | Partial (original manual); Pass (supplementary automated) | The original manual check covered table-set creation only. The automated check at 760dc59 delayed real API responses for set creation, slot creation and table assignment. Saving and Cancel were disabled in every case; attempted repeated form submission and disabled-button activation produced only one mutation request per operation. Real responses were 201/201/200, database contents were correct and the assignment persisted after reload. |
 | ST-31 | Background slot GET overlapping a save: saved slot/assignment remains visible | Inconclusive (manual); fix verified automatically | Manual Slow 3G attempts did not obtain a GET/save overlap. A separate controlled browser reproduction confirmed the defect on the original tested commit. PR #64 is now merged into dev; its head 4b44bd7 passed the automated regression and all 16 MH-02 tests. The regression failed with the pre-fix hook. No post-fix manual pass is claimed; see supplementary evidence below. |
 | ST-32 | Network unavailable: readable error, preserved form and successful retry after reconnecting | Pass | Using Chrome DevTools Offline before saving Manual Network 20261103 (one 3-seat table), tester confirmed the generic error and preserved form. After restoring No throttling, retry closes the dialog and creates exactly one set with 1 table / 3 seats. Backend shutdown was not exercised. |
 | ST-33 | Add a slot outside current date range; selected day and saved data visible | Pass | Tester confirmed creating 2026-12-10 slot 12:00–13:00 with Manual Lunch 20261103 closes the dialog, selects the date, displays 14 seats and keeps the selected day visible in the extended date strip. |
@@ -130,10 +134,12 @@ Fixture notes:
 - **ST-06:** the original manual arithmetic remains inconsistent. The separate
   automated check now confirms editing/removal using a fully specified fixture;
   another manual run is needed only if a manual Pass is required.
-- **ST-28:** after the verified redirect, log in as staff and verify return to
-  /slots and the intended return context.
-- **ST-30:** repeat the pending-save/repeated-click check for slot creation and
-  table assignment; only table-set creation has been verified.
+- **ST-28:** return context and login back to /slots are now verified automatically
+  at `760dc59`. The original manual result remains Partial; another manual run is
+  needed only if a manual Pass is required.
+- **ST-30:** pending saves and duplicate-submission prevention for set creation,
+  slot creation and assignment are now verified automatically at `760dc59`.
+  The original manual result remains Partial rather than being rewritten.
 - **ST-31:** the fix is merged and verified automatically at `4b44bd7`, as
   detailed below. A manual post-fix retest remains outstanding if a manual result
   is required; do not turn the automated result into a manual Pass.
@@ -251,11 +257,32 @@ explicitly for both the API and fixtures. No manual-run database was used.
 | ST-38 | Pass | Read-only counts confirmed 0 sets / 0 slots before the check. Created an unassigned 12:00-13:00 slot on 06/11/2026. From Add a slot for 14:00-15:00, created `AUTO-ST38-First-1793896910607` with a 4-seat draft saved without Enter. Verified return with the original date/time and the new set selected, saved the second slot, then assigned that set to the first. Reload and a fresh login retained both assignments. Final database counts: 1 set and 2 assigned slots. |
 
 These are three supplemental automated case results, not three new manual
-passes and not certification of every report case. ST-28/ST-30 remain partially
-verified manually, and the historical observations O-01/O-02 remain open.
+passes and not certification of every report case. ST-28/ST-30 were checked in
+the additional automated run below; their original manual results remain Partial,
+and the historical observations O-01/O-02 remain open.
 Screenshots of ST-06/ST-38 and execution output were captured locally. This
 documentation update adds no E2E files to the repository. The temporary
 database and both processes were removed after the run.
+
+### Automated completion of ST-28 and ST-30 (05/11/2026)
+
+Tested commit: `760dc59fbab44e3ccebedec9990ec4ac6d690037`. Headless
+Chromium/Playwright used the real React UI, Express and PostgreSQL. A new
+`mountain_hut_mh83_auto_<run ID>` database was migrated without demo data;
+only an isolated employee account and fixtures created by these checks were
+used. Client/API ports were 15183/13083. No manual-run database was used.
+
+| Case | Automated result | Evidence |
+| --- | --- | --- |
+| ST-28 | Pass | Opened Add a slot for 06/11/2026 12:00-13:00 while authenticated, removed the real sid cookie and submitted. The actual API returned 401. The browser redirected to /login with the expected message and state `{ from: '/slots', page: 'see the slots and tables' }`. Logging in on that same page returned to /slots with its staff heading and enabled Add a slot action. A database query confirmed that the unauthorized attempt saved no slot. |
+| ST-30 | Pass | Created `AUTO-ST30-Set-1793897253560` with one 3-seat table, an unassigned 06/11/2026 12:00-13:00 slot and its subsequent table-set assignment. For each operation, the real request reached the backend and its response was held to simulate network delay. Saving and Cancel were disabled; an extra form submission plus disabled-submit click caused no duplicate request. Exactly one POST for the set (201), one POST for the slot (201) and one PUT for assignment (200) were observed. SQL checks confirmed one set, one slot and the correct assignment; the page still displayed that set after reload. |
+
+The API mutation responses were delayed, not replaced by fake successes. The
+checks asserted real database state after each operation. Screenshots captured
+the login/return context and all three pending-save states locally. The temporary
+database and processes were removed after the run. This update adds no E2E files
+to the repository and does not turn either original manual Partial into a manual
+Pass.
 
 ## Temporary test databases
 
