@@ -4,7 +4,6 @@
 .eyebrow { margin: 0; font-family: var(--font-mono); font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #f3e7d3; }
 .heading h1 { margin: 12px 0 14px; font-family: var(--font-display); font-size: 92px; font-weight: 800; line-height: .95; }
 .slogan { margin: 0; font-size: 21px; font-weight: 500; }
-.credit { position: absolute; right: 12px; top: 10px; font-size: 11px; color: white; font-weight: 400; }
 .content { position: relative; max-width: 1280px; margin: -36px auto 0; padding: 0 64px 64px; }
 .search { display: grid; grid-template-columns: minmax(150px, 1.3fr) minmax(100px, .8fr) repeat(2, minmax(100px, 1fr)) auto; gap: 8px; align-items: stretch; background: var(--snow); border-radius: 16px; padding: 8px; box-shadow: 0 20px 40px rgb(16 32 26 / .2); }
 .search > button:last-child { font-size: 19px; padding-inline: 30px; }

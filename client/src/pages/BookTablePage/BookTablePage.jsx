@@ -41,8 +41,8 @@ export function BookTablePage() {
   const seatingAnswer = usePublicAvailability(slot, partySize, book.updateSlots);
   const searchMessage = !book.isLoading && !book.loadError && isSearch && !slot
     ? book.matchingCount === 0
-      ? { status: 'unavailable', message: `No meal starts between ${from} and ${to} on this day.` }
-      : { status: 'choice', message: `${book.matchingCount} times start between ${from} and ${to}. Choose one to see if your party fits.` }
+      ? { status: 'unavailable', message: `No meal slots overlap your selected time range (${from}–${to}) on this day.` }
+      : { status: 'choice', message: `${book.matchingCount} slots overlap your selected time range (${from}–${to}). Choose one to see if your party fits.` }
     : null;
   const availability = seatingAnswer ?? searchMessage;
   const canReview = !isLoading && !isStaff && availability?.status === 'available';
@@ -97,7 +97,7 @@ export function BookTablePage() {
             <p className={styles.eyebrow}>{HUT_LABEL}</p>
             <div className={styles.headingRow}>
               <h1 className={styles.title}>Book a table</h1>
-              {isSearch && <Link to="/">Change search</Link>}
+              {isSearch && <Link to={`/?${new URLSearchParams({ date: date ?? '', people: String(partySize), from, to })}`}>Change search</Link>}
             </div>
             <p className={styles.subtitle}>
               Choose the day, how many you are, and a time. You can book up to 2 hours before.

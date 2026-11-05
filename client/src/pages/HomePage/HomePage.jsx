@@ -1,24 +1,28 @@
 // MH-04: public search among staff-defined meal slots. No seats are reserved here.
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { Button } from '../../components/Button/Button.jsx';
 import { TimeField } from '../../components/TimeField/TimeField.jsx';
 import { useAvailabilityDays } from '../../hooks/useAvailabilityDays.js';
-import { formatDay } from '../../lib/bookingDates.js';
+import { toDay } from '../../lib/bookingDates.js';
+import { readBookingSearch } from '../../lib/availabilitySearch.js';
 import styles from './HomePage.module.css';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const initial = readBookingSearch(params);
   const { days, isLoading, error } = useAvailabilityDays();
-  const [chosenDay, setDay] = useState('');
-  const [people, setPeople] = useState('1');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const date = days.includes(chosenDay) ? chosenDay : days[0] ?? '';
+  const today = toDay(new Date());
+  const [date, setDay] = useState(initial.date >= today ? initial.date : today);
+  const [people, setPeople] = useState(String(initial.partySize ?? 1));
+  const [from, setFrom] = useState(initial.from ?? '');
+  const [to, setTo] = useState(initial.to ?? '');
+  const validDay = date >= today && days.includes(date);
   const validParty = Number.isSafeInteger(Number(people)) && Number(people) > 0;
   const invalidRange = Boolean(from && to && to <= from);
-  const ready = date && validParty && from && to && !invalidRange && !isLoading && !error;
+  const ready = validDay && validParty && from && to && !invalidRange && !isLoading && !error;
   const search = (event) => {
     event.preventDefault();
     if (ready) navigate(`/book?${new URLSearchParams({ date, people: String(Number(people)), from, to })}`);
@@ -26,7 +30,6 @@ export function HomePage() {
   return (
     <main className={styles.page}>
       <section className={styles.hero} aria-labelledby="hut-title">
-        <a className={styles.credit} href="https://commons.wikimedia.org/wiki/File:Sangon_utia_da_mont_sun_Ciaulonch_cun_Odles_y_stevia.jpg">Photo: Wolfgang Moroder, CC BY-SA 3.0</a>
         <div className={styles.heading}>
           <p className={styles.eyebrow}>Rifugio Alpe Lunga · 2.450 m</p>
           <h1 id="hut-title">A table waits<br />at the top.</h1>
@@ -38,10 +41,7 @@ export function HomePage() {
           <label className={styles.field}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
             <span className={styles.fieldText}><span>Day</span>
-            <select aria-label="Day" value={date} onChange={(event) => setDay(event.target.value)} disabled={isLoading || !days.length}>
-              {!days.length && <option value="">{isLoading ? 'Loading days…' : 'No days with slots'}</option>}
-              {days.map((day) => <option key={day} value={day}>{formatDay(day)}</option>)}
-            </select>
+            <input aria-label="Day" type="date" min={today} required value={date} onChange={(event) => setDay(event.target.value)} aria-invalid={Boolean(date && !isLoading && !error && !validDay)} />
             </span>
           </label>
           <label className={styles.field}>
@@ -56,7 +56,9 @@ export function HomePage() {
         </form>
         <div className={styles.messages}>
           {error && <Alert>{error}</Alert>}
-          {!isLoading && !error && !days.length && <p>No meal slots are available yet.</p>}
+          {!isLoading && !error && !days.length && <Alert>No meal slots are available yet.</Alert>}
+          {!isLoading && !error && days.length > 0 && date >= today && !validDay && <Alert>No meal slots are available on this day. Choose another day.</Alert>}
+          {date && date < today && <Alert>Choose today or a future day.</Alert>}
           {invalidRange && <Alert>Choose a To time later than From.</Alert>}
           {!validParty && <Alert>Enter a positive whole number of people.</Alert>}
         </div>

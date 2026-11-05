@@ -131,7 +131,8 @@ export function useBookTable(initial = {}) {
   const to = initial.to;
   const isSearch = Boolean(from && to);
   const daySlots = useMemo(() => (date && slotsByDate?.[date]) || [], [date, slotsByDate]);
-  const matches = isSearch ? daySlots.filter((s) => s.startsAt.slice(0, 5) >= from && s.startsAt.slice(0, 5) <= to) : [];
+  // Match a positive overlap; adjacent intervals that only touch do not match.
+  const matches = isSearch ? daySlots.filter((s) => s.startsAt.slice(0, 5) < to && s.endsAt.slice(0, 5) > from) : [];
   // The PO sets no party-size limit. Never silently reduce the user's choice to today's capacity.
   const maxPartySize = Number.MAX_SAFE_INTEGER;
   const partySize = chosenPartySize;
