@@ -23,9 +23,10 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 
 1. **The landing page.** A picture, the slogan and a search bar: day, people, From and To. No login. Only days that have slots are in the list. From and To open a scroll wheel, like the timer of a phone: hours and minutes in steps of 5. To is always after From.
 2. **Check availability.** The button waits for From and To, then opens `/book` with the same choices. **From and To are a search, not a new slot:** the hut serves only the slots set by the staff (#6, #9). A slot matches if its interval **overlaps** From/To for a positive duration (`slot start < To` and `slot end > From`). Intervals that only touch at a boundary do not match. This is a team UX choice, not an explicit PO rule.
-   - **One slot matches:** it is already chosen and the card gives the answer.
-   - **Several match:** the user picks one, then the card gives the answer.
-   - **None matches:** the answer is not available.
+   - **One overlapping slot is currently bookable for the party:** it is selected automatically, even if other overlapping slots are full, have too few free seats or are closed. The server then checks its seating availability.
+   - **Several overlapping slots are currently bookable for the party:** the user picks one, then the server checks its seating availability.
+   - **No slot overlaps:** the answer is not available.
+   - **Slots overlap but none is currently bookable:** if there is only one overlapping slot, it is selected automatically so the server can explain why it is unavailable. With several overlapping slots, the user chooses one to inspect its availability.
 3. **The answer** is in the card of Book a table: **Available** with the detail of the seats, or **Not available**. It changes when the user changes the day, the people or the time on that page. Nothing is booked or held.
 4. **Review booking.** A logged-in hiker sees *Check your booking*. A visitor goes to the login with the note "Log in to book a table." (login mockup, screen 4), and from there to *Sign up* if they have no account. The choices are kept in both.
 5. **Back after the login or the sign-up.** The user returns to `/book` with *Check your booking* already open, so the only step left is **Confirm booking**.
@@ -76,7 +77,7 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 ## Implementation (MH-63 / MH-65)
 
 - `/` uses a calendar date input, initially set to today, with past days disallowed. This replaces the mockup's day dropdown. The public API determines which days have slots: days without slots show a message and cannot be searched. The search keeps the party size, including when it is too large, and passes `date`, `people`, `from` and `to` to `/book`.
-- `/book` matches slot intervals that overlap the From/To range for a positive duration, then counts only slots currently bookable for the selected party size. One candidate is selected automatically; several require a choice. If none overlap, the page gives a not-available message. If slots overlap but none is bookable for the party, they remain selectable so the user can inspect an individual answer. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested.
+- `/book` matches slot intervals that overlap the From/To range for a positive duration, then counts only slots currently bookable for the selected party size (booking is open and free seats cover the party). One candidate is selected automatically; several require a choice. If none overlap, the page gives a not-available message. If none is bookable but exactly one overlaps, that slot is selected to obtain the server's unavailable answer; with several overlaps, the user chooses one to inspect. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested.
 - The desktop card and the mobile bottom bar show the public seating answer and its split detail. Checking does not reserve seats. Review booking is enabled only after a successful check and only for hikers or visitors who can log in.
 - Login and sign-up preserve the choices in the return URL. `review=1` reopens *Check your booking* after authentication; confirmation still requires the hiker's explicit action and obtains a fresh seating proposal.
 - The check needs no new endpoint.
