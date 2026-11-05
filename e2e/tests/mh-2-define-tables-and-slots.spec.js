@@ -155,7 +155,7 @@ async function createTableSetInPage(page, name, tables) {
 async function addSlotInPage(page, { day, startsAt, endsAt, tables }) {
   await page.getByRole('button', { name: '+ Add a slot' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'Add a slot' });
-  await dialog.getByLabel('Day').fill(day);
+  await dialog.getByRole('textbox', { name: 'Day', exact: true }).fill(day);
   await dialog.getByLabel('Starts at').fill(startsAt);
   await dialog.getByLabel('Ends at').fill(endsAt);
   if (tables === null) {
@@ -307,6 +307,47 @@ test.describe('MH-2 Define tables and slots', () => {
     )).toBe(1);
   });
 
+  // ST-31 of docs/slots-tables-manual-test-report.md: the first read of the slots answers only after
+  // a slot was saved, with the slots as they were before. The saved slot must stay on the page.
+  test('a slot just saved stays on the page when an older read of the slots answers after it', async ({ page }) => {
+    // A day of the strip with no slots, found without moving the days of the other tests.
+    let day;
+    for (let offset = 1; offset < 14 && !day; offset += 1) {
+      if ((await countSlotsOf(dayFromToday(offset))) === 0) day = dayFromToday(offset);
+    }
+    expect(day, 'a day of the strip without slots').toBeDefined();
+    fixture.days.push(day);
+    let holding = true;
+    let release;
+    const released = new Promise((resolve) => {
+      release = resolve;
+    });
+    const held = [];
+    await page.route(/\/api\/staff\/slots\?/, async (route) => {
+      if (!holding || route.request().method() !== 'GET') return route.continue();
+      const delivered = page.waitForEvent('requestfinished', (request) => request === route.request());
+      held.push(delivered);
+      const response = await route.fetch(); // the slots before the save
+      await released;
+      await route.fulfill({ response });
+    });
+    await openSlotsPage(page);
+    await expect.poll(() => held.length).toBeGreaterThan(0);
+
+    const dialog = await addSlotInPage(page, { day, startsAt: '12:00', endsAt: '13:30', tables: null });
+    await expect(dialog).toBeHidden();
+    expect(await countSlotsOf(day)).toBe(1);
+
+    holding = false;
+    release();
+    await Promise.all(held);
+    await page.waitForTimeout(300); // lets the page handle the late answers
+
+    await expect(page.getByText(/^No slots on/)).toHaveCount(0);
+    await expect(slotRow(page, '12:00', '13:30')).toContainText('No tables yet');
+    await expect(dayHeading(page)).toContainText('1 slot · 0 seats');
+  });
+
   test.describe('invalid data is rejected', () => {
     test('a table set needs a name and at least one table', async ({ page }) => {
       await openSlotsPage(page);
@@ -362,7 +403,7 @@ test.describe('MH-2 Define tables and slots', () => {
 
       await page.getByRole('button', { name: '+ Add a slot' }).first().click();
       const dialog = page.getByRole('dialog', { name: 'Add a slot' });
-      await dialog.getByLabel('Day').fill(day);
+      await dialog.getByRole('textbox', { name: 'Day', exact: true }).fill(day);
       await dialog.getByRole('button', { name: 'Add slot' }).click();
       await expect(dialog.getByText('Enter the start time.')).toBeVisible();
       await expect(dialog.getByText('Enter the end time.')).toBeVisible();

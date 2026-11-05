@@ -60,11 +60,12 @@ export function useSlotsTables() {
     return error.status === 403 ? STAFF_ONLY : GENERIC_ERROR;
   }, []);
 
-  const loadSlots = useCallback(
-    () => getStaffSlots(from, to).then((slots) => setLoaded({ to, slots })),
-    [from, to],
-  );
-  const loadTableSets = useCallback(() => getTableSets().then(setTableSets), []);
+  // Bumped after every save (and after a conflict) to read the data again. The read still on its
+  // way is dropped: it may have left the server before the save, and would hide what was saved.
+  const [slotsVersion, setSlotsVersion] = useState(0);
+  const [tableSetsVersion, setTableSetsVersion] = useState(0);
+  const reloadSlots = () => setSlotsVersion((v) => v + 1);
+  const reloadTableSets = () => setTableSetsVersion((v) => v + 1);
 
   // A longer strip loads the whole range again: the days already there keep their slots meanwhile.
   useEffect(() => {
@@ -76,11 +77,18 @@ export function useSlotsTables() {
     return () => {
       current = false;
     };
-  }, [from, to, commonFailure]);
+  }, [from, to, slotsVersion, commonFailure]);
 
   useEffect(() => {
-    getTableSets().then(setTableSets, (error) => setAlert(commonFailure(error)));
-  }, [commonFailure]);
+    let current = true;
+    getTableSets().then(
+      (sets) => current && setTableSets(sets),
+      (error) => current && setAlert(commonFailure(error)),
+    );
+    return () => {
+      current = false;
+    };
+  }, [tableSetsVersion, commonFailure]);
 
   const showMoreDays = useCallback(() => setDayCount((count) => count + DAYS_PER_PAGE), []);
 
@@ -124,12 +132,13 @@ export function useSlotsTables() {
       try {
         const slot = await createSlot(form);
         setLoaded((current) => current && { ...current, slots: [...current.slots, slot] });
+        reloadSlots();
         showDay(slot.date);
         return { ok: true, slot };
       } catch (error) {
         if (error.status === 409) {
           // The mockup reloads the day and keeps the other choices.
-          await loadSlots().catch(() => {});
+          reloadSlots();
           if (daysBetween(from, form.date) >= 0) showDay(form.date);
           return {
             ok: false,
@@ -138,7 +147,7 @@ export function useSlotsTables() {
           };
         }
         if (error.status === 404) {
-          await loadTableSets().catch(() => {});
+          reloadTableSets();
           return { ok: false, alert: `${GONE} Choose another table set.` };
         }
         if (error.status === 400) return { ok: false, alert: error.message };
@@ -151,6 +160,7 @@ export function useSlotsTables() {
       try {
         const tableSet = await postTableSet({ name: name.trim(), tables });
         setTableSets((list) => [...list, tableSet]);
+        reloadTableSets();
         return { ok: true, tableSet };
       } catch (error) {
         if (error.status === 409) {
@@ -169,12 +179,14 @@ export function useSlotsTables() {
           ...current,
           slots: current.slots.map((s) => (s.slotId === slotId ? slot : s)),
         });
+        reloadSlots();
         setAlert(null);
         return { ok: true };
       } catch (error) {
         if (error.status === 409 || error.status === 404) {
           // A colleague gave the slot its tables meanwhile, or something was deleted: reload the day.
-          await Promise.all([loadSlots(), loadTableSets()]).catch(() => {});
+          reloadSlots();
+          reloadTableSets();
           setAlert(error.status === 409 ? 'This slot already has its tables.' : GONE);
         } else {
           setAlert(commonFailure(error));
