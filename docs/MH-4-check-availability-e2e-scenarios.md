@@ -15,14 +15,16 @@ Given/When/Then form so they can be translated directly into Playwright tests.
    table**. The login is asked only at **Review booking**, which these scenarios
    do not use.
 3. From and To are a search among the slots set by the staff, not a new time: a
-   slot matches if it starts between From and To. The scenarios choose ranges
-   whose limits do not touch the start of any slot, so they do not depend on
-   whether the limits are included.
+   slot overlaps if its interval intersects From/To for a positive duration
+   (slot start < To and slot end > From). Touching boundaries do not overlap.
 4. **Check availability** opens **Book a table** with the same choices, and that
-   page gives the answer:
-   - one slot matches: it is already chosen and the answer is shown;
-   - several slots match: the user chooses one, and the answer is shown for it;
-   - no slot matches: the answer is **Not available**.
+   page counts overlapping slots that are currently bookable for the selected
+   party size:
+   - one such slot: it is already chosen and the answer is checked;
+   - several such slots: the user chooses one, and the answer is checked for it;
+   - no overlapping slot: the answer is **Not available**;
+   - overlapping slots but none bookable for the party: the user can choose one
+     to see its availability.
 5. The answer is based on the free seats of that time and on the table layout.
    A party that does not fit at one table can be split over several tables:
    with 6 free seats split over 3 tables of 2, a party of 6 is available.
@@ -34,7 +36,7 @@ Given/When/Then form so they can be translated directly into Playwright tests.
 8. The check only gives an answer. It does not book or hold anything.
 9. The texts are those of the mockup: **Available**, **Not available**, and the
    reasons "This time has N free seats, not enough for M people.", "This time
-   has no free seats." and "No meal starts between HH:MM and HH:MM on this day."
+   has no free seats." and "No meal slots overlap your selected time range (HH:MM?HH:MM) on this day."
 10. A test must be able to set the day, the people, From and To by their
     accessible names (**Day**, **People**, **From**, **To**), without depending
     on how the time wheel is drawn.
@@ -45,14 +47,14 @@ Given/When/Then form so they can be translated directly into Playwright tests.
 
 1. The browser has no active session: there is no valid `sid` cookie.
 2. The chosen day has one slot with free tables of `4` and `6` seats.
-3. No other slot of that day starts between the From and To chosen below.
+3. No other slot of that day overlaps the From/To range chosen below.
 
 **When**
 
 1. The visitor opens the home page.
 2. The visitor chooses the day.
 3. The visitor sets the people to `3`.
-4. The visitor chooses From and To so that only that slot starts between them.
+4. The visitor chooses From and To so that only that slot overlaps that range.
 5. The visitor selects **Check availability**.
 
 **Then**
@@ -69,13 +71,13 @@ Given/When/Then form so they can be translated directly into Playwright tests.
 
 1. The chosen day has one slot with exactly three free tables of `2` seats each,
    so `6` free seats in total. No table has `6` free seats.
-2. No other slot of that day starts between the From and To chosen below.
+2. No other slot of that day overlaps the From/To range chosen below.
 
 **When**
 
 1. The user opens the home page and chooses the day.
 2. The user sets the people to `6`.
-3. The user chooses From and To so that only that slot starts between them.
+3. The user chooses From and To so that only that slot overlaps that range.
 4. The user selects **Check availability**.
 
 **Then**
@@ -90,13 +92,13 @@ Given/When/Then form so they can be translated directly into Playwright tests.
 
 1. The chosen day has one slot with three tables, and the bookings of other
    parties leave `2`, `3` and `1` free seats on them (`6` free seats in total).
-2. No other slot of that day starts between the From and To chosen below.
+2. No other slot of that day overlaps the From/To range chosen below.
 
 **When**
 
 1. The user opens the home page and chooses the day.
 2. The user sets the people to `6`.
-3. The user chooses From and To so that only that slot starts between them.
+3. The user chooses From and To so that only that slot overlaps that range.
 4. The user selects **Check availability**.
 
 **Then**
@@ -137,14 +139,14 @@ Given/When/Then form so they can be translated directly into Playwright tests.
 - **Case B:** no table set has been assigned to the chosen slot yet, so it has
   `0` seats and nothing can be booked there.
 
-In both cases no other slot of that day starts between the From and To chosen
+In both cases no other slot of that day overlaps the From/To range chosen
 below.
 
 **When**
 
 1. The user opens the home page and chooses the day.
 2. The user sets the people to `1`.
-3. The user chooses From and To so that only that slot starts between them.
+3. The user chooses From and To so that only that slot overlaps that range.
 4. The user selects **Check availability**.
 
 **Then**
@@ -176,31 +178,49 @@ below.
 
 **Given**
 
-1. The chosen day has two slots that start between the From and To chosen below,
-   and both have room for the party.
+1. The chosen day has two slots that overlap the From/To range chosen below,
+   and both have enough free seats for the party.
 
 **When**
 
 1. The user opens the home page and chooses the day.
 2. The user sets the people to `3`.
-3. The user chooses From and To so that both slots start between them.
+3. The user chooses From and To so that both slots overlap that range.
 4. The user selects **Check availability**.
 5. The user chooses one of the two times on **Book a table**.
 
 **Then**
 
-1. On arrival, **Book a table** says that `2` times start between From and To
+1. On arrival, **Book a table** says that `2` slots overlap the selected time range
    and asks the user to choose one.
 2. On arrival, no time is chosen, no answer is shown and **Review booking** is
    disabled.
 3. After the choice, the answer is **Available**, with the detail for the time
    chosen.
 
-## Scenario 8: No time matches the search
+## Scenario 8: Only one overlapping slot has enough free seats
 
 **Given**
 
-1. The chosen day has slots, but none starts between the From and To chosen
+1. The chosen day has two slots that overlap the From/To range.
+2. One slot has enough free seats for the party; the other does not.
+
+**When**
+
+1. The user searches for the chosen party size and selects **Check availability**.
+
+**Then**
+
+1. The slot with enough free seats is selected automatically.
+2. Its availability is checked and shown.
+3. The other overlapping time remains visible, but is not counted as a candidate
+   for this party size.
+
+## Scenario 9: No time matches the search
+
+**Given**
+
+1. The chosen day has slots, but none overlaps the From/To range chosen
    below.
 
 **When**
@@ -213,12 +233,12 @@ below.
 **Then**
 
 1. The user is on **Book a table**, with no time chosen.
-2. The answer is **Not available**, with the reason "No meal starts between
-   HH:MM and HH:MM on this day.", where the times are the From and To chosen.
+2. The answer is **Not available**, with the reason "No meal slots overlap your selected time range
+   (HH:MM?HH:MM) on this day.", where the times are the From and To chosen.
 3. **Review booking** is disabled.
 4. No other time, day or date is suggested.
 
-## Scenario 9: The search needs From and To
+## Scenario 10: The search needs From and To
 
 **Given**
 
@@ -236,13 +256,13 @@ below.
 2. After the choice, **To** is later than **From** and **Check availability** is
    enabled.
 
-## Scenario 10: The check does not book
+## Scenario 11: The check does not book
 
 **Given**
 
 1. The chosen day has one slot with `6` free seats in total.
 2. A hiker is logged in and has no booking for that time.
-3. No other slot of that day starts between the From and To chosen below.
+3. No other slot of that day overlaps the From/To range chosen below.
 
 **When**
 
@@ -256,13 +276,13 @@ below.
    seats.
 2. The hiker has no booking for that time.
 
-## Scenario 11: An employee gets the same answer
+## Scenario 12: An employee gets the same answer
 
 **Given**
 
 1. An employee is logged in.
 2. The chosen day has one slot that fits a party of `3`.
-3. No other slot of that day starts between the From and To chosen below.
+3. No other slot of that day overlaps the From/To range chosen below.
 
 **When**
 

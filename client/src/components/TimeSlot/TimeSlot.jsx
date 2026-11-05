@@ -8,7 +8,7 @@ import dotDisabled from '../../assets/booking/seat-dot-disabled.svg';
 import { formatTimeRange } from '../../lib/bookingDates.js';
 import styles from './TimeSlot.module.css';
 
-export function TimeSlot({ slot, selected, onSelect }) {
+export function TimeSlot({ slot, selected, onSelect, allowUnavailable = false }) {
   const { startsAt, endsAt, bookable, label } = slot;
   const state = selected ? styles.selected : bookable ? '' : styles.disabled;
   return (
@@ -16,7 +16,7 @@ export function TimeSlot({ slot, selected, onSelect }) {
       type="button"
       role="radio"
       aria-checked={selected}
-      disabled={!bookable}
+      disabled={!bookable && !allowUnavailable}
       className={`${styles.slot} ${state}`}
       onClick={onSelect}
     >

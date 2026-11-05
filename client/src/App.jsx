@@ -5,9 +5,10 @@
  * A protected page is wrapped in RequireRole, with the words the login shows ("Log in to <page>.").
  * Not here: data, logic, the markup of a screen (that is pages/).
  */
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/AuthProvider.js';
 import { STAFF_ROLES } from './lib/roles.js';
+import { bookingRouteKey } from './lib/availabilitySearch.js';
 import { AppLayout } from './pages/AppLayout/AppLayout.jsx';
 import { BookTablePage } from './pages/BookTablePage/BookTablePage.jsx';
 import { HomePage } from './pages/HomePage/HomePage.jsx';
@@ -16,6 +17,11 @@ import { RequireRole } from './pages/RequireRole.jsx';
 import { SignUpPage } from './pages/SignUpPage/SignUpPage.jsx';
 import { SlotsPage } from './pages/SlotsPage/SlotsPage.jsx';
 import { StaffOnlyPage } from './pages/StaffOnlyPage/StaffOnlyPage.jsx';
+
+function BookTableRoute() {
+  const location = useLocation();
+  return <BookTablePage key={bookingRouteKey(location.search)} />;
+}
 
 export default function App() {
   return (
@@ -27,7 +33,7 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             {/* Public: anyone sees the availability; the page itself asks to log in to book. */}
-            <Route path="/book" element={<BookTablePage />} />
+            <Route path="/book" element={<BookTableRoute />} />
             <Route
               path="/slots"
               element={

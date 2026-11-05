@@ -1,4 +1,5 @@
 .slot {
+  min-width: 0;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -27,7 +28,8 @@
   font-family: var(--font-display);
   font-size: 26px;
   font-weight: 700;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .info {

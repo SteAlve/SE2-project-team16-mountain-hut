@@ -3,8 +3,10 @@ import { all, close, get, run } from '../src/dao/db.js';
 import * as bookings from '../src/dao/bookings.js';
 import {
   demoSlots,
+  DEMO_HIKERS,
   DEMO_STAFF,
   DEMO_TABLE_LAYOUTS,
+  seedHikers,
   seedSlots,
   seedStaff,
 } from '../scripts/seed.js';
@@ -36,6 +38,17 @@ describe('seedStaff', () => {
     const rows = await all('SELECT email, role FROM app_user WHERE email = ANY($1)', [DEMO_STAFF.map((s) => s.email)]);
     expect(rows).toHaveLength(DEMO_STAFF.length);
     expect(rows.some((r) => r.role === 'WARDEN')).toBe(true);
+  });
+});
+
+describe('seedHikers', () => {
+  it('is idempotent and creates the demo hiker', async () => {
+    const emails = DEMO_HIKERS.map((h) => h.email);
+    await run('DELETE FROM app_user WHERE email = ANY($1)', [emails]);
+    expect(await seedHikers()).toEqual(emails);
+    expect(await seedHikers()).toEqual([]);
+    const rows = await all('SELECT email, role FROM app_user WHERE email = ANY($1)', [emails]);
+    expect(rows).toEqual(DEMO_HIKERS.map(({ email }) => ({ email, role: 'HIKER' })));
   });
 });
 

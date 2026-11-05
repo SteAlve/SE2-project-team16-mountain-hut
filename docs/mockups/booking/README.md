@@ -82,7 +82,7 @@ These belong to other stories and are added with them: confirmation email (MH-03
 Asked to the product owner and still open; the mockup does not depend on the answers:
 
 - How far ahead a table can be booked ([#26](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/26)). The day strip has no end and shows the days that have slots, so the server decides how far ahead a day has any.
-- Smallest and largest party ([#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27)). The stepper goes from 1 to the most free seats of any time that day.
+- Party size was clarified in [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27): "No limit". The implementation starts at 1 and does not cap or reduce the party to the seats of a day. An oversized party receives a not-available answer (MH-04), and its choice is preserved when seats change. The older screenshots predate this clarification.
 - More than one booking by the same hiker in a slot ([#25](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/25)).
 - A table not shared with other parties ([#21](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/21)).
 - The story says the party must be "smaller than" the free seats; we read it as "fits in" (6 people can take 6 free seats).
