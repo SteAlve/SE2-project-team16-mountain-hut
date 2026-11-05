@@ -50,16 +50,54 @@ const localDateTime = (offsetMinutes) => {
   };
 };
 
+const fixedRomeDateTime = (daysAhead, time) => {
+  const date = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Rome',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    time,
+  };
+};
+
 async function createFixture(testTitle) {
   const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const targetSetName = `E2E MH-1 target ${suffix}`;
   const capacitySetName = `E2E MH-1 capacity ${suffix}`;
-  const open = localDateTime(240);
-  const capacity = localDateTime(300);
+  const open = fixedRomeDateTime(1, '12:00:00');
+  const capacity = fixedRomeDateTime(1, '13:00:00');
   const closed = localDateTime(60);
   const target = testTitle.includes('less than') ? closed : open;
 
   return inTransaction(async () => {
+    await run(
+      `DELETE FROM booking
+       WHERE slot_id IN (
+         SELECT s.id
+         FROM slot s
+         JOIN table_set ts ON ts.id = s.table_set_id
+         WHERE ts.name LIKE 'E2E MH-1 %'
+       )`,
+    );
+    await run(
+      `DELETE FROM slot
+       WHERE table_set_id IN (
+         SELECT id FROM table_set WHERE name LIKE 'E2E MH-1 %'
+       )`,
+    );
+    await run(
+      `DELETE FROM hut_table
+       WHERE table_set_id IN (
+         SELECT id FROM table_set WHERE name LIKE 'E2E MH-1 %'
+       )`,
+    );
+    await run(`DELETE FROM table_set WHERE name LIKE 'E2E MH-1 %'`);
+
     const targetSet = await run('INSERT INTO table_set (name) VALUES ($1) RETURNING id', [targetSetName]);
     const capacitySet = await run('INSERT INTO table_set (name) VALUES ($1) RETURNING id', [capacitySetName]);
     const targetSetId = targetSet.rows[0].id;
@@ -77,13 +115,23 @@ async function createFixture(testTitle) {
 
     const targetSlot = await run(
       `INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
-       VALUES ($1, $2, ($2::time + interval '1 hour')::time, $3)
+       VALUES ($1, $2,
+         CASE WHEN $2::time >= time '23:00:00'
+           THEN time '23:59:59'
+           ELSE ($2::time + interval '1 hour')::time
+         END,
+         $3)
        RETURNING id`,
       [target.date, target.time, targetSetId],
     );
     const capacitySlot = await run(
       `INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
-       VALUES ($1, $2, ($2::time + interval '1 hour')::time, $3)
+       VALUES ($1, $2,
+         CASE WHEN $2::time >= time '23:00:00'
+           THEN time '23:59:59'
+           ELSE ($2::time + interval '1 hour')::time
+         END,
+         $3)
        RETURNING id`,
       [capacity.date, capacity.time, capacitySetId],
     );
@@ -236,7 +284,6 @@ test.describe('MH-1 Book a table', () => {
     await login(page, hiker);
     await page.goto('/book');
     await chooseDay(page, closed.date);
-    await page.getByRole('button', { name: 'One more' }).click();
 
     const time = page.getByRole('radio', { name: new RegExp(closed.startsAt.slice(0, 5)) });
     await expect(time).toBeDisabled();
