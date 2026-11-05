@@ -14,7 +14,7 @@ Four kinds of people use one system:
 
 - **User:** anyone who opens the public pages: the hut, the menus, the availability of tables. No login.
 - **Hiker:** a registered user. Books, changes and cancels table bookings, gives the dietary requirements of the party, joins the waiting list. A party is not a role: one hiker is its contact point.
-- **Employee:** a member of the hut team. Defines slots, tables and menus, reserves for a hiker who phones or arrives at the hut, monitors the occupancy, changes reservations.
+- **Employee:** a member of the hut team. Defines slots, tables and menus (the tables and the slots are in [section 3](#the-tables-and-the-slots-of-the-hut-staff)), reserves for a hiker who phones or arrives at the hut, monitors the occupancy, changes reservations.
 - **Warden:** manages the hut. Does everything an employee does, and also cancels reservations and closes slots.
 
 The system has **one external dependency**, the **email service**. It delivers the confirmation of a booking, the news about a changed reservation and the offers made from the waiting list.
@@ -63,6 +63,11 @@ The code is in `server/src`.
 | `HUT_TIME_ZONE` | `Europe/Rome` | The time zone of the hut (an IANA name, checked at start-up) |
 | `SESSION_TTL_HOURS` | `24` | How long a login lasts |
 | `COOKIE_SECURE` | `false` | Sets `Secure` on the session cookie; `true` when the site is served over HTTPS |
+| `SMTP_HOST` | — | The email service. Without it no email is sent: `mailer.js` only writes it to the log |
+| `SMTP_PORT` | `587` | The port of the email service |
+| `SMTP_USER`, `SMTP_PASSWORD` | — | The login of the email service, if it asks for one |
+| `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails |
+| `CLIENT_DIR` | — | The folder of the built client, which the server then serves too; set in the Docker image |
 
 `dao/db.js` is the only module that imports the PostgreSQL driver. It takes the database URL from `config.js` and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
 
@@ -99,6 +104,19 @@ Layer folders may have an `example.js` while they have no real implementation; t
 - **One booking per hiker per slot.** Cancelled bookings do not count.
 - **Seating** (`domain/seating.js`, pure functions). The whole party goes to **one table** when one has enough free seats: the one with the fewest free seats that is enough (a tie goes to the lowest table number). Otherwise the party is split over **as few tables as possible**, choosing the group of tables that leaves the fewest seats free. The proposal is made by `GET /api/slots/:slotId/seating`; the hiker does not pick tables.
 
+### The tables and the slots of the hut (staff)
+
+The employees and the warden define what can be booked (`/api/staff/...`, every route behind `requireAuth`; the use cases refuse a hiker with `403`, through `usecases/requireStaff.js` and `isStaff` in `domain/roles.js`):
+
+- `POST` and `GET /api/staff/table-sets`: a **table set** is a list of tables, each with its number and its capacity (`capacity`, the seats of the table), and a unique name. It is created once and given to any number of slots, so it is never typed twice. `dao/tableSets.js` creates the set and its tables in one transaction; the unique name decides a duplicate (`409`).
+- `POST /api/staff/slots`: a slot has a day, a start and an end (`HH:MM`), with no fixed duration, and a day can have more than one. The table set is optional: a slot without one has no seats and cannot be booked. A set that does not exist gives `404`; a second slot starting at the same time on the same day gives `409` (the unique constraint `slot_unique_start` decides).
+- `GET /api/staff/slots?from=&to=`: the slots between two days, both included, with their table set. Unlike the public list, it also shows the slots without tables.
+- `PUT /api/staff/slots/:slotId/table-set`: gives a set to a slot that has none. Giving the set it has already answers `200` again; another one gives `409`, because changing the tables of a slot is its modification (story MH-19). The `UPDATE` carries the condition `table_set_id IS NULL`, so two requests cannot both win.
+
+An id that does not exist gives `404` everywhere, in the path or in the body. The staff endpoints use `capacity` for the seats of a table; `seats` is only used in a booking and in the seating preview, where it is the seats of the party at that table.
+
+Not decided yet (questions for the product owners): whether two slots can overlap in time (today only the same start is refused, so overlapping slots with the same tables could be booked twice), and whether a slot can be created, or given tables, in the past.
+
 ### Example: a request, start to finish: `POST /api/bookings`
 
 This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
@@ -107,15 +125,14 @@ A booking takes two calls. First the client asks `GET /api/slots/:slotId/seating
 
 1. The route puts `requireAuth` in front of the controller (a booking needs a logged-in user).
 2. The controller validates the body `{ slotId, partySize, tables: [{ tableNumber, seats }] }` (the slot already says the day and the time, so there is no date) with the DTO and calls the use case with the user and the data. Invalid input gives `400`: a missing or empty `tables`, a table twice, or seats that do not add up to `partySize`.
-3. The use case checks that the user is a hiker (`403`), then:
+3. The `createBooking` use case checks that the user is a hiker (`403`), then:
    - it reads the slot (a missing slot gives `404`, like the preview) and asks `checkSlotOpen` (the domain, with the time from the clock) whether it can still be booked; a slot without tables or less than 2 hours to the meal give `422`;
    - it checks that the hiker has no active booking for the slot (`422`);
    - it reads the tables of the slot that have free seats and asks the domain where the party would sit now (the same function as the preview); if the party does not fit any more the answer is `409` with the code `NO_SEATS`; if it fits but the tables of the request are not exactly the proposal (other tables or other seats) the answer is `409` with the code `TABLES_CHANGED`;
    - it asks the dao to insert the booking. The dao, in one transaction, locks the slot row and checks the seats and the duplicate again, so two hikers booking the last seats take turns. If another booking took the seats in between, nothing is booked and the answer is `409` with the code `TABLES_CHANGED`.
    After `TABLES_CHANGED` the client asks for a new preview; after `NO_SEATS` the hiker chooses another slot.
-4. The controller shapes the answer: `201` with the booking and the numbers of the tables.
-
-No email is sent yet. When the mailer exists, the use case will call it after the commit, and a failed email will never undo the booking.
+4. The `bookTable` use case sends the confirmation email (MH-03) after the commit. A failed email never undoes the booking: the failure is written to the log and the hiker gets the same answer.
+5. The controller shapes the answer: `201` with the booking and the numbers of the tables.
 
 Nothing is held between the preview and the booking: if someone books in between and the proposal changes, the booking fails instead of seating the party somewhere else.
 
@@ -158,7 +175,9 @@ The code is in `client/src`.
 
 As in the backend, ESLint enforces the table (`client/eslint.config.js`). It also forbids `fetch` anywhere but `api/`.
 
-**A screen, start to finish: the availability.** The page asks the `useAvailability` hook; the hook calls the function of `api/` for `GET /api/slots?date=...`; the answer contains the bookable slots and their free seats, and comes back as plain data; a component draws each slot, using `lib/` to write its time as `12:00–13:00`. The page needs no login, so no route guard is involved.
+**A screen, start to finish: the availability (MH-04).** The home page uses `useAvailabilityDays` to load the days with slots through `GET /api/slots`. A search passes the date, people and From/To range to `/book`. `useBookTable` keeps the choices and identifies slot intervals with a positive overlap with the search range (touching boundaries are excluded); all times of the chosen day remain visible. `usePublicAvailability` calls `GET /api/slots/:slotId/seating?partySize=N` for the selected time and refreshes the slot list, so the answer and the free-seat labels follow current server data. `AvailabilityAnswer` displays available/not available and the seat allocation, without creating or holding a booking. These calls go through `api/`; the pages need no login or route guard. Only Review booking asks a visitor to authenticate, preserving the choices and reopening the review afterward.
+
+The server's `bookingOpen` and `bookingClosesAt` decide availability and the deadline in the hut's time zone; a visitor's browser time zone does not override them. While the form is open, one 30-second timer updates the displayed clock and refreshes slots. Capacity changes revalidate seating in the background without replacing the last answer with a skeleton; Review booking is disabled until revalidation ends. Background seating checks reuse the polled slot metadata instead of fetching the list again. URL choices are validated, including ignoring past dates and their stale slot IDs. Restoring a distant future day starts with a bounded calendar window that can extend back to today or forward, without imposing a booking horizon. Client-side history remounts the form for changed choices in the restored URL, but consuming the one-shot `review=1` flag preserves the mounted review.
 
 ### Why it is built this way
 
@@ -223,12 +242,13 @@ Not designed yet, to be decided when they are needed: a password reset and a lim
 
 ![Deployment](diagrams/structurizr-Deployment.png)
 
-**Two containers**, started together with Docker Compose on one host:
+**Three containers**, started together with Docker Compose on one host:
 
 - **`app`:** the API application. The image is built in two stages: the first builds the client with Vite, the second contains the server with its production dependencies and the built client. Express serves `/api` and the static client, and answers any other path with `index.html`, so the router of the client works.
 - **`db`:** the official PostgreSQL image, with a named volume so the data survives when the container is replaced.
+- **`mailpit`:** a test email service. It keeps every email and shows them on port `8025`, so no email leaves the machine. The end-to-end tests can read them through its API.
 
-The web client runs in the browser of each device: the visitor's, the employee's and the warden's. They all reach only the `app` container. The email service is outside: the API reaches it with SMTP settings given as environment variables.
+The web client runs in the browser of each device: the visitor's, the employee's and the warden's. They all reach only the `app` container. With a real email service, the API reaches it outside the host with the SMTP settings given as environment variables.
 
 **What the code offers to Docker**
 
@@ -237,14 +257,15 @@ The web client runs in the browser of each device: the visitor's, the employee's
 | The port | `PORT`, default `3001` |
 | The database | `DATABASE_URL` |
 | Time zone of the hut, session length, `Secure` cookie | `HUT_TIME_ZONE`, `SESSION_TTL_HOURS`, `COOKIE_SECURE` (set `COOKIE_SECURE=true` behind HTTPS) |
-| Email (when the mailer exists) | SMTP settings, as environment variables |
-| Creating the tables | a migration command run before the server starts |
+| Email | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` |
+| Serving the client | `CLIENT_DIR`, set in the image |
+| Creating the tables | the container runs the migrations before it starts the server |
 | Stopping | the server closes cleanly on `SIGTERM` |
 | Knowing that it is ready | Compose waits for the database with `pg_isready` and for the API on its port |
 
 **In development Docker is not needed.** Copy `server/.env.example` to `server/.env`, create the database with `npm run db:create`, apply the schema with `npm run db:migrate` (and `npm run db:seed` for the demo data). The server runs with `npm run dev` and the client with the Vite dev server, which forwards `/api` to the server.
 
-The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`.
+The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`. The commands are in the [README](../README.md#run-with-docker).
 
 ## 7. CI/CD pipelines
 
@@ -261,12 +282,12 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
 | `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
-| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa` |
+| `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
-| `docker.yml` | called by `deploy.yml`, after its checks | Builds the Docker image from the verified commit and publishes it |
+| `docker.yml` | called by `qa.yml` and `deploy.yml`, after their checks | Builds the Docker image from the verified commit and publishes it, tagged `qa` or `latest` |
 
 **Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
 **Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
-**How Docker fits.** The image is built and published by its own workflow, called only on `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry.
+**How Docker fits.** The image is built and published by its own workflow, called on `qa` and `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry: `qa` for the demos, `latest` for the release.

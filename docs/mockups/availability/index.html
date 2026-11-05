@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MH-52 Landing page and availability mockup (QUOTA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  /* QUOTA tokens: same names and values as the Figma variables (page "Components"). */
+  :root {
+    --ink: #10201A; --pine: #1D4A3A; --pine-hover: #163A2D; --pine-deep: #0E2019; --moss-soft: #E3ECE6;
+    --snow: #FFFFFF; --mist: #EEF2EF; --stone: #66736D; --line: #D8DFDA; --input-border: #C3CCC6;
+    --blaze: #E0352B; --error: #B42318; --error-soft: #FEF3F2; --info: #175CD3; --info-soft: #EFF8FF;
+    --on-dark: #F3F6F4; --on-dark-muted: #9DB3A9; --muted: #9AA5A0;
+    --f-display: "Barlow Condensed", sans-serif; --f-body: "Barlow", sans-serif; --f-mono: "IBM Plex Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DDE4E0; font-family: var(--f-body); color: var(--ink); }
+  .sheet { padding: 48px; display: grid; gap: 56px; justify-content: start; }
+  .intro { max-width: 1280px; }
+  .intro h1 { font-family: var(--f-display); font-size: 44px; margin: 0 0 8px; }
+  .intro p { color: var(--stone); font-size: 15px; line-height: 1.55; margin: 0 0 10px; }
+  .intro table { border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+  .intro td { padding: 6px 14px 6px 0; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .intro td:first-child { font-family: var(--f-mono); font-size: 12px; color: var(--pine); white-space: nowrap; }
+  .group-h { font-family: var(--f-display); font-size: 36px; margin: 0; }
+  .shot { display: grid; gap: 10px; }
+  .shot-title { display: flex; gap: 12px; align-items: baseline; }
+  .shot-title .n { font-family: var(--f-mono); color: var(--pine); font-weight: 500; }
+  .shot-title h2 { font-family: var(--f-display); font-size: 26px; margin: 0; }
+  .shot ul { margin: 0; padding-left: 18px; color: var(--stone); font-size: 15px; line-height: 1.5; }
+
+  .screen { width: 1280px; height: 800px; background: var(--mist); border-radius: 14px; overflow: hidden; position: relative; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(16,32,26,.12); }
+
+  /* navbar */
+  .nav { height: 68px; flex: none; background: var(--snow); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 40px; padding: 0 32px; position: relative; z-index: 3; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: .08em; line-height: 1; }
+  .links { display: flex; gap: 6px; flex: 1; }
+  .links a { font-weight: 500; font-size: 15px; color: var(--stone); text-decoration: none; padding: 7px 12px; border-radius: 8px; }
+  .links a.on { background: var(--moss-soft); color: var(--pine); font-weight: 600; }
+  .user { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--moss-soft); color: var(--pine); display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+  .who b { display: block; font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .who span { font-family: var(--f-mono); font-size: 11px; color: var(--stone); letter-spacing: .06em; text-transform: uppercase; }
+  .logout { font-weight: 600; font-size: 15px; padding: 8px 14px; }
+
+  /* page */
+  .page { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 40px; padding: 32px 64px 40px; min-height: 0; }
+  .eyebrow { font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--pine); }
+  h1.title { font-family: var(--f-display); font-weight: 700; font-size: 48px; line-height: 1; margin: 6px 0 6px; }
+  .sub { color: var(--stone); font-size: 16px; margin: 0 0 22px; }
+  .step { margin-bottom: 24px; }
+  .step-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-weight: 600; font-size: 16px; }
+  .step-h .num { width: 26px; height: 26px; border-radius: 50%; background: var(--pine); color: var(--snow); display: grid; place-items: center; font-family: var(--f-mono); font-size: 12px; font-weight: 500; }
+  .step-h .num.todo { background: transparent; border: 1.5px solid var(--input-border); color: var(--stone); }
+  .step-h .clock { margin-left: auto; font-family: var(--f-mono); font-size: 12px; color: var(--stone); background: var(--snow); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+
+  /* date strip: only days that have slots can be picked */
+  .days { display: flex; gap: 10px; }
+  .day { width: 86px; padding: 10px 0 9px; background: var(--snow); border: 1px solid var(--line); border-radius: 12px; text-align: center; position: relative; flex: none; }
+  .day .wd { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--stone); }
+  .day .d { font-family: var(--f-display); font-weight: 700; font-size: 32px; line-height: 1.05; }
+  .day .mo { font-family: var(--f-mono); font-size: 11px; color: var(--stone); }
+  .day.sel { background: var(--pine); border-color: var(--pine); color: var(--snow); }
+  .day.sel .wd, .day.sel .mo { color: #B9CCC3; }
+  .day.off { background: transparent; border-style: dashed; color: #A9B3AE; }
+  .day.off .mo, .day.off .wd { color: #A9B3AE; }
+  .day .today { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--blaze); }
+  /* on a computer the strip has arrows; it has no end, so the next days wait past the edge */
+  .dstrip { display: flex; align-items: center; gap: 8px; }
+  .dstrip .clip { flex: 1; min-width: 0; overflow: hidden; }
+  .arrow { width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--snow); border: 1px solid var(--line); display: grid; place-items: center; }
+  .arrow.off { opacity: .4; }
+
+  /* people stepper */
+  .people { display: flex; align-items: center; gap: 16px; }
+  .stepper { display: flex; align-items: center; background: var(--snow); border: 1px solid var(--input-border); border-radius: 12px; overflow: hidden; }
+  .stepper button { width: 48px; height: 50px; border: 0; background: transparent; font-size: 22px; color: var(--pine); font-family: var(--f-body); }
+  .stepper button.dim { color: #B7C0BB; }
+  .stepper .val { width: 64px; text-align: center; font-family: var(--f-display); font-weight: 700; font-size: 28px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); line-height: 50px; }
+  .people .hint { font-size: 14px; color: var(--stone); }
+
+  /* time slots: a slot is a start and end time (MH-02, issue #9); a day can have several */
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .slot { background: var(--snow); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; position: relative; }
+  .slot .time { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1; }
+  .slot .free { font-size: 14px; color: var(--pine); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .slot .free::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pine); }
+  .slot.sel { border: 2px solid var(--pine); padding: 13px 15px; box-shadow: 0 0 0 4px var(--moss-soft); }
+  .slot.sel::after { content: "✓"; position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; border-radius: 50%; background: var(--pine); color: var(--snow); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .slot.dis { background: transparent; border-style: dashed; }
+  .slot.dis .time { color: var(--muted); }
+  .slot.dis .free { color: var(--stone); font-weight: 400; }
+  .slot.dis .free::before { background: transparent; border: 1.5px solid var(--muted); width: 5px; height: 5px; }
+
+  /* summary */
+  .summary { background: var(--snow); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; align-self: start; box-shadow: 0 2px 6px rgba(16,32,26,.05); }
+  .summary h3 { font-family: var(--f-display); font-weight: 700; font-size: 26px; margin: 0; }
+  .rows { display: grid; }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 15px; }
+  .row span { color: var(--stone); }
+  .row b { font-weight: 600; text-align: right; }
+  .row b.mono { font-family: var(--f-mono); font-weight: 500; font-size: 14px; }
+  .row b.muted { color: var(--muted); font-weight: 500; }
+  .note { display: flex; gap: 10px; align-items: flex-start; background: var(--mist); border-radius: 10px; padding: 12px; font-size: 14px; color: var(--stone); line-height: 1.45; }
+  .blaze { display: inline-flex; flex: none; margin-top: 6px; border-radius: 2px; overflow: hidden; }
+  .blaze i { width: 9px; height: 5px; background: var(--blaze); } .blaze i:nth-child(2) { background: var(--snow); outline: 1px solid var(--line); outline-offset: -1px; }
+  .btn { font-family: var(--f-body); font-weight: 600; font-size: 17px; border-radius: 10px; padding: 13px 20px; border: 0; text-align: center; }
+  .btn.primary { background: var(--pine); color: var(--snow); }
+  .btn.primary[disabled] { background: #A9B9B1; }
+  .btn.outline { background: var(--snow); color: var(--ink); border: 1px solid var(--input-border); }
+  .summary .btn { width: 100%; }
+  .summary .after { font-size: 13px; color: var(--stone); text-align: center; margin-top: -6px; }
+
+  /* alerts */
+  .alert { display: flex; border-radius: 10px; overflow: hidden; font-weight: 500; font-size: 14px; line-height: 1.45; }
+  .alert::before { content: ""; width: 4px; flex: none; }
+  .alert span { padding: 12px 14px; }
+  .alert.error { background: var(--error-soft); color: var(--error); } .alert.error::before { background: var(--error); }
+  .alert.info { background: var(--info-soft); color: var(--info); } .alert.info::before { background: var(--info); }
+  .avatar.dark { background: var(--pine); color: var(--snow); }
+
+  /* review dialog */
+  .scrim { position: absolute; inset: 68px 0 0 0; background: rgba(14,32,25,.55); display: grid; place-items: center; z-index: 2; }
+  .dialog { width: 540px; background: var(--snow); border-radius: 18px; padding: 28px; display: grid; gap: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+  .dialog h3 { font-family: var(--f-display); font-weight: 700; font-size: 34px; margin: 0; line-height: 1; }
+  /* one booking = one party: split seats sit in one bar, not in separate table cards */
+  .party { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; background: var(--mist); }
+  .party .head { display: flex; justify-content: space-between; align-items: center; }
+  .party .head b { font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+  .party .chip { font-family: var(--f-mono); font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: var(--moss-soft); color: var(--pine); }
+  .party .seats { display: flex; align-items: center; gap: 10px; }
+  .party .seats span { display: flex; gap: 5px; }
+  .party .seats i { width: 14px; height: 14px; border-radius: 50%; background: var(--pine); }
+  .party .seats hr { width: 1.5px; height: 18px; margin: 0; border: 0; background: var(--input-border); }
+  .party small { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .dialog .why { font-size: 14px; color: var(--stone); margin: 0; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* booked */
+  .done { flex: 1; display: grid; place-items: center; }
+  .ticket { width: 620px; background: var(--snow); border-radius: 18px; box-shadow: 0 12px 40px rgba(16,32,26,.12); overflow: hidden; }
+  .ticket .head { background: var(--pine-deep); color: var(--on-dark); padding: 28px 32px 24px; display: grid; gap: 8px; }
+  .ticket .head .ok { width: 44px; height: 44px; border-radius: 50%; background: var(--pine); display: grid; place-items: center; font-size: 22px; color: var(--snow); border: 2px solid #3E6B5A; }
+  .ticket .head h3 { font-family: var(--f-display); font-weight: 800; font-size: 48px; margin: 0; line-height: 1; }
+  .ticket .head p { margin: 0; color: var(--on-dark-muted); }
+  .perf { height: 0; border-top: 2px dashed var(--line); margin: 0 18px; position: relative; }
+  .perf::before, .perf::after { content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--mist); }
+  .perf::before { left: -30px; } .perf::after { right: -30px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); padding: 22px 32px; gap: 12px; }
+  .grid4 span { display: block; font-family: var(--f-mono); font-size: 11px; color: var(--stone); letter-spacing: .08em; text-transform: uppercase; }
+  .grid4 b { font-family: var(--f-display); font-weight: 700; font-size: 24px; }
+  .grid4 small { display: block; font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .ticket .foot { padding: 22px 32px 28px; display: grid; gap: 16px; }
+  .ticket .actions { justify-content: stretch; } .ticket .actions .btn { flex: 1; }
+
+  /* ---------- phone (below 992 px, react-bootstrap lg) ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; width: 1350px; }
+  .phones .shot { width: 414px; }
+  .phones .shot ul { font-size: 14px; min-height: 64px; }
+  .device { background: #0B1612; padding: 12px; border-radius: 52px; box-shadow: 0 16px 40px rgba(16,32,26,.18); }
+  .m { width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: var(--mist); position: relative; display: flex; flex-direction: column; }
+  .m .status { height: 47px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 34px; font-weight: 600; font-size: 16px; background: #F2F3F2; }
+  .urlbar { height: 52px; flex: none; background: #F2F3F2; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid #DADDDB; }
+  .urlbar .addr { flex: 1; height: 36px; border-radius: 12px; background: #E4E6E5; display: flex; align-items: center; justify-content: center; gap: 6px; font: 15px -apple-system, "Helvetica Neue", Arial, sans-serif; color: #2B2F2D; }
+  .urlbar .addr small { color: #7A807D; font-size: 15px; }
+  .m .topbar { height: 60px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 18px; border-bottom: 1px solid var(--line); background: var(--snow); }
+  .m .brand { font-size: 23px; gap: 8px; } .m .brand svg { width: 30px; height: 30px; }
+  .m .burger { width: 44px; height: 44px; display: grid; place-items: center; }
+  .m .content { padding: 20px 20px 0; flex: 1; overflow: hidden; }
+  .m h1.title { font-size: 36px; margin: 0 0 16px; }
+  .m .step { margin-bottom: 18px; }
+  .m .step-h { margin-bottom: 10px; }
+  .m .days { gap: 8px; width: max-content; }
+  .m .day { width: 62px; padding: 8px 0 7px; }
+  .m .day .d { font-size: 28px; }
+  .m .strip { margin: 0 -20px; padding: 0 20px; overflow: hidden; }
+  .m .slots { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .m .slot { padding: 12px 14px; } .m .slot.sel { padding: 11px 13px; }
+  .m .slot .time { font-size: 23px; }
+  .m .slot .free { font-size: 13px; }
+  .m .slot.sel::after { top: -8px; right: -6px; }
+  .m .stepper button { width: 52px; height: 52px; } .m .stepper .val { line-height: 52px; }
+  .m .people .hint { flex: 1; }
+  .m .alert { margin-bottom: 14px; }
+  .bottombar { position: absolute; left: 0; right: 0; bottom: 0; background: var(--snow); border-top: 1px solid var(--line); padding: 14px 20px 34px; display: grid; gap: 10px; box-shadow: 0 -8px 24px rgba(16,32,26,.08); z-index: 2; }
+  .bottombar .what { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+  .bottombar .what b { font-weight: 600; }
+  .bottombar .what span { font-family: var(--f-mono); font-size: 12px; color: var(--stone); }
+  .bottombar .btn, .msheet .btn, .mdone .btn { width: 100%; height: 54px; font-size: 17px; }
+  .home-ind { height: 5px; width: 134px; border-radius: 3px; background: var(--ink); position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 5; }
+  .m .scrim { inset: 159px 0 0 0; place-items: end stretch; }
+  .msheet { background: var(--snow); border-radius: 22px 22px 0 0; padding: 10px 20px 34px; display: grid; gap: 14px; }
+  .msheet .handle { width: 40px; height: 5px; border-radius: 3px; background: var(--line); justify-self: center; margin-bottom: 4px; }
+  .msheet h3 { font-family: var(--f-display); font-weight: 700; font-size: 32px; margin: 0; line-height: 1; }
+  .msheet .why { font-size: 14px; color: var(--stone); margin: 0; }
+  .stack { display: grid; gap: 10px; margin-top: 4px; }
+  .mdone { flex: 1; padding: 20px 16px; overflow: hidden; }
+  .mdone .ticket { width: auto; }
+  .mdone .ticket .head { padding: 22px 20px 20px; }
+  .mdone .ticket .head h3 { font-size: 42px; }
+  .mdone .grid4 { grid-template-columns: 1fr 1fr; padding: 18px 20px; row-gap: 16px; }
+  .mdone .ticket .foot { padding: 18px 20px 20px; gap: 12px; }
+
+  /* ---------- MH-52 ---------- */
+  .login { font-weight: 600; font-size: 15px; padding: 8px 14px; background: var(--pine); color: var(--snow); border-radius: 8px; }
+  .screen.tall { height: 900px; }
+  .hero { position: relative; height: 560px; flex: none; color: var(--snow); }
+  .hero { overflow: hidden; }
+  .hero .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; }
+  .hero .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,32,25,.62), rgba(14,32,25,.18) 62%, rgba(14,32,25,0)); }
+  .hero .credit { position: absolute; right: 12px; top: 10px; font-size: 11px; color: rgba(255,255,255,.8); }
+  .hero .copy { position: absolute; left: 64px; top: 120px; max-width: 760px; text-shadow: 0 2px 18px rgba(14,32,25,.45); }
+  .hero .eyebrow { color: #F3E7D3; }
+  .hero h1 { font-family: var(--f-display); font-weight: 800; font-size: 92px; line-height: .95; margin: 12px 0 14px; }
+  .hero p { font-size: 21px; margin: 0; color: #F3F6F4; }
+  /* the search bar sits on the edge of the picture, like on a booking site */
+  .search { position: absolute; left: 64px; right: 64px; top: 592px; z-index: 2; display: grid; grid-template-columns: 1.2fr 1fr .8fr .8fr auto; background: var(--snow); padding: 8px; border-radius: 16px; box-shadow: 0 18px 44px rgba(16,32,26,.28); }
+  .field { padding: 7px 16px; border-right: 1px solid var(--line); display: flex; align-items: center; gap: 12px; position: relative; color: var(--ink); }
+  .field svg { flex: none; }
+  .field small { display: block; font-size: 13px; color: var(--stone); }
+  .field b { display: block; font-weight: 600; font-size: 17px; white-space: nowrap; }
+  .field b.todo { color: var(--stone); font-weight: 500; }
+  .field .caret { margin-left: auto; color: var(--stone); }
+  .field.open { border-radius: 10px; box-shadow: inset 0 0 0 2px var(--pine); border-right-color: transparent; }
+  .field:nth-child(4) { border-right: 0; }
+  .search .go { margin-left: 8px; }
+  .search .go { background: var(--pine); color: var(--snow); border: 0; border-radius: 10px; font-family: var(--f-body); font-weight: 600; font-size: 19px; padding: 0 30px; white-space: nowrap; }
+  .search .go[disabled] { background: #A9B9B1; }
+  .menu { position: absolute; left: 0; right: 0; top: 66px; background: var(--snow); border-radius: 12px; box-shadow: 0 16px 40px rgba(16,32,26,.22); padding: 8px; display: grid; gap: 2px; z-index: 4; }
+  .menu div { padding: 10px 12px; border-radius: 8px; font-weight: 500; font-size: 16px; }
+  .menu div.on { background: var(--moss-soft); color: var(--pine); font-weight: 600; }
+  .wheel { position: absolute; right: 0; top: 66px; width: 300px; height: 212px; background: var(--ink); border-radius: 16px; box-shadow: 0 18px 44px rgba(16,32,26,.35); z-index: 4; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+  .wheel::before { content: ""; position: absolute; left: 12px; right: 12px; top: 84px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.12); }
+  .wheel .col { position: relative; display: grid; align-content: center; justify-items: center; }
+  .wheel .col span { display: block; height: 40px; line-height: 40px; font-family: var(--f-body); font-size: 25px; font-variant-numeric: tabular-nums; color: rgba(255,255,255,.55); }
+  .wheel .col span.near { font-size: 21px; color: rgba(255,255,255,.34); }
+  .wheel .col span.far { font-size: 17px; color: rgba(255,255,255,.16); }
+  .wheel .col span.on { color: var(--snow); font-size: 30px; font-weight: 600; }
+  .wheel .col em { position: absolute; top: 96px; left: calc(50% + 28px); font-style: normal; font-size: 13px; font-weight: 600; color: var(--snow); }
+  .why { padding: 76px 64px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .why div { background: var(--snow); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .why b { display: block; font-family: var(--f-display); font-weight: 700; font-size: 24px; margin-bottom: 4px; }
+  .why span { font-size: 15px; color: var(--stone); line-height: 1.4; }
+  .answer { display: grid; gap: 12px; }
+  .verdict { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 30px; line-height: 1; }
+  .verdict i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-body); font-style: normal; font-size: 16px; font-weight: 700; flex: none; }
+  .verdict.ok i { background: var(--pine); color: var(--snow); }
+  .verdict.no i { border: 1.5px solid var(--stone); color: var(--stone); }
+  .answer p { margin: 0; font-size: 15px; color: var(--stone); line-height: 1.45; }
+  .m .hero { height: 330px; }
+  .m .hero .copy { left: 20px; right: 20px; top: 36px; }
+  .m .hero h1 { font-size: 54px; }
+  .m .hero p { font-size: 17px; }
+  .m .search { position: relative; left: auto; right: auto; top: auto; margin: -56px 16px 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .m .field:nth-child(-n+2) { grid-column: span 2; }
+  .m .field:nth-child(3) { border-right: 1px solid var(--line); }
+  .m .search .go { grid-column: span 2; }
+  .m .field { border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 8px; }
+  .m .field:nth-child(n+3) { border-bottom: 0; }
+  .m .search .go { margin: 4px 0 0; }
+  .m .hero .photo { object-position: 42% 60%; }
+  .m .hero .shade { background: linear-gradient(180deg, rgba(14,32,25,.6), rgba(14,32,25,.15)); }
+  .m .search .go { height: 54px; }
+  .m .bottombar .answer { gap: 8px; } .m .bottombar .verdict { font-size: 25px; } .m .bottombar .party { padding: 10px 12px; gap: 8px; }
+  .m .bottombar { padding-top: 12px; }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"></div>
+
+<script>
+const MARK = `<svg width="34" height="34" viewBox="0 0 48 48"><circle cx="21" cy="21" r="15" fill="none" stroke="#1D4A3A" stroke-width="5.5"/><path d="M10 29.5 L17.5 17 L22.2 24 L25.8 19.2 L32 29.5 Z" fill="#1D4A3A"/><g transform="rotate(28 35 34)"><rect x="24" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/><rect x="32" y="30.5" width="6" height="7" fill="#FFFFFF"/><rect x="38" y="30.5" width="8" height="7" rx="1.4" fill="#E0352B"/></g></svg>`;
+const nav = (hiker, on) => `<div class="nav"><div class="brand">${MARK}QUOTA</div>
+  <div class="links"><a class="${on === "hut" ? "on" : ""}">The hut</a><a class="${on === "book" ? "on" : ""}">Book a table</a></div>
+  ${hiker ? '<div class="user"><div class="avatar">GR</div><div class="who"><b>Giulia Rossi</b><span>Hiker</span></div></div><div class="logout">Log out</div>' : '<div class="login">Log in</div>'}</div>`;
+
+// A real photo; the dark gradient keeps the slogan readable on any picture.
+const SCENE = () => `<img class="photo" src="hero.jpg" alt=""><div class="shade"></div><div class="credit">Photo: Wolfgang Moroder, CC BY-SA 3.0</div>`;
+
+const ICON = {
+  day: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D4A3A" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`,
+  people: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D4A3A" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1-4 4-6 7.500-6s6.500 2 7.500 6"/></svg>`,
+  time: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D4A3A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.500"/><path d="M12 7v5.500l3.500 2"/></svg>`,
+};
+const field = (icon, label, value, { todo, open, menu } = {}) => `<div class="field ${open ? "open" : ""}">${ICON[icon]}<div><small>${label}</small><b class="${todo ? "todo" : ""}">${value}</b></div><span class="caret">▾</span>${menu || ""}</div>`;
+// From and To are the times the user would like, chosen on two scroll wheels like a phone timer:
+// hours and minutes (every 5 minutes), the chosen value in the band in the middle.
+const wheelCol = (values, unit) => `<div class="col">${values.map((v, i) => `<span class="${["far", "near", "", "on", "", "near", "far"][i]}">${v}</span>`).slice(1, 6).join("")}<em>${unit}</em></div>`;
+const wheel = (h, m) => { const pad = (n) => String(n).padStart(2, "0"); const around = (v, step, top) => [-3, -2, -1, 0, 1, 2, 3].map((d) => pad((v + d * step + top) % top));
+  return `<div class="wheel">${wheelCol(around(h, 1, 24), "h")}${wheelCol(around(m, 5, 60), "min")}</div>`; };
+const search = ({ day = "Sat 17 Jul", people = "3 people", from, to, open }) => `<div class="search">${field("day", "Day", day)}${field("people", "People", people)}${field("time", "From", from || "Choose", { todo: !from })}${field("time", "To", to || "Choose", { todo: !to, open, menu: open ? wheel(...to.split(":").map(Number)) : "" })}<button class="go" ${from && to ? "" : "disabled"}>Check availability</button></div>`;
+const COPY = `<div class="copy"><div class="eyebrow">Rifugio Alpe Lunga · 2.450 m</div><h1>A table waits<br>at the top.</h1><p>Earn the climb. We keep your seat.</p></div>`;
+const WHY = `<div class="why"><div><b>Free to check</b><span>See if there is room for your party, no login needed.</span></div><div><b>Your table is chosen for you</b><span>We keep your party together where we can.</span></div><div><b>Book until 2 hours before</b><span>Plans change on the mountain. So do meals.</span></div></div>`;
+const landing = (opts) => nav(false, "hut") + `<div class="hero">${SCENE()}${COPY}</div>${search(opts)}${WHY}`;
+
+// Booking page: same as the booking mockup, and the card now also gives the answer.
+const DAYS = [["Wed", 14], ["Thu", 15], ["Fri", 16, "off"], ["Sat", 17], ["Sun", 18], ["Mon", 19], ["Tue", 20], ["Wed", 21]];
+const days = (sel) => `<div class="days">${DAYS.map(([wd, d, off]) => `<div class="day ${off ? "off" : ""} ${d === sel ? "sel" : ""}">${d === 14 ? '<i class="today"></i>' : ""}<div class="wd">${wd}</div><div class="d">${d}</div><div class="mo">${off ? "no slots" : "Jul"}</div></div>`).join("")}</div>`;
+const arrow = (d, off) => `<span class="arrow ${off ? "off" : ""}"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1D4A3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></span>`;
+const dayStrip = (sel) => `<div class="dstrip">${arrow("M12.5 4.5L7 10l5.500 5.500", true)}<div class="clip">${days(sel)}</div>${arrow("M7.500 4.500L13 10l-5.500 5.500")}</div>`;
+const stepper = (n) => `<div class="people"><div class="stepper"><button class="${n === 1 ? "dim" : ""}">−</button><div class="val">${n}</div><button>+</button></div><span class="hint">Including you.</span></div>`;
+const step = (num, title, body) => `<div class="step"><div class="step-h"><span class="num">${num}</span>${title}</div>${body}</div>`;
+const seatsFree = (n) => `${n} ${n === 1 ? "seat" : "seats"} free`;
+const slot = ({ time, free, party, sel }) => { const fits = free >= party; const label = free === 0 ? "Full" : fits ? seatsFree(free) : `Only ${seatsFree(free)}`;
+  return `<div class="slot ${sel ? "sel" : ""} ${fits ? "" : "dis"}"><span class="time">${time}</span><span class="free">${label}</span></div>`; };
+const slots = (list, party, sel) => `<div class="slots">${list.map(([time, free]) => slot({ time, free, party, sel: time === sel })).join("")}</div>`;
+const SAT = [["12:00 – 13:00", 5], ["13:00 – 14:00", 6], ["19:00 – 21:00", 22]];
+const SUN = [["12:00 – 13:00", 14], ["13:00 – 14:00", 0], ["19:00 – 21:00", 9]];
+const rows = (list) => `<div class="rows">${list.map(([k, v, cls]) => `<div class="row"><span>${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
+const party = (list) => `<div class="party"><div class="head"><b>${list.map(([, n]) => n).join(" + ")} seats</b><span class="chip">${list.length} table${list.length > 1 ? "s" : ""}</span></div>
+  <div class="seats">${list.map(([, n]) => `<span>${"<i></i>".repeat(n)}</span>`).join("<hr>")}</div><small>${list.map(([t, n]) => `${n} at table ${t}`).join(" · ")}</small></div>`;
+const yes = (list) => `<div class="answer"><div class="verdict ok"><i>✓</i>Available</div>${party(list)}</div>`;
+const no = (text) => `<div class="answer"><div class="verdict no"><i>✕</i>Not available</div><p>${text}</p></div>`;
+const card = (day, time, n, answer, off) => `<div class="summary"><h3>Your booking</h3>${rows([["Day", day], ["Time", time, "mono"], ["People", n]])}${answer}<button class="btn primary" ${off ? "disabled" : ""}>Review booking</button></div>`;
+const book = (hiker, day, n, list, sel, right) => nav(hiker, "book") + `<div class="page"><div><div class="eyebrow">Rifugio Alpe Lunga · 2.450 m</div><h1 class="title">Book a table</h1><p class="sub">Choose the day, how many you are, and a time. You can book up to 2 hours before.</p>
+  ${step(1, "Day", dayStrip(day))}${step(2, "How many people", stepper(n))}${step(3, "Time", slots(list, n, sel))}</div>${right}</div>`;
+const dialog = `<div class="scrim"><div class="dialog"><h3>Check your booking</h3>${rows([["Day", "Saturday 17 July 2027"], ["Time", "13:00 – 14:00"], ["People", "6"]])}${party([[1, 2], [2, 3], [4, 1]])}
+  <p class="why" style="padding:0;display:block">No single table has 6 free seats at this time, so your party is split over 3 tables.</p><div class="actions"><button class="btn outline">Back</button><button class="btn primary">Confirm booking</button></div></div></div>`;
+const SPLIT = [[1, 2], [2, 3], [4, 1]];
+
+const choose = (text) => `<div class="note"><span class="blaze"><i></i><i></i><i></i></span><span>${text}</span></div>`;
+const screens = [
+  { n: "01", tall: true, title: "The landing page", notes: ["The public home page: a full picture, the slogan and one search bar, like a booking site. No login needed.", "From and To say when the user would like to eat. Check availability waits for both.", "The photo is a stand-in from Wikimedia Commons: a real photo of the hut can replace it. The slogan is a proposal."], html: landing({}) },
+  { n: "02", tall: true, title: "Choosing the times", notes: ["From and To open a scroll wheel, like the timer of a phone: hours on the left, minutes in steps of 5, the chosen time in the band in the middle. To is always after From.", "They do not create a new slot: the hut still serves the slots set by the staff (PO, #6 and #9). They only say which slots the user wants to see."], html: landing({ from: "19:00", to: "20:30", open: true }) },
+  { n: "03", title: "One time matches: available", notes: ["Check availability lands on Book a table. A slot matches if its interval overlaps From/To for a positive duration; touching boundaries are excluded.", "With one currently bookable overlapping slot for the party, that time is selected automatically and the server checks its seating availability.", "Nothing is booked yet. Review booking goes on as in the booking mockup."], html: book(false, 17, 3, SAT, "19:00 – 21:00", card("Sat 17 Jul", "19:00 – 21:00", "3", yes([[4, 3]]))) },
+  { n: "04", title: "One time matches: available, split over tables", notes: ["The example of the PO: 6 free seats over 3 tables, a party of 6 fits as 2 + 3 + 1."], html: book(false, 17, 6, SAT, "13:00 – 14:00", card("Sat 17 Jul", "13:00 – 14:00", "6", yes(SPLIT))) },
+  { n: "05", title: "Several times match", notes: ["From 12:00 to 14:00 overlaps two slots currently bookable for the party (booking is open and enough seats are free), so the user picks one. The server checks its seating availability then."], html: book(false, 17, 3, SAT, "", card("Sat 17 Jul", "12:00 to 14:00", "3", choose("<b>2 overlapping slots</b> are currently bookable for 3 people. Choose one to check availability."), true)) },
+  { n: "06", title: "Not available: party too big", notes: ["The chosen time stays marked, so the user sees what they asked for and why not.", "No other time is suggested (PO clarification): the free seats of every time are on the page."], html: book(false, 17, 6, SAT, "12:00 – 13:00", card("Sat 17 Jul", "12:00 – 13:00", "6", no("This time has 5 free seats, not enough for 6 people."), true)) },
+  { n: "07", title: "Not available: no free seats", notes: ["The same answer for a time fully booked and for one with no tables yet: both have 0 free seats (#17)."], html: book(false, 18, 1, SUN, "13:00 – 14:00", card("Sun 18 Jul", "13:00 – 14:00", "1", no("This time has no free seats."), true)) },
+  { n: "08", title: "No time matches", notes: ["No slot interval overlaps From/To, so the answer is not available.", "The times of the day are still on the page, without a suggestion: the user can pick one or go back."], html: book(false, 17, 3, SAT, "", card("Sat 17 Jul", "15:00 to 18:00", "3", no("No meal slots overlap your selected time range (15:00?18:00) on this day."), true)) },
+  { n: "09", title: "Back after the login or the sign-up", notes: ["A visitor who presses Review booking goes to the login, and to Sign up if they have no account. The choices are kept.", "They come back where they stopped, with Check your booking already open: the only step left is Confirm booking."], html: book(true, 17, 6, SAT, "13:00 – 14:00", card("Sat 17 Jul", "13:00 – 14:00", "6", yes(SPLIT))) + dialog },
+];
+
+const STATUS = `<div class="status"><span>9:41</span></div>`;
+const urlbar = `<div class="urlbar"><div class="addr">localhost:5173</div></div>`;
+const BURGER = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>`;
+const mTop = STATUS + urlbar + `<div class="topbar"><div class="brand">${MARK}QUOTA</div><div class="burger">${BURGER}</div></div>`;
+const mBook = (n, list, sel, what, answer, off) => mTop + `<div class="content"><h1 class="title">Book a table</h1>${step(2, "How many people", stepper(n))}${step(3, "Time", slots(list, n, sel))}</div><div class="bottombar"><div class="what"><b>${what}</b></div>${answer}<button class="btn primary" ${off ? "disabled" : ""}>Review booking</button></div>`;
+const phones = [
+  { n: "M1", title: "The landing page", notes: ["The bar becomes rows, with From and To side by side. On a phone the same wheel opens at the bottom of the screen."], html: mTop + `<div class="hero">${SCENE()}${COPY}</div>${search({ from: "19:00", to: "21:00" })}` },
+  { n: "M2", title: "Available", notes: ["The answer sits in the bar at the bottom, in reach of the thumb."], html: mBook(6, SAT, "13:00 – 14:00", "Sat 17 Jul · 13:00 · 6", yes(SPLIT)) },
+  { n: "M3", title: "Not available", notes: ["Same answer as desktop. Review booking stays disabled."], html: mBook(6, SAT, "12:00 – 13:00", "Sat 17 Jul · 12:00 · 6", no("This time has 5 free seats, not enough for 6 people."), true) },
+];
+
+const ul = (notes) => `<ul>${notes.map((n) => `<li>${n}</li>`).join("")}</ul>`;
+document.getElementById("sheet").innerHTML = `<div class="intro"><h1>MH-04 The landing page and the availability</h1>
+  <p>"As a user I want to check table availability for a given date, time and party size so that I can decide whether to make a booking." The rules are in the <a href="README.md">README</a>.</p></div>
+  <h2 class="group-h">Desktop</h2>
+  ${screens.map((s) => `<section class="shot"><div class="shot-title"><span class="n">${s.n}</span><h2>${s.title}</h2></div>${ul(s.notes)}<div class="screen ${s.tall ? "tall" : ""}" id="s${s.n}">${s.html}</div></section>`).join("")}
+  <h2 class="group-h">The same pages on a phone</h2>
+  <div class="phones">${phones.map((s) => `<section class="shot"><div class="shot-title"><span class="n">${s.n}</span><h2>${s.title}</h2></div>${ul(s.notes)}<div class="device" id="${s.n}"><div class="m">${s.html}<div class="home-ind"></div></div></div></section>`).join("")}</div>`;
+</script>
+</body>
+</html>

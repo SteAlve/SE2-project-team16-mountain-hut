@@ -13,7 +13,7 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 | Source | Rule |
 |---|---|
 | Story, [#6](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/6) | Required: date, time, number of people. Date and time are chosen from those available. |
-| MH-02, [#9](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/9) | A slot is a start and end time chosen by the staff; a day can have several (e.g. 12–13 and 13–14). Times are shown as times, not as "lunch" or "dinner". |
+| MH-02, [#9](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/9) | A slot is a start and end time chosen by the staff ([slots mockup](../slots/README.md)); a day can have several (e.g. 12–13 and 13–14). Times are shown as times, not as "lunch" or "dinner". |
 | [#17](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/17) | A day or time with no tables defined has 0 seats and cannot be booked. |
 | Story | The number of people must fit in the free seats of that time. |
 | [#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7) | Booking is possible up to 2 hours before the start of the slot. |
@@ -82,7 +82,7 @@ These belong to other stories and are added with them: confirmation email (MH-03
 Asked to the product owner and still open; the mockup does not depend on the answers:
 
 - How far ahead a table can be booked ([#26](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/26)). The day strip has no end and shows the days that have slots, so the server decides how far ahead a day has any.
-- Smallest and largest party ([#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27)). The stepper goes from 1 to the most free seats of any time that day.
+- Party size was clarified in [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27): "No limit". The implementation starts at 1 and does not cap or reduce the party to the seats of a day. An oversized party receives a not-available answer (MH-04), and its choice is preserved when seats change. The older screenshots predate this clarification.
 - More than one booking by the same hiker in a slot ([#25](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/25)).
 - A table not shared with other parties ([#21](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/21)).
 - The story says the party must be "smaller than" the free seats; we read it as "fits in" (6 people can take 6 free seats).

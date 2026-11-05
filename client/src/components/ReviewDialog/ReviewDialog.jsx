@@ -11,7 +11,7 @@ import { Button } from '../Button/Button.jsx';
 import { PartySeats } from '../PartySeats/PartySeats.jsx';
 import styles from './ReviewDialog.module.css';
 
-export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPending, onBack, onConfirm }) {
+export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPending, onBack, onConfirm, partyHeading }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPe
             </div>
           </dl>
 
-          <PartySeats partySize={partySize} tables={tables} />
+          <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
           {tables?.length > 1 && (
             <p className={styles.note}>
               No single table has {partySize} free seats at this time, so your party is split

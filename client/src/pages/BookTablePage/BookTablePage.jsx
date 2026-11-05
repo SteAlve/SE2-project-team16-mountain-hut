@@ -7,7 +7,8 @@
  * An employee or the warden is told on arrival that only hikers can book, and Review booking is off.
  * The navbar and Log out come from AppLayout.
  */
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { BookingBar, BookingSummary } from '../../components/BookingSummary/BookingSummary.jsx';
 import { BookingTicket } from '../../components/BookingTicket/BookingTicket.jsx';
@@ -18,40 +19,54 @@ import { StepHeading } from '../../components/StepHeading/StepHeading.jsx';
 import { TimeSlot } from '../../components/TimeSlot/TimeSlot.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useBookTable } from '../../hooks/useBookTable.js';
+import { usePublicAvailability } from '../../hooks/usePublicAvailability.js';
 import { formatTime, toDay } from '../../lib/bookingDates.js';
+import { readBookingSearch, withoutReviewFlag } from '../../lib/availabilitySearch.js';
 import { ROLE_LABEL, STAFF_ROLES } from '../../lib/roles.js';
 import styles from './BookTablePage.module.css';
 
 // Sample data of the mockup, until the hut page story gives the real name and altitude.
 const HUT_LABEL = 'Rifugio Alpe Lunga · 2.450 m';
 
-const positiveInt = (value) => {
-  const n = Number(value);
-  return Number.isSafeInteger(n) && n > 0 ? n : undefined;
-};
-
 export function BookTablePage() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { user, isLoading, isAuthenticated } = useAuth();
-  const book = useBookTable({
-    date: params.get('date') ?? undefined,
-    partySize: positiveInt(params.get('people')),
-    slotId: positiveInt(params.get('slot')),
-  });
+  const initial = readBookingSearch(params);
+  const { from, to, isSearch } = initial;
+  const book = useBookTable(initial);
   const { date, slot, partySize, now } = book;
   // The server refuses a booking by the staff (403): say it now, not at Confirm.
   const isStaff = STAFF_ROLES.includes(user?.role);
+  const seatingAnswer = usePublicAvailability(slot, partySize, book.updateSlots);
+  const searchMessage = !book.isLoading && !book.loadError && isSearch && !slot
+    ? book.matchingCount === 0
+      ? book.overlappingCount === 0
+        ? { status: 'unavailable', message: `No meal slots overlap your selected time range (${from}–${to}) on this day.` }
+        : { status: 'choice', message: `None of the ${book.overlappingCount} overlapping slots is currently bookable for ${partySize} people. Choose a time to check its availability.` }
+      : { status: 'choice', message: `${book.matchingCount} overlapping ${book.matchingCount === 1 ? 'slot is' : 'slots are'} currently bookable for ${partySize} people. Choose one to check availability.` }
+    : null;
+  const availability = seatingAnswer ?? searchMessage;
+  const canReview = !isLoading && !isStaff && availability?.status === 'available' && !availability.isRefreshing;
+  const resume = useRef(false);
+  useEffect(() => {
+    if (params.get('review') !== '1' || resume.current || !isAuthenticated || !canReview) return;
+    resume.current = true;
+    setParams(withoutReviewFlag(params), { replace: true });
+    book.review();
+  }, [params, setParams, isAuthenticated, canReview, book]);
 
   const goToLogin = () => {
     const choices = new URLSearchParams({ people: String(partySize) });
     if (date) choices.set('date', date);
     if (slot) choices.set('slot', String(slot.slotId));
+    if (isSearch) { choices.set('from', from); choices.set('to', to); }
+    choices.set('review', '1');
     navigate('/login', { state: { from: `/book?${choices}`, page: 'book a table' } });
   };
 
   const handleReview = () => {
-    if (isStaff) return;
+    if (!canReview) return;
     if (!isLoading && !isAuthenticated) goToLogin();
     else book.review();
   };
@@ -83,7 +98,10 @@ export function BookTablePage() {
         <div className={styles.steps}>
           <header className={styles.intro}>
             <p className={styles.eyebrow}>{HUT_LABEL}</p>
-            <h1 className={styles.title}>Book a table</h1>
+            <div className={styles.headingRow}>
+              <h1 className={styles.title}>Book a table</h1>
+              {isSearch && <Link to={`/?${new URLSearchParams({ date: date ?? '', people: String(partySize), from, to })}`}>Change search</Link>}
+            </div>
             <p className={styles.subtitle}>
               Choose the day, how many you are, and a time. You can book up to 2 hours before.
             </p>
@@ -110,6 +128,7 @@ export function BookTablePage() {
               today={today}
               onSelect={book.chooseDate}
               onReachEnd={book.showMoreDays}
+              onReachStart={book.canShowEarlierDays ? book.showEarlierDays : undefined}
               labelledBy="step-day"
             />
           </section>
@@ -136,12 +155,13 @@ export function BookTablePage() {
                     key={s.slotId}
                     slot={s}
                     selected={slot?.slotId === s.slotId}
+                    allowUnavailable={isSearch}
                     onSelect={() => book.chooseSlot(s.slotId)}
                   />
                 ))}
               </div>
             ) : (
-              <p className={styles.hint}>{date ? 'No times on this day.' : 'Choose a day first.'}</p>
+              <p className={styles.hint}>{book.loadError ? 'Meal times could not be loaded.' : date ? 'No times on this day.' : 'Choose a day first.'}</p>
             )}
           </section>
         </div>
@@ -153,6 +173,9 @@ export function BookTablePage() {
           now={now}
           isPending={book.isPending}
           canBook={!isStaff}
+          availability={availability}
+          searchRange={isSearch ? `${from} to ${to}` : null}
+          isAvailable={Boolean(canReview)}
           onReview={handleReview}
         />
       </main>
@@ -161,8 +184,12 @@ export function BookTablePage() {
         date={date}
         slot={slot}
         partySize={partySize}
+        now={now}
         isPending={book.isPending}
         canBook={!isStaff}
+        availability={availability}
+        searchRange={isSearch ? `${from} to ${to}` : null}
+        isAvailable={Boolean(canReview)}
         onReview={handleReview}
       />
 
@@ -172,6 +199,7 @@ export function BookTablePage() {
         slot={slot}
         partySize={partySize}
         tables={book.tables}
+        partyHeading={isSearch && book.tables ? `${book.tables.map(({ seats }) => seats).join(' + ')} seats` : undefined}
         notice={book.reviewNotice}
         isPending={book.isPending}
         onBack={book.back}
