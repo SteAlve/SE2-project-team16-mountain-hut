@@ -8,6 +8,10 @@ Manual checks of **MH-02 - Define slot capacity**, performed by Antonio on
 
 **38 checklist cases: 33 Pass, 2 Partial (ST-28, ST-30), 2 Inconclusive
 (ST-06, ST-31), and 1 Not executed manually (ST-38).**
+**Supplementary automated completion: ST-06, ST-31 and ST-38 all passed on
+05/11/2026 at `1a03843`, using a fresh isolated database and the real backend.**
+The original manual classifications remain unchanged; these three functional
+coverage gaps now have explicit automated evidence below.
 The successful repeats in ST-21, ST-24 and ST-29 are included in the 33 passes;
 their earlier unexplained outcomes remain open observations O-01/O-02.
 
@@ -59,9 +63,10 @@ introduced by PR #56.
 
 Fixture notes:
 
-- **ST-06:** the starting set is not identified in the session notes. The numbers
-  cannot be reconciled with Manual Lunch (4/4/6); no replacement starting state is
-  inferred. A repeat is needed before marking this case Pass.
+- **ST-06:** the starting set is not identified in the original session notes.
+  The numbers cannot be reconciled with Manual Lunch (4/4/6); no replacement
+  starting state is inferred for that manual run. A separate automated check
+  now verifies the behaviour using an explicitly named 4/4/6 source (see below).
 - **ST-25:** an additional unassigned slot, 2026-11-13 17:00–18:00, was present
   when the public check was performed. Its creation is not covered by earlier
   checklist steps; this case verifies the observed unassigned-to-assigned
@@ -79,7 +84,7 @@ Fixture notes:
 | ST-03 | Table-set card shows summary; individual table numbers/capacities and totals agree in copy dialog or assigned slot | Pass | Tester confirmed with screenshots: existing set shows 1 table / 4 seats; copy dialog contains table 1 with capacity 4, total 1 table / 4 seats and By size: 1 × 4 seats. Empty draft row is excluded from the total. |
 | ST-04 | Create `Manual Lunch 20261103`: tables 1/4, 2/4, 3/6; total 14 seats | Pass | Tester confirmed tables 1–3 with capacities 4, 4, 6; total 3 tables / 14 seats; By size: 2 × 4 seats · 1 × 6. Save closes the dialog and updates the card without reload. |
 | ST-05 | New-table draft: Enter adds a row; automatic next number; save includes typed draft | Pass | Enter and automatic numbering confirmed during ST-04. Tester saved Manual Draft 20261103 with capacity 2 in the draft without Enter; card shows 1 table / 2 seats. |
-| ST-06 | Edit and remove table rows; totals and By size update correctly | Inconclusive | The recorded sequence is 10 -> 14 -> 8 seats after changing table 1 from 4 to 8 and removing table 2 described as 6 seats. The starting set was not recorded, and these capacities do not match Manual Lunch (4/4/6). Editing and removal were observed, but this evidence cannot validate the full expected totals. Cancelled without saving; repeat with a named starting set and explicit row capacities. |
+| ST-06 | Edit and remove table rows; totals and By size update correctly | Inconclusive (original manual); Pass (supplementary automated) | Original manual evidence records 10 -> 14 -> 8 seats without an identified starting set, so it remains inconclusive. On 05/11/2026, a separate automated check at 1a03843 used a named 4/4/6 set, verified edits to number/capacity, totals 14 -> 18 -> 12, By size updates and Cancel preserving the original stored rows. See automated completion below. |
 | ST-07 | Copy a set, edit the copy; source stays unchanged | Pass | Tester confirmed copying Manual Lunch 20261103 (4, 4, 6 seats), changing table 1 to 8 and saving Manual Copy 20261103: copy shows 3 tables / 18 seats; original remains 3 tables / 14 seats. |
 | ST-08 | Empty or whitespace-only name and empty table list rejected | Pass | Tester confirmed empty-form errors, rejection of whitespace-only name and rejection of named set without tables. Dialog stays open; cancelling creates no set. |
 | ST-09 | Zero, negative, fractional and nonnumeric table numbers/capacities rejected | Pass | Tester confirmed rejection of 0, -1, 1.5 and abc in both table number and capacity, with the expected field messages and no saved set. |
@@ -111,7 +116,7 @@ Fixture notes:
 | ST-35 | Mobile: navbar, day scrolling, slot cards and fixed Add a slot bar usable | Pass | Tester confirmed Chrome responsive view at 390 × 844: navbar menu opens/closes, one-column page has no page-wide horizontal overflow, day strip scrolls sideways, slot details remain readable without overlaps and fixed Add a slot action is clickable. |
 | ST-36 | Mobile dialogs: scrolling, actions, table editing and validation usable | Pass | Tester confirmed at 390 × 844: bottom-sheet Add a slot scrolls and actions are reachable; required-time errors are readable; copied table rows use one column with usable number/capacity/remove controls; zero-capacity validation is visible without overlaps; Cancel closes dialogs. |
 | ST-37 | Keyboard: labels, focus, tab navigation, Enter and Escape usable | Pass | Tester confirmed desktop Tab/Shift+Tab navigation with visible focus confined to New table set, Enter in draft Seats adds a row without saving, keyboard activation of Cancel closes without saving, and Add a slot fields/options/actions are keyboard reachable with Escape closing. This was a keyboard usability check, not a screen-reader audit. |
-| ST-38 | No table sets yet: empty state, unassigned creation and first-set flow | Not executed (manual) | No manual empty-state run was performed. A separate automated Playwright check passed against the isolated real backend/database on port 3002; see supplementary automated evidence. Excluded from the manual Pass count. |
+| ST-38 | No table sets yet: empty state, unassigned creation and first-set flow | Not executed (manual); Pass (supplementary automated) | No manual empty-state run was performed. The earlier isolated automated check passed. A fresh automated check at 1a03843 on 05/11/2026 also passed with real API/PostgreSQL: zero initial sets/slots, nested first-set creation, assignment and persistence after reload and a new authenticated session. Excluded from manual passes; see automated completion below. |
 
 ## Open observations and remaining checks
 
@@ -122,8 +127,9 @@ Fixture notes:
 - **O-02 - ST-29:** the first concurrent-assignment attempt on 17:00–18:00 was
   inconclusive. Its cause remains unknown. The controlled manual repeat on
   18:30–19:30 passed; the first attempt remains a separate open observation.
-- **ST-06:** repeat editing/removal from a named set with explicit starting rows
-  and arithmetic; current evidence is inconsistent.
+- **ST-06:** the original manual arithmetic remains inconsistent. The separate
+  automated check now confirms editing/removal using a fully specified fixture;
+  another manual run is needed only if a manual Pass is required.
 - **ST-28:** after the verified redirect, log in as staff and verify return to
   /slots and the intended return context.
 - **ST-30:** repeat the pending-save/repeated-click check for slot creation and
@@ -131,7 +137,8 @@ Fixture notes:
 - **ST-31:** the fix is merged and verified automatically at `4b44bd7`, as
   detailed below. A manual post-fix retest remains outstanding if a manual result
   is required; do not turn the automated result into a manual Pass.
-- **ST-38:** perform the empty-state flow manually if a manual result is required.
+- **ST-38:** the empty-state flow is covered by the new automated check; perform
+  it manually only if a manual result is required.
 - **QA integration:** not tested in this report.
 
 ## Known defect and supplementary automated evidence
@@ -227,6 +234,28 @@ The browser used the real UI on port 5173; API routes were forwarded to port
    appears in the card and both slots; both assignments persisted.
 
 All behaviour assertions passed in the separate automated check. This is supplementary evidence only, not a manual Pass and not a QA integration test.
+
+### Automated completion of ST-06, ST-31 and ST-38 (05/11/2026)
+
+Tested report-branch commit: `1a03843daf43ea1d86e8ae3dce1cc35a336f12ab`, based on
+`dev@142cef0` and containing the merged ST-31 fix. The checks used headless
+Chromium/Playwright, the real React UI, Express and PostgreSQL. A new database
+named `mountain_hut_mh83_auto_<run ID>` was migrated without demo data. The API
+ran on port 13083 and the client on port 15183; the database was selected
+explicitly for both the API and fixtures. No manual-run database was used.
+
+| Case | Automated result | Evidence |
+| --- | --- | --- |
+| ST-06 | Pass | Named source `AUTO-ST06-Base-1793896912061`: tables 1/4, 2/4, 3/6. Copy opened with 3 tables / 14 seats. Renaming table 1 to 10 and changing its capacity to 8 produced 18 seats; removing table 3 (6 seats) produced 2 tables / 12 seats. By size was checked at every stage. After Cancel, a database query confirmed the original rows remained exactly 1/4, 2/4, 3/6 and no copy was saved. |
+| ST-31 | Pass | Executed the existing MH-02 test `a slot just saved stays on the page when an older read of the slots answers after it` unchanged against the isolated real backend. The saved slot remained visible after releasing the held GET responses. This complements the earlier negative control recorded above. |
+| ST-38 | Pass | Read-only counts confirmed 0 sets / 0 slots before the check. Created an unassigned 12:00-13:00 slot on 06/11/2026. From Add a slot for 14:00-15:00, created `AUTO-ST38-First-1793896910607` with a 4-seat draft saved without Enter. Verified return with the original date/time and the new set selected, saved the second slot, then assigned that set to the first. Reload and a fresh login retained both assignments. Final database counts: 1 set and 2 assigned slots. |
+
+These are three supplemental automated case results, not three new manual
+passes and not certification of every report case. ST-28/ST-30 remain partially
+verified manually, and the historical observations O-01/O-02 remain open.
+Screenshots of ST-06/ST-38 and execution output were captured locally. This
+documentation update adds no E2E files to the repository. The temporary
+database and both processes were removed after the run.
 
 ## Temporary test databases
 
