@@ -14,7 +14,7 @@ import styles from './DayStrip.module.css';
 // How early, before the last day is in view, the next days are asked for.
 const REACH_END_MARGIN = '0px 300px 0px 0px';
 
-export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelledBy, pickEmpty = false }) {
+export function DayStrip({ days, selected, today, onSelect, onReachEnd, onReachStart, labelledBy, pickEmpty = false }) {
   const stripRef = useRef(null);
   const endRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
@@ -46,8 +46,8 @@ export function DayStrip({ days, selected, today, onSelect, onReachEnd, labelled
         type="button"
         className={`${styles.arrow} ${styles.back}`}
         aria-label="Earlier days"
-        disabled={atStart}
-        onClick={() => scrollBy(-1)}
+        disabled={atStart && !onReachStart}
+        onClick={() => atStart && onReachStart ? onReachStart() : scrollBy(-1)}
       >
         <img src={chevron} alt="" width="20" height="20" />
       </button>

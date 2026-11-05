@@ -22,10 +22,11 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 ## The flow
 
 1. **The landing page.** A picture, the slogan and a search bar: day, people, From and To. No login. Only days that have slots are in the list. From and To open a scroll wheel, like the timer of a phone: hours and minutes in steps of 5. To is always after From.
-2. **Check availability.** The button waits for From and To, then opens `/book` with the same choices. **From and To are a search, not a new slot:** the hut serves only the slots set by the staff (#6, #9). A slot matches if it **starts** between From and To.
-   - **One slot matches:** it is already chosen and the card gives the answer.
-   - **Several match:** the user picks one, then the card gives the answer.
-   - **None matches:** the answer is not available.
+2. **Check availability.** The button waits for From and To, then opens `/book` with the same choices. **From and To are a search, not a new slot:** the hut serves only the slots set by the staff (#6, #9). A slot matches if its interval **overlaps** From/To for a positive duration (`slot start < To` and `slot end > From`). Intervals that only touch at a boundary do not match. This is a team UX choice, not an explicit PO rule.
+   - **One overlapping slot is currently bookable for the party:** it is selected automatically, even if other overlapping slots are full, have too few free seats or are closed. The server then checks its seating availability.
+   - **Several overlapping slots are currently bookable for the party:** the user picks one, then the server checks its seating availability.
+   - **No slot overlaps:** the answer is not available.
+   - **Slots overlap but none is currently bookable:** if there is only one overlapping slot, it is selected automatically so the server can explain why it is unavailable. With several overlapping slots, the user chooses one to inspect its availability.
 3. **The answer** is in the card of Book a table: **Available** with the detail of the seats, or **Not available**. It changes when the user changes the day, the people or the time on that page. Nothing is booked or held.
 4. **Review booking.** A logged-in hiker sees *Check your booking*. A visitor goes to the login with the note "Log in to book a table." (login mockup, screen 4), and from there to *Sign up* if they have no account. The choices are kept in both.
 5. **Back after the login or the sign-up.** The user returns to `/book` with *Check your booking* already open, so the only step left is **Confirm booking**.
@@ -62,8 +63,9 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 |---|---|
 | Slogan (a proposal) | A table waits at the top. Earn the climb. We keep your seat. |
 | From or To missing on the landing page | *Choose*, and *Check availability* is disabled |
-| Several slots match | *N* times start between *HH:MM* and *HH:MM*. Choose one to see if your party fits. *Review booking* is disabled |
-| No slot matches | **Not available.** No meal starts between *HH:MM* and *HH:MM* on this day. *Review booking* is disabled |
+| Several slots can host the party | *N* overlapping slots are currently bookable for *M* people. Choose one to check availability. *Review booking* is disabled |
+| Slots overlap, but none can host the party | None of the *N* overlapping slots is currently bookable for *M* people. Choose a time to check its availability. *Review booking* is disabled |
+| No slot matches | **Not available.** No meal slots overlap your selected time range (*HH:MM*?*HH:MM*) on this day. *Review booking* is disabled |
 | Time card on `/book` | As in the booking: *N* seats free, Only *N* seats free, Full |
 | Time less than 2 hours away | Closed at *HH:MM*, as in the booking |
 | The party fits (`200`) | **Available**, and the party bar: "*2 + 3 + 1* seats", a *K* tables chip, the seats in one bar, and "2 at table 1 · 3 at table 2 · 1 at table 4". *Review booking* is enabled |
@@ -72,21 +74,34 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 | The time has no tables yet (`422`) | **Not available.** This time has no free seats. *Review booking* is disabled |
 | Employee or warden | The same answer, and `/book` says that only hikers can book (booking mockup, screen 7) |
 
-## What changes in the code
+## Implementation (MH-63 / MH-65)
 
-- `/` is a placeholder today: this page replaces it.
-- `/book` already reads `?date=&people=&slot=` from the URL, and the login and the sign-up already go back to it.
-- Changes on `/book`: it also reads `from` and `to`, and matches them to the slots of the day; the card shows the answer; a time too small stays marked when the user arrives with it; *Check your booking* opens by itself after the login or the sign-up.
+- `/` uses a calendar date input, initially set to today, with past days disallowed. This replaces the mockup's day dropdown. The public API determines which days have slots: days without slots show a message and cannot be searched. The search keeps the party size, including when it is too large, and passes `date`, `people`, `from` and `to` to `/book`.
+- `/book` matches slot intervals that overlap the From/To range for a positive duration, then counts only slots currently bookable for the selected party size (booking is open and free seats cover the party). One candidate is selected automatically; several require a choice. If none overlap, the page gives a not-available message. If none is bookable but exactly one overlaps, that slot is selected to obtain the server's unavailable answer; with several overlaps, the user chooses one to inspect. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested.
+- The desktop card and the mobile bottom bar show the public seating answer and its split detail. Checking does not reserve seats. Review booking is enabled only after a successful check and only for hikers or visitors who can log in.
+- Login and sign-up preserve the choices in the return URL. `review=1` reopens *Check your booking* after authentication and is then removed with history replacement. Removing only this flag keeps the booking component mounted, so the dialog stays open, while reloading no longer asks to reopen it. Confirmation still requires the hiker's explicit action and obtains a fresh seating proposal.
 - The check needs no new endpoint.
+- **Change search** returns to the home form with the currently selected day and party size and the original From/To range filled in, ready to edit.
+
+### PR #63 review corrections
+
+- The hero heading uses `width: 100%` with `max-width: 1152px` to fit between the desktop padding at intermediate widths. The landing-page footer includes the photo attribution; the client image is resized and compressed.
+- Party size is not capped by free capacity: the PO explicitly answered **No limit** in [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27). `Number.MAX_SAFE_INTEGER` is only a JavaScript precision guard, used by both the stepper and its state setter; the obsolete capacity-based `largestParty` helper is removed.
+- Unavailable messages are selected by HTTP status. A failed slot refresh cannot turn a 422 response into a contradictory capacity claim; unknown or stale capacity receives a general explanation.
+- `npm test` in `client` runs 77 unit tests using Node's built-in runner, also included in CI. They cover URL validation (including past dates), one-shot review-flag consumption and route identity, partial overlaps and excluded touching boundaries, automatic selection, party capacity/closure decisions, unavailable messages, background-refresh presentation and deadline labels. These are pure logic tests; they do not certify browser layout, hook/network timing or the complete login flow. No E2E scenarios are implemented by this change.
+- Polling and the displayed clock share one 30-second timer. A changed capacity revalidates seating in the background while retaining the previous answer and disabling Review booking until the new answer arrives. A background recheck uses the already fetched slot list, rather than fetching it a second time. A different slot, party size or explicit retry shows the loading state.
+- Check again is shown for unexpected/network errors only. Direct past-day links cannot restore a past selection or its old slot ID. Server deadline times stay authoritative; the label is shortened to `HH:MM today` when its date equals the displayed current day.
+- The time picker uses `aria-describedby` for its selection description. New JSX/CSS is expanded for readability and the unused `compact` prop is removed. A ResizeObserver measures the mobile BookingBar and reserves its actual height plus a small gap through a CSS variable, keeping the last slot reachable even when many seating groups wrap. The root README names the MH-02 fixtures that require a dedicated E2E database.
 
 ## Open points
 
+- **Range examples.** With slots 12:00?13:00 and 13:00?14:00, 12:30?13:30 matches both; 12:00?13:00 matches only the first. With the next slot starting at 19:00, 14:00?19:00 matches none. Static screenshots may still show the earlier start-time wording.
 - **From and To.** The PO asked for the date and time to be chosen from those available (#6). This mockup keeps that rule: From and To only search among the slots. A time chosen freely by the hiker would need a question to the PO.
 - **The team has to agree on this page.** It is one more way to answer the question of where the availability lives: the search on the home page, the answer on `/book`. It needs no change to the routes.
 - **The scenarios of MH-04** say "opens the availability check" and "asks for the availability". Here those steps are the search bar with From and To, and *Check availability*. They also use the words **available** and **not available** and the detail `2 + 3 + 1` seats, which this mockup keeps.
 - **The picture.** It is a stand-in, not our hut. A photo of the real hut can replace it, or we keep it with its credit (see below).
 - **The slogan and the three short texts** are proposals.
-- **Party size.** There is no limit until the product owner answers [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27).
+- **Party size.** The PO answered "No limit" in [#27](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/27). The form keeps oversized parties and reports unavailability instead of silently reducing the requested number.
 
 ## Left out on purpose
 
