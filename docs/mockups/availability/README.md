@@ -62,7 +62,8 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 |---|---|
 | Slogan (a proposal) | A table waits at the top. Earn the climb. We keep your seat. |
 | From or To missing on the landing page | *Choose*, and *Check availability* is disabled |
-| Several slots match | *N* slots overlap your selected time range (*HH:MM*?*HH:MM*). Choose one to see if your party fits. *Review booking* is disabled |
+| Several slots can host the party | *N* overlapping slots are currently bookable for *M* people. Choose one to check availability. *Review booking* is disabled |
+| Slots overlap, but none can host the party | None of the *N* overlapping slots is currently bookable for *M* people. Choose a time to check its availability. *Review booking* is disabled |
 | No slot matches | **Not available.** No meal slots overlap your selected time range (*HH:MM*?*HH:MM*) on this day. *Review booking* is disabled |
 | Time card on `/book` | As in the booking: *N* seats free, Only *N* seats free, Full |
 | Time less than 2 hours away | Closed at *HH:MM*, as in the booking |
@@ -75,7 +76,7 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 ## Implementation (MH-63 / MH-65)
 
 - `/` uses a calendar date input, initially set to today, with past days disallowed. This replaces the mockup's day dropdown. The public API determines which days have slots: days without slots show a message and cannot be searched. The search keeps the party size, including when it is too large, and passes `date`, `people`, `from` and `to` to `/book`.
-- `/book` matches slot intervals that overlap the From/To range for a positive duration. One match is selected automatically, several require a choice, and no matches give a not-available message. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested. An unavailable slot selected by a search stays visible with its answer.
+- `/book` matches slot intervals that overlap the From/To range for a positive duration, then counts only slots currently bookable for the selected party size. One candidate is selected automatically; several require a choice. If none overlap, the page gives a not-available message. If slots overlap but none is bookable for the party, they remain selectable so the user can inspect an individual answer. All times of the day remain visible, as in screens 3–8, so the user can check a different time without it being suggested.
 - The desktop card and the mobile bottom bar show the public seating answer and its split detail. Checking does not reserve seats. Review booking is enabled only after a successful check and only for hikers or visitors who can log in.
 - Login and sign-up preserve the choices in the return URL. `review=1` reopens *Check your booking* after authentication; confirmation still requires the hiker's explicit action and obtains a fresh seating proposal.
 - The check needs no new endpoint.

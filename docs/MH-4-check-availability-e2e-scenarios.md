@@ -15,13 +15,16 @@ Given/When/Then form so they can be translated directly into Playwright tests.
    table**. The login is asked only at **Review booking**, which these scenarios
    do not use.
 3. From and To are a search among the slots set by the staff, not a new time: a
-   slot matches if its interval overlaps From/To for a positive duration
-   (slot start < To and slot end > From). Touching boundaries do not match.
+   slot overlaps if its interval intersects From/To for a positive duration
+   (slot start < To and slot end > From). Touching boundaries do not overlap.
 4. **Check availability** opens **Book a table** with the same choices, and that
-   page gives the answer:
-   - one slot matches: it is already chosen and the answer is shown;
-   - several slots match: the user chooses one, and the answer is shown for it;
-   - no slot matches: the answer is **Not available**.
+   page counts overlapping slots that are currently bookable for the selected
+   party size:
+   - one such slot: it is already chosen and the answer is checked;
+   - several such slots: the user chooses one, and the answer is checked for it;
+   - no overlapping slot: the answer is **Not available**;
+   - overlapping slots but none bookable for the party: the user can choose one
+     to see its availability.
 5. The answer is based on the free seats of that time and on the table layout.
    A party that does not fit at one table can be split over several tables:
    with 6 free seats split over 3 tables of 2, a party of 6 is available.
@@ -176,7 +179,7 @@ below.
 **Given**
 
 1. The chosen day has two slots that overlap the From/To range chosen below,
-   and both have room for the party.
+   and both have enough free seats for the party.
 
 **When**
 
@@ -195,7 +198,25 @@ below.
 3. After the choice, the answer is **Available**, with the detail for the time
    chosen.
 
-## Scenario 8: No time matches the search
+## Scenario 8: Only one overlapping slot has enough free seats
+
+**Given**
+
+1. The chosen day has two slots that overlap the From/To range.
+2. One slot has enough free seats for the party; the other does not.
+
+**When**
+
+1. The user searches for the chosen party size and selects **Check availability**.
+
+**Then**
+
+1. The slot with enough free seats is selected automatically.
+2. Its availability is checked and shown.
+3. The other overlapping time remains visible, but is not counted as a candidate
+   for this party size.
+
+## Scenario 9: No time matches the search
 
 **Given**
 
@@ -217,7 +238,7 @@ below.
 3. **Review booking** is disabled.
 4. No other time, day or date is suggested.
 
-## Scenario 9: The search needs From and To
+## Scenario 10: The search needs From and To
 
 **Given**
 
@@ -235,7 +256,7 @@ below.
 2. After the choice, **To** is later than **From** and **Check availability** is
    enabled.
 
-## Scenario 10: The check does not book
+## Scenario 11: The check does not book
 
 **Given**
 
@@ -255,7 +276,7 @@ below.
    seats.
 2. The hiker has no booking for that time.
 
-## Scenario 11: An employee gets the same answer
+## Scenario 12: An employee gets the same answer
 
 **Given**
 

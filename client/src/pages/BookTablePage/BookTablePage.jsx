@@ -41,8 +41,10 @@ export function BookTablePage() {
   const seatingAnswer = usePublicAvailability(slot, partySize, book.updateSlots);
   const searchMessage = !book.isLoading && !book.loadError && isSearch && !slot
     ? book.matchingCount === 0
-      ? { status: 'unavailable', message: `No meal slots overlap your selected time range (${from}–${to}) on this day.` }
-      : { status: 'choice', message: `${book.matchingCount} slots overlap your selected time range (${from}–${to}). Choose one to see if your party fits.` }
+      ? book.overlappingCount === 0
+        ? { status: 'unavailable', message: `No meal slots overlap your selected time range (${from}–${to}) on this day.` }
+        : { status: 'choice', message: `None of the ${book.overlappingCount} overlapping slots is currently bookable for ${partySize} people. Choose a time to check its availability.` }
+      : { status: 'choice', message: `${book.matchingCount} overlapping ${book.matchingCount === 1 ? 'slot has' : 'slots have'} enough free seats for ${partySize} people. Choose one to check availability.` }
     : null;
   const availability = seatingAnswer ?? searchMessage;
   const canReview = !isLoading && !isStaff && availability?.status === 'available';

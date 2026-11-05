@@ -131,16 +131,18 @@ export function useBookTable(initial = {}) {
   const to = initial.to;
   const isSearch = Boolean(from && to);
   const daySlots = useMemo(() => (date && slotsByDate?.[date]) || [], [date, slotsByDate]);
-  // Match a positive overlap; adjacent intervals that only touch do not match.
-  const matches = isSearch ? daySlots.filter((s) => s.startsAt.slice(0, 5) < to && s.endsAt.slice(0, 5) > from) : [];
   // The PO sets no party-size limit. Never silently reduce the user's choice to today's capacity.
   const maxPartySize = Number.MAX_SAFE_INTEGER;
   const partySize = chosenPartySize;
 
   const slots = daySlots.map((s) => ({ ...s, ...slotAvailability(s, date, partySize, now) }));
+  // Match positive overlaps, then count only slots with enough free seats for this party.
+  const overlappingSlots = isSearch ? slots.filter((s) => s.startsAt.slice(0, 5) < to && s.endsAt.slice(0, 5) > from) : [];
+  const matches = overlappingSlots.filter((s) => s.bookable);
   // While the check dialog is open the slot stays chosen even if the clock closes it: the server
   // answers the confirm, and the dialog does not go blank under the hiker.
-  const selectedId = slotId === undefined && matches.length === 1 ? matches[0].slotId : slotId;
+  const autoSelected = matches.length === 1 ? matches[0] : matches.length === 0 && overlappingSlots.length === 1 ? overlappingSlots[0] : null;
+  const selectedId = slotId === undefined ? autoSelected?.slotId : slotId;
   const slot = slots.find((s) => s.slotId === selectedId && (isSearch || s.bookable || isReviewing)) ?? null;
 
   const chooseDate = (next) => {
@@ -245,6 +247,7 @@ export function useBookTable(initial = {}) {
     updateSlots,
     loadError,
     matchingCount: matches.length,
+    overlappingCount: overlappingSlots.length,
     isLoading: slotsByDate === null,
     slot,
     chooseSlot: setSlotId,
