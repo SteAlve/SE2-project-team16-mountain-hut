@@ -1,12 +1,4 @@
-TEMPLATE FOR RETROSPECTIVE (Team 16)
-=====================================
-
-The retrospective should include _at least_ the following
-sections:
-
-- [process measures](#process-measures)
-- [quality measures](#quality-measures)
-- [general assessment](#assessment)
+# Retrospective — Sprint 1 (Team 16)
 
 ## PROCESS MEASURES 
 
@@ -14,7 +6,7 @@ sections:
 
 - Number of stories committed vs done: **4 / 4**
 - Total points committed vs done: **16 / 16**
-- Nr of hours planned vs spent (as a team): **109h 30m** / **96h 28m**
+- Nr of hours planned vs spent (as a team): **109h 30m** / **97h 23m**
 
 **Remember**  a story is done ONLY if it fits the Definition of Done:
  
@@ -27,17 +19,17 @@ sections:
 
 | Story | # Tasks | Points | Hours est. | Hours actual |
 |-------|---------|--------|------------|--------------|
-| #0 - Uncategorized | 20 | - | 51h 00m | 46h 40m |
+| #0 - Uncategorized | 20 | - | 51h 00m | 47h 05m |
 | MH-01 | 12 | 8 | 17h 30m | 18h 25m |
-| MH-02 | 14 | 3 | 19h 15m | 17h 13m |
+| MH-02 | 14 | 3 | 19h 15m | 17h 43m |
 | MH-03 | 7 | 2 | 6h 00m | 5h 00m |
 | MH-04 | 13 | 3 | 15h 45m | 9h 10m |
-| **Total** | **66** | **16** | **109h 30m** | **96h 28m** |
+| **Total** | **66** | **16** | **109h 30m** | **97h 23m** |
   
 
-- Hours per task per person: average **0.941 hours**, standard deviation **0.653 hours**.
+- Hours per task per person: average **0.946 hours**, standard deviation **0.650 hours**.
 
-- Total task estimation error ratio: **-11.90%** (96h 28m / 109h 30m - 1)
+- Total task estimation error ratio: **-11.07%** (97h 23m / 109h 30m - 1)
 
   
 ## QUALITY MEASURES
@@ -45,8 +37,8 @@ sections:
 - Unit Testing:
   - Total hours estimated: **10h 30m**
   - Total hours spent: **5h 45m**
-  - Nr of automated unit test cases: **202**
-  - Coverage: **96.36% lines, 96.45% statements, 93.86% branches, 97.24% functions**
+  - Nr of automated unit test cases: **349**
+  - Coverage: **96.81% lines, 96.82% statements, 94.78% branches, 97.70% functions**
 - Integration testing:
   - Total hours estimated: **3h 00m**
   - Total hours spent: **2h 40m**
@@ -55,7 +47,7 @@ sections:
   - Total hours spent: **8h 40m**
 - Code review:
   - Total hours estimated: **13h 30m**
-  - Total hours spent: **11h 40m**
+  - Total hours spent: **12h 10m**
 
 ## ASSESSMENT
 
