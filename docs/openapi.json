@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
@@ -456,7 +456,7 @@
           "Auth"
         ],
         "summary": "Ask for a password reset link",
-        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for a limited time that the server decides. It is the way for a hiker whose account was created by the staff to recover the generated password, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
+        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for a limited time that the server decides. It is also the way for a hiker whose account was created by the staff to choose a password when the email with the generated one is lost or never arrived, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
         "operationId": "requestPasswordReset",
         "requestBody": {
           "required": true,
@@ -1896,7 +1896,7 @@
           "Staff"
         ],
         "summary": "Create a hiker",
-        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER`, the server generates a random password and returns it once as `temporaryPassword`, so that the employee can tell it to the hiker, who has to change it at the first login (`mustChangePassword`) and can later use the web interface like anyone who signed up. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
+        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The password is never returned: the server stores only its hash and sends it by email to the hiker, so the employee does not see it. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
         "operationId": "createHiker",
         "security": [
           {
@@ -1934,38 +1934,33 @@
         },
         "responses": {
           "201": {
-            "description": "Hiker created.",
+            "description": "Hiker created. For a regular account the generated password has been sent by email to the hiker; it is not in the response.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreatedHiker"
+                  "$ref": "#/components/schemas/Hiker"
                 },
                 "examples": {
                   "regular": {
-                    "summary": "A regular account: the password is returned once",
+                    "summary": "A regular account: the password goes to the hiker by email",
                     "value": {
-                      "hiker": {
-                        "id": 21,
-                        "firstName": "Marco",
-                        "lastName": "Bianchi",
-                        "email": "marco.bianchi@example.com",
-                        "phone": "+39 340 555 1234",
-                        "temporary": false
-                      },
-                      "temporaryPassword": "k7mp-x4wn-r9ht"
+                      "id": 21,
+                      "firstName": "Marco",
+                      "lastName": "Bianchi",
+                      "email": "marco.bianchi@example.com",
+                      "phone": "+39 340 555 1234",
+                      "temporary": false
                     }
                   },
                   "temporary": {
-                    "summary": "A temporary hiker: no password",
+                    "summary": "A temporary hiker: no email, no password",
                     "value": {
-                      "hiker": {
-                        "id": 22,
-                        "firstName": "Giulia",
-                        "lastName": "Verdi",
-                        "email": null,
-                        "phone": "+39 333 987 6543",
-                        "temporary": true
-                      }
+                      "id": 22,
+                      "firstName": "Giulia",
+                      "lastName": "Verdi",
+                      "email": null,
+                      "phone": "+39 333 987 6543",
+                      "temporary": true
                     }
                   }
                 }
@@ -2222,7 +2217,7 @@
           "Staff"
         ],
         "summary": "Book for a hiker",
-        "description": "Creates a booking for the hiker `hikerId`, made by an employee or the warden (MH-07), for example for someone who phones or arrives at the hut. It works like `POST /api/bookings`: the tables are the ones of the seating preview (`GET /api/staff/slots/{slotId}/seating`) and the server books them only if the party would sit exactly there now; otherwise it answers 409 and books nothing. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The hiker can be a regular account or a temporary one. The two-hour rule of the web booking does not apply: the only time limit is that the slot has not started. A hiker can have one booking per slot. The hiker receives the confirmation email if they have an email, and a temporary hiker has none; if the email fails, the booking stands.",
+        "description": "Creates a booking for the hiker `hikerId`, made by an employee or the warden (MH-07), for example for someone who phones or arrives at the hut. It works like `POST /api/bookings`: the tables are the ones of the seating preview (`GET /api/staff/slots/{slotId}/seating`) and the server books them only if the party would sit exactly there now; otherwise it answers 409 and books nothing. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The hiker can be a regular account or a temporary one. The two-hour rule of the web booking does not apply: the only time limit is that the slot has not started. A hiker can have one booking per slot. The hiker receives the confirmation email if they have an email, and a temporary hiker has none; if the email fails, the booking stands. The body can also carry the dietary needs and allergies of the guests (MH-05), as the hiker gives them to the employee: the same lines and the same rules as in `POST /api/bookings`. They are saved with the booking, in the same transaction, and the response returns them; the confirmation email lists them.",
         "operationId": "createStaffBooking",
         "security": [
           {
@@ -2245,6 +2240,19 @@
                     "tableNumber": 3,
                     "seats": 3
                   }
+                ],
+                "requirements": [
+                  {
+                    "diets": [
+                      "VEGAN"
+                    ],
+                    "allergies": [
+                      "PEANUTS"
+                    ]
+                  },
+                  {
+                    "otherRequests": "No spicy food"
+                  }
                 ]
               }
             }
@@ -2252,7 +2260,7 @@
         },
         "responses": {
           "201": {
-            "description": "Booking created. `tables` are the ones sent.",
+            "description": "Booking created. `tables` are the ones sent and `requirements` are the saved needs.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2268,13 +2276,35 @@
                       "tableNumber": 3,
                       "seats": 3
                     }
+                  ],
+                  "requirements": [
+                    {
+                      "diets": [
+                        "VEGAN"
+                      ],
+                      "otherDiet": null,
+                      "allergies": [
+                        "PEANUTS"
+                      ],
+                      "otherAllergy": null,
+                      "otherRequests": null,
+                      "hasAllergies": true
+                    },
+                    {
+                      "diets": [],
+                      "otherDiet": null,
+                      "allergies": [],
+                      "otherAllergy": null,
+                      "otherRequests": "No spicy food",
+                      "hasAllergies": false
+                    }
                   ]
                 }
               }
             }
           },
           "400": {
-            "description": "The request body is invalid: a field is missing, is not valid, or the tables are repeated or do not add up to the party size.",
+            "description": "The request body is invalid: a field is missing, is not valid, or the tables are repeated or do not add up to the party size, or wrong `requirements`: not a list, more lines than `partySize`, an unknown field, a diet or an allergy not in the list or twice, two of VEGETARIAN, VEGAN and PESCATARIAN, an empty or too long text, or a line that says nothing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2588,7 +2618,7 @@
           },
           "mustChangePassword": {
             "type": "boolean",
-            "description": "True when the staff created the account and the first password, which the staff knows, has not been changed yet. It becomes false when the user changes the password (`POST /api/auth/change-password`) or chooses a new one with the link of a password reset email. While it is true the user can only read `GET /api/auth/me`, change the password or log out: any other request answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+            "description": "True when the staff created the account and the first password, generated by the server and sent to the hiker by email, has not been changed yet. It becomes false when the user changes the password (`POST /api/auth/change-password`) or chooses a new one with the link of a password reset email. While it is true the user can only read `GET /api/auth/me`, change the password or log out: any other request answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
           }
         }
       },
@@ -2991,21 +3021,6 @@
           }
         }
       },
-      "CreatedHiker": {
-        "type": "object",
-        "required": [
-          "hiker"
-        ],
-        "properties": {
-          "hiker": {
-            "$ref": "#/components/schemas/Hiker"
-          },
-          "temporaryPassword": {
-            "type": "string",
-            "description": "Only for a hiker created with an email: the password generated by the server, so that the employee can tell it to the hiker, for example aloud. It is 12 characters in three groups of four, made of lowercase letters and digits without the ones that look alike (0 and o, 1 and l and i), so that it can be read out. It is returned only in this answer, the server stores only its hash, and it cannot be read again. The hiker has to change it at the first login (`mustChangePassword`), and can also choose a new one with `POST /api/auth/password-reset-requests`."
-          }
-        }
-      },
       "CreateStaffBookingRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -3040,6 +3055,14 @@
             "items": {
               "$ref": "#/components/schemas/TableSeats"
             }
+          },
+          "requirements": {
+            "type": "array",
+            "description": "Optional. The dietary needs and allergies of the party (MH-05), as the hiker tells them to the employee: one line per guest who has any, so at most `partySize` lines. The same lines and the same rules as in `POST /api/bookings`. Omitted or empty: no needs.",
+            "items": {
+              "$ref": "#/components/schemas/RequirementRequest"
+            },
+            "default": []
           }
         }
       },
