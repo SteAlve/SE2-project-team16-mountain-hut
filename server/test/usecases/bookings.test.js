@@ -55,7 +55,7 @@ function setup({ now = new Date('2026-10-27T10:00:00Z'), slot = slotRow, layout 
     createWithTableAssignments: async (input) => {
       calls.push(input);
       if (create) return create(input, calls.length);
-      return { id: 45, slotId: input.slotId, partySize: input.partySize };
+      return { id: 45, slotId: input.slotId, partySize: input.partySize, requirements: input.requirements };
     },
   };
   const checkSlotOpen = makeCheckSlotOpen({ clock: clockAt(now), hutTimeZone: ZONE });
@@ -76,10 +76,10 @@ describe('createBooking', () => {
   it('books exactly the tables it is given and answers with them', async () => {
     const t = setup({ layout: tables(4, 6) });
     await expect(t.book({ partySize: 5, tables: [at(20, 5)] })).resolves.toEqual({
-      id: 45, date: DATE, slotId: 12, partySize: 5, tables: [at(20, 5)],
+      id: 45, date: DATE, slotId: 12, partySize: 5, tables: [at(20, 5)], requirements: [],
     });
     expect(t.calls).toEqual([{
-      hikerId: 7, slotId: 12, partySize: 5, tableAssignments: [{ tableId: 2, seatCount: 5 }],
+      hikerId: 7, slotId: 12, partySize: 5, tableAssignments: [{ tableId: 2, seatCount: 5 }], requirements: [],
     }]);
   });
 

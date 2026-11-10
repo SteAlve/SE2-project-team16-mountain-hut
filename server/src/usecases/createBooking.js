@@ -1,5 +1,6 @@
 /**
- * Use case: a hiker books the tables the seating preview showed (MH-01).
+ * Use case: a hiker books the tables the seating preview showed (MH-01), with the dietary needs of
+ * the guests, if any (MH-05). They are saved with the booking, in one transaction.
  *
  * The client sends back the tables of the preview. The server works out again where the party
  * would sit now (domain/seating.js, the same choice as the preview) and books the request only if
@@ -12,6 +13,7 @@
  *   NO_SEATS        the party does not fit in the free seats any more: choose another slot
  *   TABLES_CHANGED  the party still fits, but not at these tables: ask for a new preview
  */
+import { checkDietaryNeeds } from '../domain/dietaryNeeds.js';
 import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from '../domain/errors.js';
 import { ROLES } from '../domain/roles.js';
 import { assignSeats, describeSeating } from '../domain/seating.js';
@@ -26,8 +28,9 @@ const sameTables = (a, b) => a.length === b.length
   && a.every((table, i) => table.tableNumber === b[i].tableNumber && table.seats === b[i].seats);
 
 export const makeCreateBooking = ({ slots, bookings, checkSlotOpen }) =>
-  async ({ user, slotId, partySize, tables }) => {
+  async ({ user, slotId, partySize, tables, requirements = [] }) => {
     if (user.role !== ROLES.HIKER) throw new ForbiddenError('Only hikers can create bookings');
+    checkDietaryNeeds(requirements);
 
     const slot = await slots.findById(slotId);
     if (!slot) throw new NotFoundError(`Slot ${slotId} not found`);
@@ -49,8 +52,11 @@ export const makeCreateBooking = ({ slots, bookings, checkSlotOpen }) =>
         slotId,
         partySize,
         tableAssignments: proposed,
+        requirements,
       });
-      return { id: booking.id, date: slot.serviceDate, slotId, partySize, tables: requested };
+      return {
+        id: booking.id, date: slot.serviceDate, slotId, partySize, tables: requested, requirements: booking.requirements,
+      };
     } catch (error) {
       // The dao checks the seats again with the slot locked: someone may have booked just now.
       if (error.code === 'SEATS_UNAVAILABLE') throw tablesChanged();
