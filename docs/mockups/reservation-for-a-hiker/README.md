@@ -8,7 +8,7 @@ A party arrives at the hut some time before the meal and asks for seats, or some
 
 **Figma (source of truth):** page *MH-07 Reservation for a hiker* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=381-1282). Every element is an instance from the *Components* page. Most of them are already used by the [login](../login/README.md), [booking](../booking/README.md) and [slots](../slots/README.md) mockups: navbar, step heading, day, day arrow, people stepper, time slot, text field, alert, button, table chip and the phone bars. This story adds:
 
-- *Hiker option*: a hiker found by the search, or the hiker chosen. Variants: `State` (Default, Selected) and `Size` (Desktop, Phone). On desktop, name, email and phone are on one line. On a phone they are on three lines. Its `Kind=Temporary` variants are not used, see the open question below.
+- *Hiker option*: a hiker found by the search, or the hiker chosen. Variants: `State` (Default, Selected) and `Size` (Desktop, Phone). On desktop, name, email and phone are on one line. On a phone they are on three lines. Its `Kind=Temporary` variants, with a "TEMPORARY · NO LOGIN" badge, are not used: temporary hikers are not shown in the search.
 - *Hiker mode*: the Quick entry / Full profile switch.
 - *Icon / Search*.
 - A `Search icon` option on *Text field*. It is off by default, so the other mockups are unchanged.
@@ -25,7 +25,8 @@ Everything shown comes from the story or from the product owner's clarifications
 |---|---|
 | Story | The procedure has two ways to enter the hiker. The quick way is a name and maybe a phone. The full way is all the details of the hiker. The reservation details come in addition: day, how many people, time. |
 | Clarification | The hiker may already be in the system. Then they are found by name, phone or email. |
-| Clarification | A hiker who is missing is entered with a **quick entry**: a name and an optional phone. This makes a **temporary hiker**, who cannot log in or use the website. |
+| Clarification | A hiker who is missing is entered with a **quick entry**: a name (first and last name) and an optional phone. This makes a **temporary hiker**, who cannot log in or use the website. |
+| Team decision | The search lists **only full hiker accounts**, never temporary hikers, so each quick entry makes a new temporary hiker. The server must leave them out of `GET /api/staff/hikers` (asked in PR #88), so the limit of 20 results counts only real accounts. |
 | Clarification | A hiker who is missing can also be entered with a **full profile**: first name, last name, email and an optional phone. This makes a regular hiker account, which can later use the website. |
 | Clarification | For a full profile the password is generated at random. The employee tells it to the hiker, e.g. aloud. The hiker must change it at the next login, and can always recover it by email. |
 | Clarification | The only time limit for the staff is the start of the time slot: no reservation after it starts. The 2-hour limit of hikers ([#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7)) does not apply. |
@@ -35,7 +36,7 @@ Everything shown comes from the story or from the product owner's clarifications
 
 1. **Find the hiker.** The page opens with an empty search, today's date already chosen and 1 person (screen 1). The search starts as the employee types. It matches name, phone or email among **full hiker accounts only** (screen 2). Each result shows name, email and phone. Picking a result chooses that hiker. The chosen hiker card has a *Change* button to go back to the search.
 2. **New hiker.** The *+ New hiker* button is there from the start: under the search, or next to "Not in the list?" under the results. It opens a dialog with a switch:
-   - **Quick entry** (screen 4): name and optional phone. *Add hiker* creates a temporary hiker.
+   - **Quick entry** (screen 4): first name, last name and optional phone. *Add hiker* creates a temporary hiker.
    - **Full profile** (screen 5): first name, last name, email and optional phone. There is no password field: the password is generated when the reservation is saved.
 
    After *Add hiker* the dialog closes and the new hiker is chosen in step 1.
@@ -60,6 +61,7 @@ The summary on the right (a bar at the bottom on a phone) fills in as the employ
 | 5 | New hiker: full profile (hiker account) | ![New hiker full profile](05-new-hiker-full-profile.png) |
 | 6 | New hiker: errors, and an email already in the system (`409`) | ![New hiker errors](06-new-hiker-errors.png) |
 | 7 | Reservation saved, with the generated password | ![Reservation saved](07-reservation-saved.png) |
+| 8 | The hiker already has a booking at that time (`422`) | ![Already booked for this time](08-already-booked.png) |
 
 ### On a phone
 
@@ -91,7 +93,8 @@ The full profile sheet on a phone has the same fields as desktop screen 5, and i
 
 | Field | Required | Rule | Message under the field |
 |---|---|---|---|
-| Name | yes | not empty | Enter a name. |
+| First name | yes | not empty | Enter the first name. |
+| Last name | yes | not empty | Enter the last name. |
 | Phone | no | digits, spaces and a leading `+` | Helper: "Optional. To reach the party if needed." Error: "Enter a valid phone number." |
 
 ### New hiker: full profile
@@ -129,6 +132,7 @@ The browser checks these rules before sending, and the server checks them again 
 | Full profile note | A password is generated at random. Tell it to the hiker: they must change it at their first login, and can always recover it by email. |
 | Email already used (`409`) | Under Email: "This email belongs to *name*, already in the system." Red alert: "This hiker may already be in the system. Choose *name*, or use another email." Button *Choose name* picks that hiker and closes the dialog. |
 | Reservation saved (`201`) | **Reservation saved.** *Name* now has a hiker account and a table for *N* today at *HH:MM*. The details and the tables follow. For a new full profile, also: "Password for *name*", the password, *Copy*, and "Tell it to the hiker now: it is shown only this once. They must change it at their first login, and can always recover it by email at *email*." Buttons: *+ New reservation*, *Done*. |
+| The hiker already has a booking for that time (`422`, screen 8) | Red alert in the summary, above Save reservation: "*Name* already has a booking at *HH:MM* today. Choose another time." Nothing is saved, every choice is kept. Changing that booking is MH-08. |
 | Seats gone or time started meanwhile (`409`) | As in MH-01: the free seats are reloaded, the choices are kept, and the employee chooses another time or fewer people. |
 | Not logged in (`401`) | The login page (login mockup, screen 4). |
 | A hiker opens the page (`403`) | The "Staff only" page (login mockup, screen 7). |
@@ -144,7 +148,6 @@ These belong to other stories and are added with them:
 
 ## Open questions (not decided by the product owner)
 
-- **Temporary hikers are not found by the search.** The clarification says a hiker "already present in the system" is matched by name, phone or email. It does not say whether temporary hikers count. The mockup lists only full hiker accounts, so each quick entry makes a new temporary hiker, even for someone who came before. If the PO decides otherwise, the *Hiker option* component already has the `Kind=Temporary` variants, with a "TEMPORARY · NO LOGIN" badge, to show them in the results.
 - **The warden** probably has the same page (as for Slots & tables). The mockup shows only an employee.
 
 Sample data (hut, names, emails, phones, dates, tables, password) is invented for the mockup.

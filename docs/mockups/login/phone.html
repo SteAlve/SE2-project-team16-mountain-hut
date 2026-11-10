@@ -245,7 +245,7 @@ const groups = [
       { n: "M14", title: "Choose a new password", notes: ["Opened from the link in the email. Errors as on the sign-up (M6).", "Saved: back to the login with \"Your password has been changed. Log in with the new one.\""],
         html: passwordPage({ path: "/reset-password", title: "Choose a new password", sub: "For giulia.rossi@example.com.", body: newPw("Save password") }) },
       { n: "M15", title: "Change at the first login", notes: ["Right after logging in with the password told by the staff. No other page opens until it is saved.", "Then as after any login: Book a table."],
-        html: passwordPage({ path: "/change-password", top: "", title: "Choose your password", sub: "Hello Luca. Your account was made by the hut staff: choose your own password to continue.", body: `${newPw("Save and continue")}<div class="alt-line">Not now? <b>Log out</b></div>` }) },
+        html: passwordPage({ path: "/change-password", top: "", title: "Choose your password", sub: "Hello Luca. Your account was made by the hut staff: choose your own password to continue.", body: `${field({ label: "Current password", req: 1, ph: "The password the staff gave you", eye: true })}${newPw("Save and continue")}<div class="alt-line">Not now? <b>Log out</b></div>` }) },
     ] },
 ];
 

@@ -7,7 +7,7 @@ Mockup for the login frontend ([MH-55](https://polito-se2-26-16.youtrack.cloud/i
 | Figma page | What it holds |
 |---|---|
 | **Brand · QUOTA** | Name, logo, palette, typography, motifs and usage rules |
-| **MH-45 Login & sign-up** | The 15 desktop screens and the 15 phone screens below |
+| **MH-45 Login & sign-up** | The 17 desktop screens and the 15 phone screens below |
 | **Components** | Logo, trail blaze, eye icon, button, text field (with the show/hide password toggle), alert, navbars, log out dialog, brand panel, phone browser bar and top bar, and the colour variables |
 
 ## The brand in one paragraph
@@ -33,6 +33,8 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 | 13 | Reset link not valid (expired or already used) | ![Reset link not valid](13-reset-link-not-valid.png) |
 | 14 | Password changed, back on the login | ![Password changed](14-password-changed.png) |
 | 15 | Change the password at the first login (account made by the staff) | ![Change the password at the first login](15-change-password-first-login.png) |
+| 16 | Change the password: the current one is wrong (`422`) | ![Current password wrong](16-change-password-wrong-current.png) |
+| 17 | Change the password: the new one is the same as the current one (`422`) | ![New password same as the current one](17-change-password-same-as-current.png) |
 
 Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
 
@@ -68,7 +70,7 @@ The same website opened in a phone browser, not a separate app: the React pages 
 | 14 | Choose a new password | ![Choose a new password on a phone](phone/14-choose-new-password.png) |
 | 15 | Change the password at the first login | ![Change the password at the first login on a phone](phone/15-change-password-first-login.png) |
 
-On a phone, Check your email, Reset link not valid and Password changed are the same as on desktop (screens 11, 13, 14) in the phone layout of the login.
+On a phone, Check your email, Reset link not valid, Password changed and the two errors of the password change are the same as on desktop (screens 11, 13, 14, 16, 17) in the phone layout of the login.
 
 ## Behaviour
 
@@ -87,7 +89,8 @@ On a phone, Check your email, Reset link not valid and Password changed are the 
 
   Passwords are still stored only as hashes: nobody, the hut staff included, can read them.
 - **Change the password at the first login** (screen 15). An employee can create a full hiker account for someone at the hut or on the phone (MH-07, [reservation for a hiker mockup](../reservation-for-a-hiker/README.md)). Its password is generated at random and told to the hiker.
-  - When that hiker logs in with it, the login goes to *Choose your password* and no other page opens until a new password is saved.
+  - When that hiker logs in with it, the login goes to *Choose your password* and no other page opens until a new password is saved. The page asks for the **current password** (the one the staff gave) and the new one twice (`POST /api/auth/change-password`).
+  - If the current password is wrong, or the new one is the same as the current one, the server answers `422` (screens 16 and 17).
   - Then the hiker goes on as after any login (*Book a table*, or the page they came from).
   - *Log out* leaves without changing the password, and the next login asks again.
   - The hiker can also skip the generated password and use *Forgot password?* instead.
@@ -138,10 +141,18 @@ All rules except the `409` are checked in the browser before sending, and checke
 
 | Field | Required | Rule | Message under the field |
 |---|---|---|---|
+| Current password | yes, only on screen 15 | the password the staff gave | Enter the current password. |
 | New password | yes | at least 8 characters | Use at least 8 characters. |
 | Repeat password | yes | same as new password | The passwords are different. |
 
-Both fields have the show/hide eye. The rules are checked in the browser before sending, and checked again by the server (`400` if they fail).
+Every field has the show/hide eye. The rules are checked in the browser before sending, and checked again by the server (`400` if they fail).
+
+Two answers of the server on screen 15 (`422`):
+
+| When | What the hiker sees |
+|---|---|
+| The current password is wrong (screen 16) | Under Current password: "The current password is wrong. Use the one the hut staff gave you." The current password is emptied and gets the focus; the new ones are kept. |
+| The new password is the same as the current one (screen 17) | Under New password: "Choose a password different from the current one." The two new fields are emptied; the current one is kept. |
 
 ### Other texts
 
