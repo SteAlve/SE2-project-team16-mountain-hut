@@ -111,7 +111,7 @@ All the rules above are checked in the browser before sending, and checked again
 
 ## Left out on purpose
 
-These belong to other stories and are added with them: changing the time or the tables of a slot (MH-19), closing a slot (MH-17) and the bookings it affects (MH-18), repeating a week of slots (MH-09), booked and free seats per slot (MH-12), menus (MH-10), a reservation entered by an employee (MH-07). Deleting a slot or a table set is not in any story, so there is no delete button.
+These belong to other stories and are added with them: changing the time or the tables of a slot (MH-19), closing a slot (MH-17) and the bookings it affects (MH-18), repeating a week of slots (MH-09), booked and free seats per slot (MH-12), menus (MH-10), a reservation entered by an employee (MH-07, [mockup](../reservation-for-a-hiker/README.md)). Deleting a slot or a table set is not in any story, so there is no delete button.
 
 ## Assumptions to confirm
 

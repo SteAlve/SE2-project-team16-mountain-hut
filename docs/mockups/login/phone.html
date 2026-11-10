@@ -77,6 +77,7 @@
   .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: #fff; }
   .alt-line { text-align: center; color: var(--stone); font-size: 15px; margin-top: 16px; }
   .alt-line b { color: var(--pine); text-decoration: underline; text-underline-offset: 3px; }
+  .forgot { text-align: right; margin: -6px 0 0; font-size: 15px; font-weight: 600; color: var(--pine); text-decoration: underline; text-underline-offset: 3px; }
   .alert { display: flex; border-radius: 10px; overflow: hidden; font-weight: 500; font-size: 14px; margin-bottom: 18px; line-height: 1.4; }
   .alert::before { content: ""; width: 4px; flex: none; }
   .alert span { padding: 12px 14px; }
@@ -177,7 +178,8 @@ const foot = `<div class="foot"><span class="back">← Back to the hut page</spa
 const login = ({ alert, email = {}, password = {}, busy }) => `${status()}${urlbar("/login")}${hero("No account? <b>Sign up</b>")}<div class="form">
   <h1 style="margin-bottom:20px">Log in</h1>${alert || ""}
   ${field({ label: "Email", ph: "name@example.com", ...email })}${field({ label: "Password", ph: "Your password", eye: true, ...password })}
-  <div style="height:8px"></div>
+  <div class="forgot">Forgot password?</div>
+  <div style="height:16px"></div>
   <button class="btn primary ${busy ? "busy" : ""}">${busy ? '<i class="spinner"></i>Logging in…' : "Log in"}</button>
   <div class="alt-line">New here? <b>Create a hiker account</b></div>${foot}</div>`;
 
@@ -189,6 +191,11 @@ const signup = (f) => `${status()}${urlbar("/signup")}${heroCompact("Already reg
   ${field({ label: "Password", req: 1, ph: "At least 8 characters", ...f.pw })}${field({ label: "Repeat password", req: 1, ph: "Same password again", ...f.pw2 })}
   <button class="btn primary" style="margin-top:6px">Create account</button>
   ${foot}</div>`;
+
+const passwordPage = ({ path, top = "No account? <b>Sign up</b>", title, sub, body }) => `${status()}${urlbar(path)}${hero(top)}<div class="form">
+  <h1 style="margin-bottom:8px">${title}</h1><p class="sub">${sub}</p>${body}</div>`;
+const newPw = (button) => `${field({ label: "New password", req: 1, ph: "At least 8 characters", eye: true })}${field({ label: "Repeat password", req: 1, ph: "Same as above", eye: true })}
+  <button class="btn primary">${button}</button>`;
 
 const LINKS = { hiker: ["The hut", "Book a table"], staff: ["The hut", "Slots & tables"] };
 const BURGER = `<svg width="22" height="22" viewBox="0 0 22 22" stroke="#10201A" stroke-width="2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg>`;
@@ -230,6 +237,15 @@ const groups = [
     shots: [
       { n: "M11", title: "Log out: confirm", notes: ["Log out in the menu closes the menu and asks first.", "Cancel or a tap outside closes the dialog: nothing happens."], html: logoutDialog() },
       { n: "M12", title: "Log out failed", notes: ["The session is still open: the dialog stays, Log out tries again.", "Cancel keeps the user logged in on the same page."], html: logoutDialog('<div class="alert error"><span>You are still logged in: something went wrong on our side. Try again in a minute.</span></div>') },
+    ] },
+  { title: "Password", text: "Forgot password? on the login sends a link by email to choose a new password (desktop screens 10–14). A hiker whose account was made by an employee (MH-07) must choose their own password at the first login (desktop screen 15). Same rules as the sign-up: at least 8 characters, the two the same.",
+    shots: [
+      { n: "M13", title: "Forgot password", notes: ["Same as desktop 10. After Send the link, the text of desktop 11 replaces the form: the same answer whether the email has an account or not."],
+        html: passwordPage({ path: "/forgot-password", title: "Forgot your password?", sub: "Enter the email of your account. We send you a link to choose a new password.", body: `${field({ label: "Email", val: "giulia.rossi@example.com" })}<button class="btn primary">Send the link</button><div class="alt-line"><b>← Back to log in</b></div>` }) },
+      { n: "M14", title: "Choose a new password", notes: ["Opened from the link in the email. Errors as on the sign-up (M6).", "Saved: back to the login with \"Your password has been changed. Log in with the new one.\""],
+        html: passwordPage({ path: "/reset-password", title: "Choose a new password", sub: "For giulia.rossi@example.com.", body: newPw("Save password") }) },
+      { n: "M15", title: "Change at the first login", notes: ["Right after logging in with the password told by the staff. No other page opens until it is saved.", "Then as after any login: Book a table."],
+        html: passwordPage({ path: "/change-password", top: "", title: "Choose your password", sub: "Hello Luca. Your account was made by the hut staff: choose your own password to continue.", body: `${newPw("Save and continue")}<div class="alt-line">Not now? <b>Log out</b></div>` }) },
     ] },
 ];
 
