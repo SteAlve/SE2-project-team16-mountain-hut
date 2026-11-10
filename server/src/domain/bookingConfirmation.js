@@ -6,8 +6,10 @@
  * uses tables and inline styles because that is what email apps support; the colours are the
  * tokens of the client (client/src/index.css).
  *
- * What it contains comes from the product owner (issue #24). Table numbers are left out on purpose.
- * The party requirements are not in the email yet: they arrive with MH-05.
+ * What it contains comes from the product owner (issue #24 and MH-03): the reference, the date and
+ * time, the party size, the name and the party requirements (MH-05). Table numbers are left out on
+ * purpose. Guests with exactly the same needs are shown once, with how many they are, as on the
+ * Table booked screen.
  */
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -46,9 +48,75 @@ const row = (label, value) => `
     <td align="right" style="${FONT}padding:12px 0;border-top:1px solid ${LINE};color:${INK};font-size:15px;font-weight:bold;">${value}</td>
   </tr>`;
 
+// The words of the preset diets and allergies (domain/dietaryNeeds.js).
+const NEED_LABELS = {
+  VEGETARIAN: 'Vegetarian',
+  VEGAN: 'Vegan',
+  PESCATARIAN: 'Pescatarian',
+  LACTOSE_FREE: 'Lactose-free',
+  GLUTEN: 'Gluten',
+  MILK: 'Milk',
+  EGGS: 'Eggs',
+  PEANUTS: 'Peanuts',
+  TREE_NUTS: 'Tree nuts',
+  FISH: 'Fish',
+  SHELLFISH: 'Shellfish',
+};
+
+// One entry per different line of needs, with how many guests have it, in the order of the lines.
+const groupNeeds = (requirements) => {
+  const groups = new Map();
+  for (const line of requirements) {
+    const key = JSON.stringify([line.diets, line.otherDiet, line.allergies, line.otherAllergy, line.otherRequests]);
+    const group = groups.get(key) ?? { ...line, guests: 0 };
+    group.guests += 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+};
+
+// The parts of a line, in the words of the hiker: allergies first, as the kitchen reads them.
+const needParts = ({ diets, otherDiet, allergies, otherAllergy, otherRequests }) => {
+  const allergyWords = [...allergies.map((code) => NEED_LABELS[code]), ...(otherAllergy ? [otherAllergy] : [])];
+  const dietWords = [...diets.map((code) => NEED_LABELS[code]), ...(otherDiet ? [otherDiet] : [])];
+  return {
+    allergies: allergyWords.length ? `Allergies: ${allergyWords.join(', ')}` : null,
+    diets: dietWords.length ? `Diet: ${dietWords.join(', ')}` : null,
+    request: otherRequests ? `"${otherRequests}"` : null,
+  };
+};
+
+const guests = (count) => `${count} ${count === 1 ? 'guest' : 'guests'}`;
+
+const needsText = (groups) => groups.map((group) => {
+  const { allergies, diets, request } = needParts(group);
+  return `- ${guests(group.guests)}: ${[allergies, diets, request].filter(Boolean).join(' · ')}`;
+});
+
+const needsHtml = (groups) => {
+  if (groups.length === 0) return '';
+  const lines = groups.map((group) => {
+    const { allergies, diets, request } = needParts(group);
+    const parts = [
+      allergies && `<span style="color:${BLAZE};font-weight:bold;">${escapeHtml(allergies)}</span>`,
+      diets && escapeHtml(diets),
+      request && `<span style="color:${STONE};font-style:italic;">${escapeHtml(request)}</span>`,
+    ].filter(Boolean).join('<br>');
+    return `
+                <tr>
+                  <td valign="top" style="${FONT}padding:10px 0;border-top:1px solid ${LINE};color:${STONE};font-size:14px;white-space:nowrap;">${guests(group.guests)}</td>
+                  <td style="${FONT}padding:10px 0 10px 16px;border-top:1px solid ${LINE};color:${INK};font-size:14px;line-height:20px;">${parts}</td>
+                </tr>`;
+  }).join('');
+  return `
+              <h2 style="${FONT}margin:24px 0 8px;color:${INK};font-size:16px;">Dietary needs</h2>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${lines}
+              </table>`;
+};
+
 const blazeBar = (color) => `<td width="28" height="6" style="background:${color};font-size:0;line-height:0;">&nbsp;</td>`;
 
-const toHtml = ({ name, ref, date, slotTime, partySize }) => `<!doctype html>
+const toHtml = ({ name, ref, date, slotTime, partySize, needs }) => `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:${MIST};">
@@ -75,7 +143,7 @@ const toHtml = ({ name, ref, date, slotTime, partySize }) => `<!doctype html>
                 ${row('Date', date)}
                 ${row('Time', slotTime)}
                 ${row('Party size', partySize)}
-              </table>
+              </table>${needsHtml(needs)}
               <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">See you at the hut!</p>
             </td>
           </tr>
@@ -95,8 +163,10 @@ export const bookingConfirmationEmail = ({
   startsAt,
   endsAt,
   partySize,
+  requirements = [],
 }) => {
   const name = `${firstName} ${lastName}`;
+  const needs = groupNeeds(requirements);
   const ref = reference(bookingId);
   const slotTime = `${time(startsAt)}–${time(endsAt)}`;
 
@@ -113,6 +183,7 @@ export const bookingConfirmationEmail = ({
       `Date: ${day(date)}`,
       `Time: ${slotTime}`,
       `Party size: ${partySize}`,
+      ...(needs.length ? ['', 'Dietary needs:', ...needsText(needs)] : []),
       '',
       'See you at the hut!',
     ].join('\n'),
@@ -122,6 +193,7 @@ export const bookingConfirmationEmail = ({
       date: day(date),
       slotTime,
       partySize,
+      needs,
     }),
   };
 };

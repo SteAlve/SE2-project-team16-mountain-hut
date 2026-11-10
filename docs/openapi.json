@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.5.1",
+    "version": "1.6.0",
     "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability and booking a table. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409."
   },
   "paths": {
@@ -400,7 +400,7 @@
     "/api/bookings": {
       "post": {
         "summary": "Book the tables of the preview",
-        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The response says which tables the party got, which are the ones sent. After the booking is saved, the hiker receives a confirmation email; if the email fails, the booking still stands and the response is the same.",
+        "description": "Creates a booking for an authenticated hiker on the tables of the seating preview (`GET /api/slots/{slotId}/seating`). The slot identifies the day and the time of the meal, so the body carries no date. The server works out again where the party would sit now and books the request only if it is exactly that: the same tables with the same seats. Otherwise it answers 409 and books nothing, so a hiker never gets other tables than the ones shown. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The slot must be at least two hours away (exactly two hours is still allowed; the time of the slot is the local time of the hut). A hiker can have one booking per slot. The body can also carry the dietary needs and allergies of the guests (MH-05): one line per guest, with diets and allergies of the preset lists, an other diet and an other allergy in words, and other requests for the kitchen. They are saved with the booking, in the same transaction. The response says which tables the party got, which are the ones sent, and the saved needs, each with its allergy flag. After the booking is saved, the hiker receives a confirmation email; if the email fails, the booking still stands and the response is the same.",
         "operationId": "createBooking",
         "security": [
           {
@@ -425,6 +425,28 @@
                   {
                     "tableNumber": 5,
                     "seats": 2
+                  }
+                ],
+                "requirements": [
+                  {
+                    "diets": [
+                      "VEGAN"
+                    ],
+                    "allergies": [
+                      "PEANUTS"
+                    ]
+                  },
+                  {
+                    "allergies": [
+                      "SHELLFISH"
+                    ],
+                    "otherRequests": "No mushrooms, please"
+                  },
+                  {
+                    "diets": [
+                      "VEGETARIAN",
+                      "LACTOSE_FREE"
+                    ]
                   }
                 ]
               }
@@ -453,13 +475,48 @@
                       "tableNumber": 5,
                       "seats": 2
                     }
+                  ],
+                  "requirements": [
+                    {
+                      "diets": [
+                        "VEGAN"
+                      ],
+                      "otherDiet": null,
+                      "allergies": [
+                        "PEANUTS"
+                      ],
+                      "otherAllergy": null,
+                      "otherRequests": null,
+                      "hasAllergies": true
+                    },
+                    {
+                      "diets": [],
+                      "otherDiet": null,
+                      "allergies": [
+                        "SHELLFISH"
+                      ],
+                      "otherAllergy": null,
+                      "otherRequests": "No mushrooms, please",
+                      "hasAllergies": true
+                    },
+                    {
+                      "diets": [
+                        "VEGETARIAN",
+                        "LACTOSE_FREE"
+                      ],
+                      "otherDiet": null,
+                      "allergies": [],
+                      "otherAllergy": null,
+                      "otherRequests": null,
+                      "hasAllergies": false
+                    }
                   ]
                 }
               }
             }
           },
           "400": {
-            "description": "The request body is invalid: a wrong or unknown field (a `date` is not accepted), `tables` missing or empty, a table twice, or seats that do not add up to `partySize`.",
+            "description": "The request body is invalid: a wrong or unknown field (a `date` is not accepted), `tables` missing or empty, a table twice, or seats that do not add up to `partySize`, or wrong `requirements`: not a list, more lines than `partySize`, an unknown field, a diet or an allergy not in the list or twice, two of VEGETARIAN, VEGAN and PESCATARIAN, an empty or too long text, or a line that says nothing.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1524,6 +1581,14 @@
             "items": {
               "$ref": "#/components/schemas/TableSeats"
             }
+          },
+          "requirements": {
+            "type": "array",
+            "description": "Optional. The dietary needs and allergies of the party (MH-05): one line per guest who has any, so at most `partySize` lines. Omitted or empty: no needs.",
+            "items": {
+              "$ref": "#/components/schemas/RequirementRequest"
+            },
+            "default": []
           }
         }
       },
@@ -1534,7 +1599,8 @@
           "date",
           "slotId",
           "partySize",
-          "tables"
+          "tables",
+          "requirements"
         ],
         "properties": {
           "id": {
@@ -1565,6 +1631,13 @@
             "description": "The tables chosen for the party, by table number.",
             "items": {
               "$ref": "#/components/schemas/TableSeats"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "description": "The dietary needs saved with the booking, one line per guest, in the order they were sent. Empty when there are none.",
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
             }
           }
         }
@@ -1967,6 +2040,144 @@
             "minimum": 0,
             "description": "Seats of the slot: 0 when it has no table set."
           }
+        }
+      },
+      "Requirement": {
+        "type": "object",
+        "required": [
+          "diets",
+          "otherDiet",
+          "allergies",
+          "otherAllergy",
+          "otherRequests",
+          "hasAllergies"
+        ],
+        "description": "The saved dietary needs of one guest (MH-05). Texts are trimmed; a text that was not sent is null.",
+        "properties": {
+          "diets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "VEGETARIAN",
+                "VEGAN",
+                "PESCATARIAN",
+                "LACTOSE_FREE"
+              ]
+            }
+          },
+          "otherDiet": {
+            "type": "string",
+            "nullable": true
+          },
+          "allergies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "GLUTEN",
+                "MILK",
+                "EGGS",
+                "PEANUTS",
+                "TREE_NUTS",
+                "FISH",
+                "SHELLFISH"
+              ]
+            }
+          },
+          "otherAllergy": {
+            "type": "string",
+            "nullable": true
+          },
+          "otherRequests": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasAllergies": {
+            "type": "boolean",
+            "description": "True when the guest has at least one allergy (of the list or other): the kitchen must take special care. Worked out by the server."
+          }
+        },
+        "example": {
+          "diets": [
+            "VEGAN"
+          ],
+          "otherDiet": null,
+          "allergies": [
+            "PEANUTS"
+          ],
+          "otherAllergy": null,
+          "otherRequests": null,
+          "hasAllergies": true
+        }
+      },
+      "RequirementRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "The dietary needs of one guest (MH-05). At least one field must say something.",
+        "properties": {
+          "diets": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "VEGETARIAN",
+                "VEGAN",
+                "PESCATARIAN",
+                "LACTOSE_FREE"
+              ]
+            },
+            "default": [],
+            "description": "The diets of the guest. At most one of VEGETARIAN, VEGAN and PESCATARIAN; LACTOSE_FREE can go with any of them."
+          },
+          "otherDiet": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "A diet that is not in the list, in words (the *Other* diet card), e.g. halal."
+          },
+          "allergies": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "GLUTEN",
+                "MILK",
+                "EGGS",
+                "PEANUTS",
+                "TREE_NUTS",
+                "FISH",
+                "SHELLFISH"
+              ]
+            },
+            "default": [],
+            "description": "Any number of allergies of the list, each once."
+          },
+          "otherAllergy": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "An allergy that is not in the list, in words (the *Other* allergy card), e.g. sesame."
+          },
+          "otherRequests": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Anything else the kitchen should know that is not a diet or an allergy, e.g. no spicy food."
+          }
+        },
+        "example": {
+          "diets": [
+            "VEGAN"
+          ],
+          "allergies": [
+            "PEANUTS"
+          ]
         }
       }
     }
