@@ -12,7 +12,9 @@ export const makeLogin = ({ users, passwordHasher, startSession }) => async ({ e
   const passwordMatches = await passwordHasher.verify(password, found?.passwordHash);
   if (!found || !passwordMatches) throw new UnauthorizedError('Invalid email or password');
 
-  const { id, firstName, lastName, email: userEmail, phone, role } = found;
-  const user = { id, firstName, lastName, email: userEmail, phone, role };
+  // A hiker whose account the staff made can log in with the generated password: mustChangePassword
+  // tells the client to ask for a new one (MH-07).
+  const { id, firstName, lastName, email: userEmail, phone, role, mustChangePassword } = found;
+  const user = { id, firstName, lastName, email: userEmail, phone, role, mustChangePassword };
   return { user, session: await startSession(user) };
 };
