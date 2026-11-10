@@ -19,7 +19,7 @@ afterAll(async () => {
 describe('users dao', () => {
   it('inserts, returns public columns only, and finds by email with the hash', async () => {
     const created = await users.insert(data);
-    expect(created).toMatchObject({ firstName: 'Dao', email: data.email, role: 'HIKER', phone: null });
+    expect(created).toMatchObject({ firstName: 'Dao', email: data.email, role: 'HIKER', phone: null, mustChangePassword: false });
     expect(created).not.toHaveProperty('passwordHash');
 
     expect(await users.findByEmail(data.email)).toMatchObject({ id: created.id, passwordHash: 'scrypt$x$y' });
@@ -44,7 +44,7 @@ describe('sessions dao', () => {
     await sessions.insert({ tokenHash: 'h1', userId: user.id, expiresAt });
 
     const found = await sessions.findByTokenHash('h1');
-    expect(found).toMatchObject({ id: user.id, email: data.email, role: 'HIKER' });
+    expect(found).toMatchObject({ id: user.id, email: data.email, role: 'HIKER', mustChangePassword: false });
     expect(found.expiresAt.getTime()).toBe(expiresAt.getTime());
     expect(found).not.toHaveProperty('passwordHash');
 

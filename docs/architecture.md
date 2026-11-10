@@ -25,7 +25,7 @@ The system has **one external dependency**, the **email service**. It delivers t
 
 - **Web client:** a React single-page application, built with Vite.
 - **API application:** Node.js and Express. It holds all the business rules and the REST API under `/api`. In Docker it also serves the built web client (see [section 6](#6-docker)).
-- **Database:** PostgreSQL. Users, sessions, slots, tables, bookings and waiting lists.
+- **Database:** PostgreSQL. Users, sessions, the links of the password reset, slots, tables, bookings and waiting lists.
 
 The browser talks only to the API, in JSON over HTTP. Only the API talks to the database and to the email service.
 
@@ -75,7 +75,7 @@ The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`, beca
 
 ### Database and scripts
 
-The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions) and `001_booking_schema.sql` (slots, tables, bookings). The scripts in `server/scripts/` are run with npm:
+The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings) and `002_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset). The scripts in `server/scripts/` are run with npm:
 
 | Command | What it does |
 |---|---|
@@ -195,7 +195,7 @@ Only some endpoints need a login. The **public** ones stay open: the availabilit
 |---|---|---|
 | `UnauthorizedError` (`401`), `ForbiddenError` (`403`) | `domain/errors.js` | Already there; the middleware in `app.js` turns them into status codes |
 | `login`, `logout`, `authenticate` | `usecases/` | Check the credentials and create or delete the session; given a session id, return the user or fail with `401`. Who may do what is checked here, on the user the controller hands over |
-| `users`, `sessions` | `dao/` | Find a user by email; create, find and delete a session |
+| `users`, `sessions`, `passwordResets` | `dao/` | Find a user by email; find and search the hikers (MH-07), create a hiker or a temporary hiker, change a password; create, find and delete a session; store the link of a password reset and use it once |
 | `parseLogin`, `toUserDto` | `dto/` | Validate email and password; shape the user without the password hash |
 | Login and logout controllers | `controllers/` | Call the use case, then set or clear the cookie. The cookie is an HTTP detail, so it never reaches a use case |
 | `requireAuth` | `middleware/` | Reads the cookie, asks `authenticate` who is calling and puts the user in `req.user` |
