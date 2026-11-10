@@ -75,7 +75,7 @@ The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`, beca
 
 ### Database and scripts
 
-The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings) and `002_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset). The scripts in `server/scripts/` are run with npm:
+The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings), `002_booking_requirements.sql` (dietary needs of a booking) and `003_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset). The scripts in `server/scripts/` are run with npm:
 
 | Command | What it does |
 |---|---|
