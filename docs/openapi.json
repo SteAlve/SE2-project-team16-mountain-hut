@@ -3,7 +3,7 @@
   "info": {
     "title": "Mountain Hut API",
     "version": "1.6.0",
-    "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability, booking a table, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -371,7 +371,7 @@
                 "$ref": "#/components/schemas/ChangePasswordRequest"
               },
               "example": {
-                "currentPassword": "k7Rm-Qx92-Lp4w",
+                "currentPassword": "k7mp-x4wn-r9ht",
                 "newPassword": "a new password of mine"
               }
             }
@@ -429,6 +429,134 @@
                       "message": "The new password must be different from the current one"
                     }
                   }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password-reset-requests": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Ask for a password reset link",
+        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for a limited time that the server decides. It is the way for a hiker whose account was created by the staff to recover the generated password, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
+        "operationId": "requestPasswordReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              },
+              "example": {
+                "email": "marco.bianchi@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. If the email has an account, a message with the link is on its way; if not, nothing is sent. The answer does not tell which."
+          },
+          "400": {
+            "description": "The email is missing or is not a valid email address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "email must be a valid email address"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password-resets": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Choose a new password with the link of the email",
+        "description": "Sets the new password of the account the link was sent to. The `token` is the one in the link of the password reset email. It also clears `mustChangePassword`, because the hiker chose the password themselves. It does not log the user in: the page goes back to the login. A link that has expired, that was already used, that a newer link replaced, or that never existed is always the same answer, 422 with the `code` `RESET_LINK_NOT_VALID`, and the page shows \"This link no longer works\" with a button to ask for a new one. No login is required.",
+        "operationId": "resetPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              },
+              "example": {
+                "token": "q7Zf2VhA9xT0mBnLw3KsEyJc4RdUi8Po",
+                "newPassword": "a password of my own"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed. The old password and the link no longer work."
+          },
+          "400": {
+            "description": "The request body is invalid: the token is missing or the new password is shorter than 8 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "newPassword must have at least 8 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The link does not work any more: it has expired, was already used, was replaced by a newer one, or does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "code": "RESET_LINK_NOT_VALID",
+                  "message": "The link is not valid any more"
                 }
               }
             }
@@ -1596,7 +1724,7 @@
           "Staff"
         ],
         "summary": "Find a hiker",
-        "description": "Looks for a hiker who is already in the system, to make a reservation for them (MH-07). The text can be any part of the first name, the last name, the email or the phone, in any letter case. Regular accounts and temporary hikers are both returned; employees and the warden are not. At most 20 hikers come back, in order of last name and first name: a longer text narrows the list. An empty array means that nobody matches, so the hiker can be created with `POST /api/staff/hikers`.",
+        "description": "Looks for a hiker who is already in the system, to make a reservation for them (MH-07). The text can be any part of the first name, the last name, the email or the phone, in any letter case. Only regular hiker accounts are returned: temporary hikers, employees and the warden are not, so each quick entry makes a new temporary hiker. At most 20 hikers come back, in order of last name and first name: a longer text narrows the list. An empty array means that nobody matches, so the hiker can be created with `POST /api/staff/hikers`. It is also how to find who owns an email after the 409 of `POST /api/staff/hikers`.",
         "operationId": "searchHikers",
         "security": [
           {
@@ -1618,7 +1746,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The hikers that match, at most 20.",
+            "description": "The regular accounts that match, at most 20.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1637,12 +1765,12 @@
                     "temporary": false
                   },
                   {
-                    "id": 22,
-                    "firstName": "Giulia",
-                    "lastName": "Verdi",
-                    "email": null,
-                    "phone": "+39 333 987 6543",
-                    "temporary": true
+                    "id": 30,
+                    "firstName": "Anna",
+                    "lastName": "Bianchi",
+                    "email": "anna.bianchi@example.com",
+                    "phone": null,
+                    "temporary": false
                   }
                 ]
               }
@@ -1767,7 +1895,7 @@
                         "phone": "+39 340 555 1234",
                         "temporary": false
                       },
-                      "temporaryPassword": "k7Rm-Qx92-Lp4w"
+                      "temporaryPassword": "k7mp-x4wn-r9ht"
                     }
                   },
                   "temporary": {
@@ -1830,7 +1958,7 @@
             }
           },
           "409": {
-            "description": "An account with this email already exists.",
+            "description": "An account with this email already exists. The answer does not say whose it is: the page finds the account with `GET /api/staff/hikers?q=` and the email.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2331,9 +2459,10 @@
             "enum": [
               "NO_SEATS",
               "TABLES_CHANGED",
-              "PASSWORD_CHANGE_REQUIRED"
+              "PASSWORD_CHANGE_REQUIRED",
+              "RESET_LINK_NOT_VALID"
             ],
-            "description": "Present on some 403 and 409 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`)."
+            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
           }
         }
       },
@@ -2386,7 +2515,7 @@
           },
           "mustChangePassword": {
             "type": "boolean",
-            "description": "True when the staff created the account and the first password, which the staff knows, has not been changed yet. While it is true the user can only read `GET /api/auth/me`, change the password (`POST /api/auth/change-password`) or log out: any other request answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+            "description": "True when the staff created the account and the first password, which the staff knows, has not been changed yet. It becomes false when the user changes the password (`POST /api/auth/change-password`) or chooses a new one with the link of a password reset email. While it is true the user can only read `GET /api/auth/me`, change the password or log out: any other request answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
           }
         }
       },
@@ -2755,7 +2884,7 @@
           },
           "temporary": {
             "type": "boolean",
-            "description": "True for a hiker the staff created with a name and, at most, a phone number: it has no email and no password, so it cannot log in or book on the web, and no confirmation email is sent for it."
+            "description": "True for a hiker the staff created with a name and, at most, a phone number: it has no email and no password, so it cannot log in or book on the web, and no confirmation email is sent for it. It is only returned by `POST /api/staff/hikers`: the search does not list temporary hikers."
           }
         }
       },
@@ -2800,7 +2929,7 @@
           },
           "temporaryPassword": {
             "type": "string",
-            "description": "Only for a hiker created with an email: the password generated by the server, so that the employee can tell it to the hiker, for example aloud. It is returned only in this answer and cannot be read again. The hiker has to change it at the first login (`mustChangePassword`), and can also recover it by email."
+            "description": "Only for a hiker created with an email: the password generated by the server, so that the employee can tell it to the hiker, for example aloud. It is 12 characters in three groups of four, made of lowercase letters and digits without the ones that look alike (0 and o, 1 and l and i), so that it can be read out. It is returned only in this answer, the server stores only its hash, and it cannot be read again. The hiker has to change it at the first login (`mustChangePassword`), and can also choose a new one with `POST /api/auth/password-reset-requests`."
           }
         }
       },
@@ -2861,13 +2990,48 @@
             "description": "At least 8 characters, and not the same as the current password."
           }
         }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The email of the account. It is compared without regard to letter case."
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The token in the link of the password reset email (`...?token=`)."
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "At least 8 characters, as in the sign up."
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Auth",
-      "description": "Sign up, log in, log out, current user and change of the password."
+      "description": "Sign up, log in, log out, current user, change of the password and password reset by email."
     },
     {
       "name": "Slots",
