@@ -16,7 +16,7 @@ describe('parseCreateBooking', () => {
   };
 
   it('accepts the slot, the party size and the tables', () => {
-    expect(parseCreateBooking(valid)).toEqual(valid);
+    expect(parseCreateBooking(valid)).toEqual({ ...valid, requirements: [] });
   });
 
   it.each([
@@ -82,6 +82,7 @@ describe('output', () => {
       .toEqual({
         id: 5, date: '2026-10-28', slotId: 1, partySize: 6,
         tables: [{ tableNumber: 3, seats: 4 }, { tableNumber: 5, seats: 2 }],
+        requirements: [],
       });
   });
 });
