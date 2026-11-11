@@ -1,14 +1,16 @@
-# Emails mockup (MH-03, MH-07)
+# Emails mockup (MH-03, MH-06, MH-07, MH-08)
 
 Mockup of the emails QUOTA sends to a hiker:
 
 - **Booking confirmation** (MH-03). The server already sends it.
 - **Password reset.** The MH-07 clarifications say that "the hiker can recover their password via email".
+- **Booking changed** (MH-06). Sent when a change to a booking is saved.
+- **Booking cancelled** (MH-08). Sent when the hiker confirms the cancellation.
 - **Hiker account** (MH-07). When an employee adds a hiker with a full profile, the employee never sees the generated password: the server sends it to the hiker with this email.
 
 All use the same layout.
 
-**Figma (source of truth):** page *Emails (MH-03, MH-07)* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=406-877). The emails use two components from the *Components* page:
+**Figma (source of truth):** page *Emails (MH-03, MH-07)* (it also has the emails of MH-06 and MH-08) in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=406-877). The emails use two components from the *Components* page:
 
 - **Email / Header:** the pine band with the trail blaze, the QUOTA wordmark and the hut.
 - **Email / Row:** a detail line, with the label on the left and the value on the right.
@@ -21,6 +23,8 @@ Each email is shown inside a generic email app: subject, sender, recipient. The 
 |---|---|
 | MH-03, [#24](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/24) | The confirmation has the booking reference, name, date, time and party size. Table numbers are left out on purpose. |
 | MH-05 | When the booking has dietary needs, the confirmation lists them after the rows (see [Dietary needs](#dietary-needs-mh-05)). |
+| MH-06, team decision confirmed by the product owner | A saved change to a booking (day, time, party size or dietary needs) is emailed to the hiker, with the new details of the booking. A failed change sends no email ([hiker booking page mockup](../hiker-booking-page/README.md)). |
+| MH-08, team decision confirmed by the product owner | A confirmed cancellation is emailed to the hiker, who can cancel at any time. |
 | MH-07 | The hiker can recover the password by email. The email has a link to *Choose a new password* ([login mockup](../login/README.md), screen 12). |
 | Product owner, [#44](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/44) | The reset link works for 24 hours. |
 | Login, screen 11 | A reset email is sent only if the email has an account. The page answers the same in both cases, so nobody can find out which emails are registered. |
@@ -49,6 +53,8 @@ The emails share one layout, and the confirmation already uses it in [`server/sr
 |---|---|---|
 | 1 | Booking confirmation | ![Booking confirmation](01-booking-confirmation.png) |
 | 2 | Password reset | ![Password reset](02-password-reset.png) |
+| 3 | Booking changed | ![Booking changed](03-booking-changed.png) |
+| 4 | Booking cancelled | ![Booking cancelled](04-booking-cancelled.png) |
 | 5 | Hiker account | ![Hiker account](05-hiker-account.png) |
 
 ### On a phone
@@ -57,9 +63,11 @@ The emails share one layout, and the confirmation already uses it in [`server/sr
 |---|---|---|
 | 1 | Booking confirmation | ![Booking confirmation on a phone](phone/01-booking-confirmation.png) |
 | 2 | Password reset | ![Password reset on a phone](phone/02-password-reset.png) |
+| 3 | Booking changed | ![Booking changed on a phone](phone/03-booking-changed.png) |
+| 4 | Booking cancelled | ![Booking cancelled on a phone](phone/04-booking-cancelled.png) |
 | 5 | Hiker account | ![Hiker account on a phone](phone/05-hiker-account.png) |
 
-Emails 3 and 4 of the Figma page (a changed or a cancelled booking, MH-06 and MH-08) are documented with their stories. The hiker account email is longer than the others, so its screens are taller: 1280 × 840 and 390 × 888.
+The changed-booking email (3) and the hiker account email (5) are longer than the others, so their screens are taller: 1280 × 949 and 390 × 1000 for email 3, 1280 × 840 and 390 × 888 for email 5. The cancelled-booking email (4) is 1280 × 820 and 390 × 900.
 
 ## 1. Booking confirmation (MH-03)
 
@@ -157,6 +165,78 @@ The page cannot check the link before the form, so it finds out at *Save passwor
 
 The name comes from the account. Like in the confirmation, it is escaped in the HTML, because the hiker typed it.
 
+## 3. Booking changed (MH-06)
+
+*Save changes* in the *Change your booking* dialog sends this email when the change is saved ([hiker booking page mockup](../hiker-booking-page/README.md), screens 4, 7 and 8). It leaves for every saved change: day, time, party size or dietary needs. It has the same layout, sender and colours as the confirmation. A change that fails (no seats, past the 48 hours) sends no email, and the old booking stays as it is.
+
+The details are the new ones: they replace those of the earlier emails of the same booking. The booking reference does not change.
+
+**Subject:** `Your booking has changed (QUOTA-00042)`
+
+**HTML:**
+
+| Part | Text |
+|---|---|
+| Title | Your booking has changed |
+| Text | Hello *first name last name*, here are the new details of your booking. These details replace the ones of the earlier emails for booking *QUOTA-00042*. |
+| Rows | Booking reference · Name · Date · Time · Party size, as in the confirmation, then **Changed on** (*14 July 2027, 11:20*) |
+| Dietary needs | When the booking has dietary needs, the same part as in the confirmation ([Dietary needs](#dietary-needs-mh-05)): the title, then one line per group of guests. A booking without needs has no such part. |
+| End | See you at the hut! |
+
+**Plain text:**
+
+```
+Hello Giulia Rossi,
+
+Your booking has changed. These are the new details, and they replace the ones of the earlier emails:
+
+Booking reference: QUOTA-00042
+Name: Giulia Rossi
+Date: 17 July 2027
+Time: 13:00–14:00
+Party size: 6
+Changed on: 14 July 2027, 11:20
+
+Dietary needs:
+- 1 guest: Allergies: Peanuts · Diet: Vegan
+
+See you at the hut!
+```
+
+## 4. Booking cancelled (MH-08)
+
+Confirming in the *Cancel this booking?* dialog sends this email ([hiker booking page mockup](../hiker-booking-page/README.md), screens 9 and 10). The hiker can cancel at any time, so it has no deadline. It has the same layout, sender and colours as the other emails.
+
+The rows are those of the booking that was cancelled. There are no dietary needs in it: the booking no longer exists.
+
+**Subject:** `Your booking has been cancelled (QUOTA-00042)`
+
+**HTML:**
+
+| Part | Text |
+|---|---|
+| Title | Your booking has been cancelled |
+| Text | Hello *first name last name*, your booking *QUOTA-00042* has been cancelled. The seats are free again for other guests. |
+| Rows | Booking reference · Name · Date · Time · Party size of the cancelled booking, then **Cancelled on** (*14 July 2027, 11:32*) |
+| End | We hope to see you at the hut another time. |
+
+**Plain text:**
+
+```
+Hello Giulia Rossi,
+
+Your booking QUOTA-00042 has been cancelled. The seats are free again for other guests.
+
+Booking reference: QUOTA-00042
+Name: Giulia Rossi
+Date: 17 July 2027
+Time: 13:00–14:00
+Party size: 4
+Cancelled on: 14 July 2027, 11:32
+
+We hope to see you at the hut another time.
+```
+
 ## 5. Hiker account (MH-07)
 
 *Add hiker* in the *New hiker* dialog, with a full profile, sends this email ([reservation for a hiker mockup](../reservation-for-a-hiker/README.md), screen 5). It leaves when the account is created, before the reservation is saved; the booking confirmation (email 1) follows at *Save reservation*. If it cannot be sent, the account exists all the same, and the hiker can choose a password with *Forgot password?* (email 2).
@@ -200,6 +280,7 @@ See you at the hut!
 ## Left out on purpose
 
 - Other emails, such as the waiting list (MH-16). They are added with their stories.
+- An email to the staff when a booking is changed or cancelled. No story asks for it.
 
 ## Open questions
 
