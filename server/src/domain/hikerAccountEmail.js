@@ -5,7 +5,7 @@
  *
  * A pure function: sending it is the job of the mailer.
  */
-import { detailRow, emailPage, escapeHtml, INK, linkButton, paragraph } from './emailLayout.js';
+import { closing, detailRow, emailPage, escapeHtml, INK, linkButton, paragraph } from './emailLayout.js';
 
 export const hikerAccountEmail = ({ firstName, lastName, email, password, loginUrl }) => {
   const name = `${firstName} ${lastName}`;
@@ -34,7 +34,7 @@ export const hikerAccountEmail = ({ firstName, lastName, email, password, loginU
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
                 ${detailRow('Email', escapeHtml(email))}
                 ${detailRow('Password', `<span style="font-family:Menlo,Consolas,monospace;color:${INK};">${escapeHtml(password)}</span>`)}
-              </table>${paragraph('The first time you log in you will be asked to choose your own password.')}${linkButton(escapeHtml(loginUrl), 'Log in')}${paragraph('If you have lost this email, use <b>Forgot password?</b> on the login page to choose a new password.')}`,
+              </table>${paragraph('The first time you log in you will be asked to choose your own password.')}${linkButton(escapeHtml(loginUrl), 'Log in')}${paragraph('If you have lost this email, use <b>Forgot password?</b> on the login page to choose a new password.')}${closing('See you at the hut!')}`,
     }),
   };
 };

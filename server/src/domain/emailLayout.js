@@ -45,6 +45,10 @@ export const linkButton = (href, label) => `
 export const fallbackLink = (href) => `
               <p style="${FONT}margin:16px 0 0;color:${STONE};font-size:13px;line-height:20px;">If the button does not work, copy this link into your browser:<br><a href="${href}" style="color:${PINE};text-decoration:underline;word-break:break-all;">${href}</a></p>`;
 
+// The last line of the body, as in the booking confirmation.
+export const closing = (text) => `
+              <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">${text}</p>`;
+
 // A note under a line, at the end of the body. `html` must be already safe HTML.
 export const note = (html) => `
               <p style="${FONT}margin:24px 0 0;padding-top:16px;border-top:1px solid ${LINE};color:${STONE};font-size:13px;line-height:20px;">${html}</p>`;
