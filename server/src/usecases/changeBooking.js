@@ -15,7 +15,9 @@
  *
  * Errors: 403 not a hiker; 404 the booking or the new slot does not exist; 422 changes are closed,
  * the booking was cancelled, the new slot cannot be booked, the hiker already has a booking for the
- * new slot, or more lines of needs than people; 409 NO_SEATS the party does not fit any more.
+ * new slot, or more lines of needs than people; 409 NO_SEATS the party does not fit any more;
+ * 409 BOOKING_CHANGED another change of the same booking was saved while this one was checked
+ * (the booking is read before it is locked, so the dao checks it did not move in between).
  */
 import { checkDietaryNeeds } from '../domain/dietaryNeeds.js';
 import { isChangeOpen } from '../domain/bookingWindow.js';
@@ -25,6 +27,10 @@ import { assignSeats } from '../domain/seating.js';
 
 const noSeats = () => new ConflictError('Not enough free seats', { code: 'NO_SEATS' });
 const changesClosed = () => new UnprocessableError('Bookings can be changed until 48 hours before the meal');
+const changedMeanwhile = () => new ConflictError(
+  'The booking was changed in the meantime: reload it and try again',
+  { code: 'BOOKING_CHANGED' },
+);
 const alreadyBooked = () => new UnprocessableError('You already have a booking for this slot');
 
 export const makeChangeBooking = ({ bookings, slots, checkSlotOpen, clock, hutTimeZone }) =>
@@ -64,12 +70,18 @@ export const makeChangeBooking = ({ bookings, slots, checkSlotOpen, clock, hutTi
     }
 
     try {
-      return await bookings.updateBooking({ bookingId, seats, requirements: requirements ?? null });
+      return await bookings.updateBooking({
+        bookingId,
+        expected: { slotId: booking.slotId, partySize: booking.partySize },
+        seats,
+        requirements: requirements ?? null,
+      });
     } catch (error) {
       // The dao checks again with the slot locked: someone may have booked or changed just now.
       if (error.code === 'SEATS_UNAVAILABLE') throw noSeats();
       if (error.code === 'DUPLICATE_BOOKING') throw alreadyBooked();
       if (error.code === 'BOOKING_NOT_FOUND') throw new UnprocessableError('This booking was cancelled');
+      if (error.code === 'BOOKING_CHANGED' || error.code === 'TOO_MANY_REQUIREMENTS') throw changedMeanwhile();
       throw error;
     }
   };

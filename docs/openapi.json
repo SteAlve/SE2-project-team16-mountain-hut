@@ -1834,16 +1834,23 @@
             }
           },
           "409": {
-            "description": "The party does not fit in the free seats of the slot (`code` `NO_SEATS`). Nothing changes.",
+            "description": "Nothing changes. `code` `NO_SEATS`: the party does not fit in the free seats of the slot. `code` `BOOKING_CHANGED`: another change of the same booking was saved at the same moment; reload the booking and try again.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
-                "example": {
-                  "error": "ConflictError",
-                  "message": "Not enough free seats",
-                  "code": "NO_SEATS"
+                "examples": {
+                  "noSeats": {
+                    "value": { "error": "ConflictError", "message": "Not enough free seats", "code": "NO_SEATS" }
+                  },
+                  "bookingChanged": {
+                    "value": {
+                      "error": "ConflictError",
+                      "message": "The booking was changed in the meantime: reload it and try again",
+                      "code": "BOOKING_CHANGED"
+                    }
+                  }
                 }
               }
             }

@@ -12,9 +12,14 @@ export const makeChangeBookingAndNotify = ({ changeBooking, bookings, mailer, cl
     const booking = await changeBooking(input);
 
     try {
-      const details = await bookings.findConfirmationDetails(booking.id);
+      // Only the hiker's name and address are read again; the booking itself is the one saved by the
+      // change, so the email never mixes it with a later change.
+      const { email, firstName, lastName } = await bookings.findConfirmationDetails(booking.id);
+      const { id: bookingId, date, startsAt, endsAt, partySize, requirements } = booking;
       const changedAt = clock.localDateTime(clock.now().getTime(), hutTimeZone);
-      await mailer.send(bookingChangedEmail({ ...details, requirements: booking.requirements, changedAt }));
+      await mailer.send(bookingChangedEmail({
+        email, firstName, lastName, bookingId, date, startsAt, endsAt, partySize, requirements, changedAt,
+      }));
     } catch (error) {
       console.error(`The email about the change of booking ${booking.id} was not sent:`, error);
     }

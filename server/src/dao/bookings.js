@@ -329,7 +329,7 @@ export const findUpcomingByHiker = (hikerId, fromDate) => all(
  *   requirements  the new dietary needs, which replace all the old lines.
  * Returns the booking as findById reads it.
  */
-export const updateBooking = async ({ bookingId, seats = null, requirements = null }) => {
+export const updateBooking = async ({ bookingId, expected, seats = null, requirements = null }) => {
   if (!isPositiveInteger(bookingId)) {
     throw new TypeError('bookingId must be a positive safe integer.');
   }
@@ -344,7 +344,7 @@ export const updateBooking = async ({ bookingId, seats = null, requirements = nu
   return inTransaction(async () => {
     const booking = await get(
       `
-        SELECT id, hiker_id AS "hikerId", slot_id AS "slotId"
+        SELECT id, hiker_id AS "hikerId", slot_id AS "slotId", party_size AS "partySize"
         FROM booking
         WHERE id = $1 AND cancelled_at IS NULL
         FOR UPDATE
@@ -354,9 +354,24 @@ export const updateBooking = async ({ bookingId, seats = null, requirements = nu
     if (!booking) {
       throw fail('BOOKING_NOT_FOUND', `Booking ${bookingId} does not exist or was cancelled.`);
     }
+    // The change was worked out from the booking as it was read before this lock: if another change
+    // of the same booking was saved in between, this one would mix the two.
+    if (booking.slotId !== expected.slotId || booking.partySize !== expected.partySize) {
+      throw fail('BOOKING_CHANGED', `Booking ${bookingId} was changed by another request.`);
+    }
+
+    // At most one line of needs per person, checked again on what the booking will hold.
+    const partySize = seats?.partySize ?? booking.partySize;
+    const requirementCount = requirements?.length ?? (await get(
+      'SELECT COUNT(*)::INTEGER AS count FROM booking_requirement WHERE booking_id = $1',
+      [bookingId],
+    )).count;
+    if (requirementCount > partySize) {
+      throw fail('TOO_MANY_REQUIREMENTS', `Booking ${bookingId} would have more needs than people.`);
+    }
 
     if (seats !== null) {
-      const { slotId, partySize, tableAssignments } = seats;
+      const { slotId, tableAssignments } = seats;
       const slot = await lockSlot(slotId);
 
       if (slotId !== booking.slotId) {
