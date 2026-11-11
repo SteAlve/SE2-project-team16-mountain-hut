@@ -99,6 +99,26 @@ export function parseCreateBooking(body) {
   };
 }
 
+// Body of PATCH /api/bookings/:bookingId (MH-06): what changes, at least one of slotId, partySize and
+// requirements. requirements replaces all the lines ([] removes them). The tables are chosen by the
+// server. When partySize is not sent the use case compares the lines with the party of the booking.
+export function parseChangeBooking(params, body) {
+  const bookingId = requirePositiveIntegerText(params?.bookingId, 'bookingId');
+  requireObject(body);
+  rejectUnknownFields(body, ['slotId', 'partySize', 'requirements']);
+  if (body.slotId === undefined && body.partySize === undefined && body.requirements === undefined) {
+    throw new ValidationError('Send at least one of slotId, partySize and requirements');
+  }
+
+  const change = { bookingId };
+  if (body.slotId !== undefined) change.slotId = requirePositiveInteger(body.slotId, 'slotId');
+  if (body.partySize !== undefined) change.partySize = requirePositiveInteger(body.partySize, 'partySize');
+  if (body.requirements !== undefined) {
+    change.requirements = requireRequirements(body.requirements, change.partySize ?? Infinity);
+  }
+  return change;
+}
+
 // GET /api/slots/:slotId/seating?partySize=6
 export const parseSeatingRequest = (params, query) => ({
   slotId: requirePositiveIntegerText(params?.slotId, 'slotId'),
@@ -136,4 +156,19 @@ export const toBookingDto = ({ id, date, slotId, partySize, tables, requirements
   partySize,
   tables: toTablesDto(tables),
   requirements: toRequirementsDto(requirements),
+});
+
+// A booking of the page "My bookings" (MH-06), and the answer of PATCH /api/bookings/:bookingId.
+export const toMyBookingDto = ({
+  id, slotId, date, startsAt, endsAt, partySize, tables, requirements, canChange, changeableUntil,
+}) => ({
+  id,
+  slotId,
+  date,
+  startsAt: toHourMinute(startsAt),
+  endsAt: toHourMinute(endsAt),
+  partySize,
+  tables: toTablesDto(tables),
+  requirements: toRequirementsDto(requirements),
+  ...(canChange === undefined ? {} : { canChange, changeableUntil }),
 });
