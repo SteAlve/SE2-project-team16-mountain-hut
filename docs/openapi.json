@@ -456,7 +456,7 @@
           "Auth"
         ],
         "summary": "Ask for a password reset link",
-        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for a limited time that the server decides. It is also the way for a hiker whose account was created by the staff to choose a password when the email with the generated one is lost or never arrived, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
+        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for 24 hours (product owner, clarification MH-07 on the validity of the link). It is also the way for a hiker whose account was created by the staff to choose a password when the email with the generated one is lost or never arrived, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
         "operationId": "requestPasswordReset",
         "requestBody": {
           "required": true,
@@ -512,7 +512,7 @@
           "Auth"
         ],
         "summary": "Choose a new password with the link of the email",
-        "description": "Sets the new password of the account the link was sent to. The `token` is the one in the link of the password reset email. It also clears `mustChangePassword`, because the hiker chose the password themselves. It does not log the user in: the page goes back to the login. A link that has expired, that was already used, that a newer link replaced, or that never existed is always the same answer, 422 with the `code` `RESET_LINK_NOT_VALID`, and the page shows \"This link no longer works\" with a button to ask for a new one. No login is required.",
+        "description": "Sets the new password of the account the link was sent to. The `token` is the one in the link of the password reset email. It also clears `mustChangePassword`, because the hiker chose the password themselves. It does not log the user in: the page goes back to the login. A link that has expired (it works for 24 hours), that was already used, that a newer link replaced, or that never existed is always the same answer, 422 with the `code` `RESET_LINK_NOT_VALID`, and the page shows \"This link no longer works\" with a button to ask for a new one. No login is required.",
         "operationId": "resetPassword",
         "requestBody": {
           "required": true,
@@ -547,7 +547,7 @@
             }
           },
           "422": {
-            "description": "The link does not work any more: it has expired, was already used, was replaced by a newer one, or does not exist.",
+            "description": "The link does not work any more: it is more than 24 hours old, was already used, was replaced by a newer one, or does not exist.",
             "content": {
               "application/json": {
                 "schema": {
