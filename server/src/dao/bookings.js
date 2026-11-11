@@ -7,7 +7,36 @@ const isPositiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 //   DUPLICATE_BOOKING   the hiker already has an active booking for the slot
 const fail = (code, message) => Object.assign(new RangeError(message), { code });
 
-const validateBooking = ({ hikerId, slotId, partySize, tableAssignments }) => {
+// A guest line of the dietary needs (MH-05): diets and allergies (arrays), otherDiet, otherAllergy and
+// otherRequests (text or null), and at least one of them. The DTO and the domain have already
+// checked the values.
+const isTextOrNull = (value) => value === null || typeof value === 'string';
+
+const validateRequirements = (requirements) => {
+  if (!Array.isArray(requirements)) {
+    throw new TypeError('requirements must be an array.');
+  }
+
+  for (const requirement of requirements) {
+    if (
+      !requirement
+      || !Array.isArray(requirement.diets)
+      || !Array.isArray(requirement.allergies)
+      || !isTextOrNull(requirement.otherDiet)
+      || !isTextOrNull(requirement.otherAllergy)
+      || !isTextOrNull(requirement.otherRequests)
+    ) {
+      throw new TypeError('Each requirement needs diets, allergies, otherDiet, otherAllergy and otherRequests.');
+    }
+
+    const { diets, allergies, otherDiet, otherAllergy, otherRequests } = requirement;
+    if (!diets.length && !allergies.length && otherDiet === null && otherAllergy === null && otherRequests === null) {
+      throw new TypeError('Each requirement needs at least one need or a request.');
+    }
+  }
+};
+
+const validateBooking = ({ hikerId, slotId, partySize, tableAssignments, requirements }) => {
   if (!isPositiveInteger(hikerId)) {
     throw new TypeError('hikerId must be a positive safe integer.');
   }
@@ -47,6 +76,8 @@ const validateBooking = ({ hikerId, slotId, partySize, tableAssignments }) => {
   if (assignedSeats !== partySize) {
     throw new RangeError('Assigned seats must equal partySize.');
   }
+
+  validateRequirements(requirements);
 };
 
 // Does the hiker already have an active (not cancelled) booking for the slot?
@@ -80,13 +111,34 @@ export const findConfirmationDetails = (bookingId) => get(
   [bookingId],
 );
 
+const REQUIREMENT_COLUMNS = `
+  diets,
+  other_diet AS "otherDiet",
+  allergies,
+  other_allergy AS "otherAllergy",
+  other_requests AS "otherRequests",
+  has_allergies AS "hasAllergies"
+`;
+
+// The dietary needs of a booking (MH-05), one line per guest, in the order the hiker added them.
+export const findRequirements = (bookingId) => all(
+  `
+    SELECT ${REQUIREMENT_COLUMNS}
+    FROM booking_requirement
+    WHERE booking_id = $1
+    ORDER BY id
+  `,
+  [bookingId],
+);
+
 export const createWithTableAssignments = async ({
   hikerId,
   slotId,
   partySize,
   tableAssignments,
+  requirements = [],
 }) => {
-  validateBooking({ hikerId, slotId, partySize, tableAssignments });
+  validateBooking({ hikerId, slotId, partySize, tableAssignments, requirements });
 
   return inTransaction(async () => {
     const slot = await get(
@@ -171,6 +223,19 @@ export const createWithTableAssignments = async ({
       );
     }
 
-    return { ...booking, tableAssignments };
+    const savedRequirements = [];
+    for (const { diets, otherDiet, allergies, otherAllergy, otherRequests } of requirements) {
+      savedRequirements.push(await get(
+        `
+          INSERT INTO booking_requirement
+            (booking_id, diets, other_diet, allergies, other_allergy, other_requests)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING ${REQUIREMENT_COLUMNS}
+        `,
+        [booking.id, diets, otherDiet, allergies, otherAllergy, otherRequests],
+      ));
+    }
+
+    return { ...booking, tableAssignments, requirements: savedRequirements };
   });
 };
