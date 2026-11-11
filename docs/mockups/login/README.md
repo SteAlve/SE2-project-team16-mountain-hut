@@ -30,7 +30,7 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 | 10 | Forgot password | ![Forgot password](10-forgot-password.png) |
 | 11 | Check your email | ![Check your email](11-check-your-email.png) |
 | 12 | Choose a new password (from the link in the email) | ![Choose a new password](12-choose-new-password.png) |
-| 13 | Reset link not valid (expired or already used) | ![Reset link not valid](13-reset-link-not-valid.png) |
+| 13 | Reset link not valid (expired, used or replaced), after Save password | ![Reset link not valid](13-reset-link-not-valid.png) |
 | 14 | Password changed, back on the login | ![Password changed](14-password-changed.png) |
 | 15 | Change the password at the first login (account made by the staff) | ![Change the password at the first login](15-change-password-first-login.png) |
 | 16 | Change the password: the current one is wrong (`422`) | ![Current password wrong](16-change-password-wrong-current.png) |
@@ -82,18 +82,18 @@ On a phone, Check your email, Reset link not valid, Password changed and the two
 - **After sign-up:** the hiker is logged in straight away and goes to *Book a table*.
 - **Password reset by email** (screens 10–14). It was added with MH-07, whose clarifications say that a hiker "can recover their password via email". The login has **Forgot password?** under the password field (screens 1–4).
   1. *Forgot password?* opens a page that asks for the email, with a *Send the link* button (screen 10).
-  2. The answer is always "Check your email" (screen 11), whether the email has an account or not, so nobody can find out which emails are registered. *Send it again* asks for a new link, and the previous one stops working. The email itself is in the [emails mockup](../emails/README.md).
-  3. The link in the email opens *Choose a new password* (screen 12), with the same rules as the sign-up.
-  4. *Save password* goes back to the login with the email already written and a blue note (screen 14).
-  5. A link that has expired or was already used opens screen 13, with *Send a new link*.
+  2. The answer is always "Check your email" (screen 11), whether the email has an account or not, so nobody can find out which emails are registered. *Send it again* asks for a new link, and the previous one stops working. The email itself is in the [emails mockup](../emails/README.md). The link works for 24 hours, and only once (product owner, [#44](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/44)).
+  3. The link in the email opens *Choose a new password* (screen 12), with the same rules as the sign-up. The line "For *email*" is shown only when the page knows the email, because the reset was asked in this browser. The link carries only a token and no answer of the API gives the email, so when the link is opened on another device (asked on the computer, opened on the phone) the line is left out.
+  4. *Save password* goes back to the login with a blue note (screen 14). The email is already written only when the page knows it, as above; otherwise the field is empty.
+  5. The page cannot check the link before the form: the API has no call for it. A link that has expired, was already used or was replaced by a newer one is found out at *Save password*: the server answers `422` (`RESET_LINK_NOT_VALID`) and the page shows screen 13. *Send a new link* opens screen 10, with the email already written only when the page knows it.
 
   Passwords are still stored only as hashes: nobody, the hut staff included, can read them.
-- **Change the password at the first login** (screen 15). An employee can create a full hiker account for someone at the hut or on the phone (MH-07, [reservation for a hiker mockup](../reservation-for-a-hiker/README.md)). Its password is generated at random and told to the hiker.
-  - When that hiker logs in with it, the login goes to *Choose your password* and no other page opens until a new password is saved. The page asks for the **current password** (the one the staff gave) and the new one twice (`POST /api/auth/change-password`).
+- **Change the password at the first login** (screen 15). An employee can create a full hiker account for someone at the hut or on the phone (MH-07, [reservation for a hiker mockup](../reservation-for-a-hiker/README.md)). Its password is generated at random and emailed to the hiker (email 5 of the [emails mockup](../emails/README.md)): the employee never sees it.
+  - When that hiker logs in with it, the login goes to *Choose your password* and no other page opens until a new password is saved. The page asks for the **current password** (the one we emailed) and the new one twice (`POST /api/auth/change-password`).
   - If the current password is wrong, or the new one is the same as the current one, the server answers `422` (screens 16 and 17).
   - Then the hiker goes on as after any login (*Book a table*, or the page they came from).
   - *Log out* leaves without changing the password, and the next login asks again.
-  - The hiker can also skip the generated password and use *Forgot password?* instead.
+  - The hiker can also skip the emailed password and use *Forgot password?* instead, for example if the email was lost.
 - **Log out** is in the navbar for every role. It asks first (screen 8): a dialog "Log out?" with *Cancel* and *Log out*. Cancel, Esc or a click outside the dialog closes it and nothing happens. *Log out* ends the session and goes back to the public hut page; while the request runs both buttons are disabled and the button reads "Logging out…".
 - **Log out failed** (server down or any error, screen 9): the session is still open, so the user stays logged in on the same page. The dialog stays open with an alert above the buttons, and *Log out* tries again.
 - **The navbar shows only the pages that role can use** (screen 7). A hiker who opens a staff page by URL sees the "Staff only" page. An employee or the warden who opens Book a table by URL sees the free seats, with a note that only hikers can book (booking mockup).
@@ -141,7 +141,7 @@ All rules except the `409` are checked in the browser before sending, and checke
 
 | Field | Required | Rule | Message under the field |
 |---|---|---|---|
-| Current password | yes, only on screen 15 | the password the staff gave | Enter the current password. |
+| Current password | yes, only on screen 15 | the password we emailed (placeholder: "The password we emailed you") | Enter the current password. |
 | New password | yes | at least 8 characters | Use at least 8 characters. |
 | Repeat password | yes | same as new password | The passwords are different. |
 
@@ -151,7 +151,7 @@ Two answers of the server on screen 15 (`422`):
 
 | When | What the hiker sees |
 |---|---|
-| The current password is wrong (screen 16) | Under Current password: "The current password is wrong. Use the one the hut staff gave you." The current password is emptied and gets the focus; the new ones are kept. |
+| The current password is wrong (screen 16) | Under Current password: "The current password is wrong. Use the one we emailed you." The current password is emptied and gets the focus; the new ones are kept. |
 | The new password is the same as the current one (screen 17) | Under New password: "Choose a password different from the current one." The two new fields are emptied; the current one is kept. |
 
 ### Other texts
@@ -170,7 +170,7 @@ Two answers of the server on screen 15 (`422`):
 | Login, under the password | **Forgot password?** |
 | Forgot password | **Forgot your password?** Enter the email of your account. We send you a link to choose a new password. Button: Send the link · ← Back to log in |
 | Link sent | **Check your email.** If there is an account for *email*, we have sent it a link to choose a new password. Look also in the spam folder. Button: Send it again · ← Back to log in |
-| Choose a new password | **Choose a new password.** For *email*. Button: Save password |
+| Choose a new password | **Choose a new password.** For *email*. (only when the page knows the email) Button: Save password |
 | Link expired or already used | **This link no longer works.** Red alert: The link has expired or was already used. Ask for a new one. Button: Send a new link |
 | Password changed | Blue note on the login: Your password has been changed. Log in with the new one. |
 | First login with a generated password | **Choose your password.** Hello *first name*. Your account was made by the hut staff: choose your own password to continue. Button: Save and continue · Not now? **Log out** |
@@ -179,5 +179,4 @@ Two answers of the server on screen 15 (`422`):
 
 - The stories do not list the hiker's account fields. We use first name, last name, email (MH-3 sends the confirmation by email) and an optional phone (MH-7 mentions name and phone).
 - The app name QUOTA and the demo hut "Rifugio Alpe Lunga, 2.450 m" are ours, not from the product owner.
-- How long a reset link stays valid is not said by the product owner. The backend decides it; the mockup only shows what happens when the link no longer works (screen 13).
 - The forced password change at the first login applies only to accounts made by the staff (MH-07). Whether employee and warden accounts made by the team should also change their password at the first login is not decided.

@@ -4,8 +4,9 @@ Mockup of the emails QUOTA sends to a hiker:
 
 - **Booking confirmation** (MH-03). The server already sends it.
 - **Password reset.** The MH-07 clarifications say that "the hiker can recover their password via email".
+- **Hiker account** (MH-07). When an employee adds a hiker with a full profile, the employee never sees the generated password: the server sends it to the hiker with this email.
 
-Both use the same layout.
+All use the same layout.
 
 **Figma (source of truth):** page *Emails (MH-03, MH-07)* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=406-877). The emails use two components from the *Components* page:
 
@@ -19,13 +20,16 @@ Each email is shown inside a generic email app: subject, sender, recipient. The 
 | Source | Rule |
 |---|---|
 | MH-03, [#24](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/24) | The confirmation has the booking reference, name, date, time and party size. Table numbers are left out on purpose. |
+| MH-05 | When the booking has dietary needs, the confirmation lists them after the rows (see [Dietary needs](#dietary-needs-mh-05)). |
 | MH-07 | The hiker can recover the password by email. The email has a link to *Choose a new password* ([login mockup](../login/README.md), screen 12). |
+| Product owner, [#44](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/44) | The reset link works for 24 hours. |
 | Login, screen 11 | A reset email is sent only if the email has an account. The page answers the same in both cases, so nobody can find out which emails are registered. |
+| MH-07, team decision | When an employee adds a hiker with a full profile, the server generates the password and sends it with the hiker account email. The employee never sees it and the server keeps only its hash, so this email is the only place where the password is written. |
 | Server | Sender: `QUOTA <no-reply@quota.example>` (`MAIL_FROM` in `server/src/config.js`). Every email has an HTML version, with tables and inline styles because that is what email apps support, and a plain text version for the apps that do not show HTML. |
 
 ## How they look
 
-The two emails share one layout, and the confirmation already uses it in [`server/src/domain/bookingConfirmation.js`](../../../server/src/domain/bookingConfirmation.js):
+The emails share one layout, and the confirmation already uses it in [`server/src/domain/bookingConfirmation.js`](../../../server/src/domain/bookingConfirmation.js):
 
 - **Background:** `mist` (#EEF2EF), with 32 px of space above and below and 16 px on the sides.
 - **Card:** white, at most **520 px** wide, with rounded corners (8 px). On a phone it takes the full width minus 16 px on each side.
@@ -37,7 +41,7 @@ The two emails share one layout, and the confirmation already uses it in [`serve
   - Title in bold, 26 px, `ink`.
   - Text 15 px, `stone`, line height 22 px.
   - Detail lines: label 14 px `stone`, value 15 px bold `ink`, with a 1 px `line` (#D8DFDA) border on top and 12 px above and below.
-- **Font:** Helvetica, Arial, sans-serif, the fonts every email app has. Figma does not have them, so the mockup uses Inter, which looks very close.
+- **Font:** Helvetica, Arial, sans-serif, the fonts every email app has. Figma does not have them, so the mockup uses Inter, which looks very close. The password of email 5 is in a monospace font (Menlo, Consolas); the mockup uses IBM Plex Mono.
 
 ## Emails
 
@@ -45,6 +49,7 @@ The two emails share one layout, and the confirmation already uses it in [`serve
 |---|---|---|
 | 1 | Booking confirmation | ![Booking confirmation](01-booking-confirmation.png) |
 | 2 | Password reset | ![Password reset](02-password-reset.png) |
+| 5 | Hiker account | ![Hiker account](05-hiker-account.png) |
 
 ### On a phone
 
@@ -52,12 +57,15 @@ The two emails share one layout, and the confirmation already uses it in [`serve
 |---|---|---|
 | 1 | Booking confirmation | ![Booking confirmation on a phone](phone/01-booking-confirmation.png) |
 | 2 | Password reset | ![Password reset on a phone](phone/02-password-reset.png) |
+| 5 | Hiker account | ![Hiker account on a phone](phone/05-hiker-account.png) |
+
+Emails 3 and 4 of the Figma page (a changed or a cancelled booking, MH-06 and MH-08) are documented with their stories. The hiker account email is longer than the others, so its screens are taller: 1280 × 840 and 390 × 888.
 
 ## 1. Booking confirmation (MH-03)
 
-It is sent when a booking is saved. The mockup is the email the server sends today: the same texts, rows, colours and sizes.
+It is sent when a booking is saved. The mockup is the email the server sends for a booking without dietary needs: the same texts, rows, colours and sizes.
 
-It is also sent for a reservation entered by an employee ([MH-07](../reservation-for-a-hiker/README.md)), when the hiker has an email. A temporary hiker has no email, so no email is sent.
+It is also sent for a reservation entered by an employee ([MH-07](../reservation-for-a-hiker/README.md)), at *Save reservation*, when the hiker has an email. A new hiker with a full profile has already had the hiker account email (email 5) at *Add hiker*. A temporary hiker has no email, so no email is sent.
 
 **Subject:** `Your table is booked (QUOTA-00042)`
 
@@ -86,6 +94,29 @@ Party size: 4
 See you at the hut!
 ```
 
+### Dietary needs (MH-05)
+
+The MH-05 backend is on `dev`: when the booking has dietary needs, the confirmation lists them after the rows, before "See you at the hut!". Guests with exactly the same needs are shown once, with how many they are, as on the *Table booked* screen of MH-05. A booking without needs has no such part, as in the images above.
+
+**HTML:**
+
+| Part | Text |
+|---|---|
+| Title | **Dietary needs**: bold, 16 px, `ink`, with 24 px above and 8 px below. |
+| One line per group | A 1 px `line` border on top. On the left, how many guests (*1 guest*, *2 guests*): 14 px, `stone`. On the right, each part on its own line, 14 px: "Allergies: *…*" in bold `blaze` red, then "Diet: *…*" in `ink`, then the other requests between quotes, in italic `stone`. Allergies come first, because the kitchen reads them first. |
+
+**Plain text:**
+
+```
+Party size: 4
+
+Dietary needs:
+- 2 guests: Allergies: Peanuts · Diet: Vegan
+- 1 guest: Diet: Vegetarian · "No onions, please"
+
+See you at the hut!
+```
+
 ## 2. Password reset (MH-07)
 
 *Send the link* on the *Forgot password?* page sends this email ([login mockup](../login/README.md), screens 10–11). It is sent only if the email has an account.
@@ -100,7 +131,7 @@ See you at the hut!
 | Text | Hello *first name last name*, we received a request to reset the password of your QUOTA account. Use the button to choose a new one. |
 | Button | **Choose a new password**: pine, white bold text 15 px, 14/24 px padding, 6 px corners. It opens the link. |
 | Link | If the button does not work, copy this link into your browser: *the full link*, underlined, in `pine`, 13 px. |
-| Note | Under a line: "Did not ask for it? You can ignore this email: your password stays the same. The link works only once." 13 px, `stone`. |
+| Note | Under a line: "Did not ask for it? You can ignore this email: your password stays the same. The link works for 24 hours, and only once." 13 px, `stone`. |
 
 **Plain text:**
 
@@ -113,24 +144,65 @@ To choose a new one, open this link:
 https://quota.example/reset-password?token=…
 
 Did not ask for it? You can ignore this email: your password stays the same.
-The link works only once.
+The link works for 24 hours, and only once.
 ```
 
-**The link** opens *Choose a new password* (login screen 12). There are two cases where it no longer works, and in both it opens *This link no longer works* (login screen 13):
+**The link** opens *Choose a new password* (login screen 12). It stops working in three cases:
 
-- it has expired;
-- it was already used, or a newer link was asked for.
+- it is more than 24 hours old;
+- it was already used;
+- a newer link was asked for.
+
+The page cannot check the link before the form, so it finds out at *Save password*, when the server refuses it. Then it shows *This link no longer works* (login screen 13).
 
 The name comes from the account. Like in the confirmation, it is escaped in the HTML, because the hiker typed it.
 
+## 5. Hiker account (MH-07)
+
+*Add hiker* in the *New hiker* dialog, with a full profile, sends this email ([reservation for a hiker mockup](../reservation-for-a-hiker/README.md), screen 5). It leaves when the account is created, before the reservation is saved; the booking confirmation (email 1) follows at *Save reservation*. If it cannot be sent, the account exists all the same, and the hiker can choose a password with *Forgot password?* (email 2).
+
+The texts are those of `server/src/domain/hikerAccountEmail.js` in the MH-07 backend (PR #93).
+
+**Subject:** `Your QUOTA account`
+
+**HTML:**
+
+| Part | Text |
+|---|---|
+| Title | Your account is ready |
+| Text | Hello *first name last name*, the team of the hut has made a QUOTA account for you, so you can book your tables on the website. |
+| Rows | Email · Password. The password is in a monospace font, so every character is easy to read and type. |
+| Text | The first time you log in you will be asked to choose your own password. |
+| Button | **Log in**: the same button as in email 2. It opens the login page. |
+| Text | If you have lost this email, use **Forgot password?** on the login page to choose a new password. |
+| End | See you at the hut! |
+
+**Plain text:**
+
+```
+Hello Luca Bianchi,
+
+The team of the hut has made a QUOTA account for you, so you can book your tables on the website.
+
+Email: luca.bianchi@mail.it
+Password: k7mp-x4wn-r9ht
+
+The first time you log in you will be asked to choose your own password.
+Log in: https://quota.example/login
+
+If you have lost this email, use "Forgot password?" on the login page to choose a new password.
+
+See you at the hut!
+```
+
+**The password** is generated by the server: 12 lowercase letters and digits in three groups of four, without the characters that look alike (0 and o, 1, l and i). The hiker must change it at the first login (login screen 15). Like the name, it is escaped in the HTML.
+
 ## Left out on purpose
 
-- The party requirements in the confirmation. They arrive with MH-05.
-- Other emails: changes or cancellations (MH-06, MH-08), waiting list (MH-16). They are added with their stories.
+- Other emails, such as the waiting list (MH-16). They are added with their stories.
 
 ## Open questions
 
-- **How long the reset link stays valid** is not said by the product owner. Until it is decided, the email does not say it. If a duration is chosen, add "The link works for *N* hours." to the note.
-- **The address in the link** (`https://quota.example/...`) is a placeholder. The real one comes from the deployment settings.
+- **The address in the links** (`https://quota.example/...`) is a placeholder. The real one comes from the deployment settings.
 
-Sample data (names, email, reference, date) is invented for the mockup.
+Sample data (names, emails, reference, date, password) is invented for the mockup.
