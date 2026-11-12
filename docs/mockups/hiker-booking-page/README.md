@@ -28,7 +28,7 @@ Everything shown comes from the story or from the product owner's clarifications
 | Product owner | There are no time constraints: a hiker can cancel a reservation at any time. |
 | Team decision (confirmed by the product owner) | The 48 hours are counted back from the booked time: a booking on 27/09 from 13:00 to 14:00 can be changed until 13:00 on 25/09. |
 | Team decision (confirmed by the product owner) | The dietary needs follow the same 48 hours as every other change. |
-| Team decision | The new time follows the booking rule of MH-01: it can be chosen until 2 hours before it starts ([#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7)). |
+| Team decision | The 48 hours count twice: before the time of the current booking (the hiker can open *Edit*) and before the time of the new booking (the hiker can choose it). The new day and time must start at least 48 hours from now, so a change cannot move a booking inside the 48 hours. It replaces the 2-hour limit of a new booking ([#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7)), which does not apply to changes. |
 | Team decision | Until a change is confirmed the old booking stays as it is. If the change fails, nothing changes. |
 | Team decision | The page lists only the bookings of the hiker, from today on, that are not cancelled. Past and cancelled bookings are not listed. |
 | Team decision | The system chooses the tables for the new day, time or party size, as when a hiker books ([booking mockup](../booking/README.md)). |
@@ -37,7 +37,7 @@ Everything shown comes from the story or from the product owner's clarifications
 ## The flow
 
 1. **My bookings** (screen 1) lists the upcoming bookings in date order. Each booking shows the day, the time, the booking reference, how many people, the tables, the dietary needs and two buttons: *Edit* and *Cancel booking*. A booking that can still be changed says "Change until *day* · *time*". When the 48 hours have passed, *Edit* is faded and the line says "Changes closed on *day* · *time*"; *Cancel booking* still works. A hiker with no upcoming bookings sees a message and a *Book a table* button (screen 2).
-2. **Edit** opens the *Change your booking* dialog on top of the list (screen 3). It has the booking filled in, with the same three steps as *Book a table*: **Day**, **How many people** and **Time**. On the right, *After the change* shows the new day, time and people, and under it the **Dietary needs and allergies**. Nothing changes until the hiker saves.
+2. **Edit** opens the *Change your booking* dialog on top of the list (screen 3). It has the booking filled in, with the same three steps as *Book a table*: **Day**, **How many people** and **Time**. On the right, *After the change* shows the new day, time and people, and under it the **Dietary needs and allergies**. Nothing changes until the hiker saves. The new day and time must start at least 48 hours from now, like the booking being changed.
 3. **Check availability.** When the day, the time or the people change, the button of the dialog is *Check availability*. The page asks the server for the seating of the new choice:
    - There is room (screen 4): the new seating is shown, like on *Book a table*, with a blue note. The button becomes *Save changes*.
    - There is no room (screen 5): a red note says which time is full. The booking stays as it is, and the hiker can choose another time or close the dialog.
@@ -99,9 +99,9 @@ The sheet has the same steps and rules as desktop screens 3 to 7, and the dietar
 
 | Field | Rule |
 |---|---|
-| Day | The days with slots, from today on. The current day is chosen. |
+| Day | The days with slots that start at least 48 hours from now. The current day is chosen. |
 | How many people | From 1. Must fit in the free seats of the time. |
-| Time | A time of that day that can still be booked (up to 2 hours before it starts). Each time says how many seats are free. |
+| Time | A time of that day that starts at least 48 hours from now. Each time says how many seats are free. |
 | Dietary needs and allergies | Optional, as in [MH-05](../dietary/README.md): one line per group of guests with the same needs, and the guests counted must not be more than the people. |
 
 ## Texts and server answers
@@ -134,6 +134,7 @@ These belong to other stories or were not asked for:
 ## Open questions
 
 - **The API.** The endpoints to list, change and cancel a booking are not decided yet. The mockup does not show any.
+- **The times inside the 48 hours.** The mockup does not show how the day strip and the time list look when a time cannot be chosen because it starts in less than 48 hours (disabled, hidden, or with a note). The days and times of the screens are examples.
 - **The 48 hours passing between the page and the save.** The mockup has no message for it, because nobody has said what the hiker should see.
 - **The tables changing between the check and the save** (`TABLES_CHANGED` in MH-01). The mockup does not show it for a change.
 
