@@ -1,6 +1,6 @@
 # Login, sign-up and logout: manual test report
 
-The goal of the test is to check by hand that login, sign-up and logout behave as [the mockup](mockups/login/README.md) says ([MH-55](https://polito-se2-26-16.youtrack.cloud/issue/MH-55), [MH-49](https://polito-se2-26-16.youtrack.cloud/issue/MH-49)): fields and messages, redirects, the navbar of each role, the session cookie and the phone layout.
+The goal of the test is to check by hand that login, sign-up and logout behave as [the mockup](../mockups/login/README.md) says ([MH-55](https://polito-se2-26-16.youtrack.cloud/issue/MH-55), [MH-49](https://polito-se2-26-16.youtrack.cloud/issue/MH-49)): fields and messages, redirects, the navbar of each role, the session cookie and the phone layout.
 
 86 scenarios were run, and all 86 behaved as expected (✅ in the **Result** column).
 
@@ -169,5 +169,5 @@ The browser checks stop a normal user, so these went straight to the server with
 
 ## Result
 
-All 86 scenarios behaved as expected on commit `716ac89`: login, sign-up and logout work as [the mockup](mockups/login/README.md) says ([MH-55](https://polito-se2-26-16.youtrack.cloud/issue/MH-55), [MH-49](https://polito-se2-26-16.youtrack.cloud/issue/MH-49)), on the phone too.
+All 86 scenarios behaved as expected on commit `716ac89`: login, sign-up and logout work as [the mockup](../mockups/login/README.md) says ([MH-55](https://polito-se2-26-16.youtrack.cloud/issue/MH-55), [MH-49](https://polito-se2-26-16.youtrack.cloud/issue/MH-49)), on the phone too.
 

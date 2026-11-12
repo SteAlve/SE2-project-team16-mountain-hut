@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.7.0",
-    "description": "API endpoints for authentication, defining the tables of each slot, checking meal-slot availability, booking a table and changing a booking. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409."
+    "version": "1.8.0",
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, changing a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -53,7 +53,8 @@
                   "lastName": "Parker",
                   "email": "emily.parker@example.com",
                   "phone": "+39 333 123 4567",
-                  "role": "HIKER"
+                  "role": "HIKER",
+                  "mustChangePassword": false
                 }
               }
             }
@@ -181,7 +182,8 @@
                   "lastName": "Parker",
                   "email": "emily.parker@example.com",
                   "phone": "+39 333 123 4567",
-                  "role": "HIKER"
+                  "role": "HIKER",
+                  "mustChangePassword": false
                 }
               }
             }
@@ -311,7 +313,8 @@
                   "lastName": "Parker",
                   "email": "emily.parker@example.com",
                   "phone": "+39 333 123 4567",
-                  "role": "HIKER"
+                  "role": "HIKER",
+                  "mustChangePassword": false
                 }
               }
             }
@@ -326,6 +329,234 @@
                 "example": {
                   "error": "UnauthorizedError",
                   "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Change the password",
+        "description": "Changes the password of the logged-in user, who stays logged in. It is how a hiker whose account was created by the staff clears `mustChangePassword`: until then every other request, apart from `GET /api/auth/me` and `POST /api/auth/logout`, answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`. Any user can use it at any time.",
+        "operationId": "changePassword",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              },
+              "example": {
+                "currentPassword": "k7mp-x4wn-r9ht",
+                "newPassword": "a new password of mine"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed. `mustChangePassword` is false from now on."
+          },
+          "400": {
+            "description": "The request body is invalid: a field is missing or the new password is shorter than 8 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "newPassword must have at least 8 characters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rule fails: the current password is wrong, or the new password is the same as the current one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "wrongPassword": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "The current password is wrong"
+                    }
+                  },
+                  "samePassword": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "The new password must be different from the current one"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password-reset-requests": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Ask for a password reset link",
+        "description": "The \"Forgot password?\" of the login. The server sends an email with a link to choose a new password, but only if the email has an account; the answer is the same in both cases (204), so nobody can find out which emails are registered. A new request makes the previous link stop working. The link works once and for 24 hours (product owner, clarification MH-07 on the validity of the link). It is also the way for a hiker whose account was created by the staff to choose a password when the email with the generated one is lost or never arrived, and for any hiker who forgot theirs. A temporary hiker has no email and cannot ask. No login is required.",
+        "operationId": "requestPasswordReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              },
+              "example": {
+                "email": "marco.bianchi@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. If the email has an account, a message with the link is on its way; if not, nothing is sent. The answer does not tell which."
+          },
+          "400": {
+            "description": "The email is missing or is not a valid email address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "email must be a valid email address"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/password-resets": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Choose a new password with the link of the email",
+        "description": "Sets the new password of the account the link was sent to. The `token` is the one in the link of the password reset email. It also clears `mustChangePassword`, because the hiker chose the password themselves. It does not log the user in: the page goes back to the login. A link that has expired (it works for 24 hours), that was already used, that a newer link replaced, or that never existed is always the same answer, 422 with the `code` `RESET_LINK_NOT_VALID`, and the page shows \"This link no longer works\" with a button to ask for a new one. No login is required.",
+        "operationId": "resetPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              },
+              "example": {
+                "token": "q7Zf2VhA9xT0mBnLw3KsEyJc4RdUi8Po",
+                "newPassword": "a password of my own"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed. The old password and the link no longer work."
+          },
+          "400": {
+            "description": "The request body is invalid: the token is missing or the new password is shorter than 8 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "newPassword must have at least 8 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The link does not work any more: it is more than 24 hours old, was already used, was replaced by a newer one, or does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "code": "RESET_LINK_NOT_VALID",
+                  "message": "The link is not valid any more"
                 }
               }
             }
@@ -741,6 +972,261 @@
                 "example": {
                   "error": "ForbiddenError",
                   "message": "Only hikers have bookings"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}": {
+      "patch": {
+        "tags": [
+          "Bookings"
+        ],
+        "summary": "Change a booking",
+        "description": "Changes the slot, the party size, the dietary needs of a booking, or some of them (MH-06). Only the hiker who made the booking can change it, until 48 hours before the meal; a new slot must also be at least 48 hours away. A new slot or party size is seated again like a new booking in that slot (product owner, issue #38): the seats of the booking count as free, so it can keep or reuse them, and the server chooses the tables. There is no preview: the change succeeds, or it is refused and nothing changes. A change of the dietary needs only does not check the seats and keeps the tables. After the change, the hiker receives an email \"Your booking has changed\" with the same booking reference, the new details and the moment of the change; it says that it replaces the earlier emails of that booking. If the email fails, the change still stands.",
+        "operationId": "changeBooking",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the booking.",
+            "example": 45
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeBookingRequest"
+              },
+              "examples": {
+                "moveAndGrow": {
+                  "summary": "Another slot and 6 people",
+                  "value": {
+                    "slotId": 13,
+                    "partySize": 6
+                  }
+                },
+                "needsOnly": {
+                  "summary": "Only the dietary needs",
+                  "value": {
+                    "requirements": [
+                      {
+                        "diets": [
+                          "VEGAN"
+                        ],
+                        "allergies": [
+                          "SHELLFISH"
+                        ]
+                      },
+                      {
+                        "otherRequests": "High chair"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The booking as it is now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyBooking"
+                },
+                "example": {
+                  "id": 45,
+                  "slotId": 13,
+                  "date": "2026-11-14",
+                  "startsAt": "13:00",
+                  "endsAt": "14:00",
+                  "partySize": 6,
+                  "tables": [
+                    {
+                      "tableNumber": 5,
+                      "seats": 6
+                    }
+                  ],
+                  "requirements": [
+                    {
+                      "diets": [
+                        "VEGAN"
+                      ],
+                      "otherDiet": null,
+                      "allergies": [
+                        "SHELLFISH"
+                      ],
+                      "otherAllergy": null,
+                      "otherRequests": null,
+                      "hasAllergies": true
+                    },
+                    {
+                      "diets": [],
+                      "otherDiet": null,
+                      "allergies": [],
+                      "otherAllergy": null,
+                      "otherRequests": "High chair",
+                      "hasAllergies": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid: a wrong `bookingId`, no field, an unknown field, a wrong `slotId` or `partySize`, or wrong `requirements` (same rules as when booking, and more lines than the `partySize` sent).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "Send at least one of slotId, partySize and requirements"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not a hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only hikers can change bookings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The booking does not exist or is not of this hiker, or the new slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "booking": {
+                    "summary": "Booking not found",
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Booking 45 not found"
+                    }
+                  },
+                  "slot": {
+                    "summary": "Slot not found",
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Slot 13 not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nothing changes. `code` `NO_SEATS`: the party does not fit in the free seats of the slot. `code` `BOOKING_CHANGED`: another change of the same booking was saved at the same moment; reload the booking and try again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "noSeats": {
+                    "value": {
+                      "error": "ConflictError",
+                      "message": "Not enough free seats",
+                      "code": "NO_SEATS"
+                    }
+                  },
+                  "bookingChanged": {
+                    "value": {
+                      "error": "ConflictError",
+                      "message": "The booking was changed in the meantime: reload it and try again",
+                      "code": "BOOKING_CHANGED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rule of the hut fails: the meal of the booking or of the new slot is less than 48 hours away, the booking was cancelled, the new slot has no tables, the hiker already has a booking for the new slot, or there are more lines of dietary needs than people.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "changesClosed": {
+                    "summary": "Changes are closed",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Bookings can be changed until 48 hours before the meal"
+                    }
+                  },
+                  "alreadyBooked": {
+                    "summary": "Already booked in the new slot",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "You already have a booking for this slot"
+                    }
+                  },
+                  "tooManyNeeds": {
+                    "summary": "More lines than people",
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "There can be at most one requirement per person of the party"
+                    }
+                  }
                 }
               }
             }
@@ -1654,14 +2140,14 @@
         }
       }
     },
-    "/api/bookings/{bookingId}": {
-      "patch": {
+    "/api/staff/hikers": {
+      "get": {
         "tags": [
-          "Bookings"
+          "Staff"
         ],
-        "summary": "Change a booking",
-        "description": "Changes the slot, the party size, the dietary needs of a booking, or some of them (MH-06). Only the hiker who made the booking can change it, until 48 hours before the meal; a new slot must also be at least 48 hours away. A new slot or party size is seated again like a new booking in that slot (product owner, issue #38): the seats of the booking count as free, so it can keep or reuse them, and the server chooses the tables. There is no preview: the change succeeds, or it is refused and nothing changes. A change of the dietary needs only does not check the seats and keeps the tables. After the change, the hiker receives an email \"Your booking has changed\" with the same booking reference, the new details and the moment of the change; it says that it replaces the earlier emails of that booking. If the email fails, the change still stands.",
-        "operationId": "changeBooking",
+        "summary": "Find a hiker",
+        "description": "Looks for a hiker who is already in the system, to make a reservation for them (MH-07). The text can be any part of the first name, the last name, the email or the phone, in any letter case. Only regular hiker accounts are returned: temporary hikers, employees and the warden are not, so each quick entry makes a new temporary hiker. At most 20 hikers come back, in order of last name and first name: a longer text narrows the list. An empty array means that nobody matches, so the hiker can be created with `POST /api/staff/hikers`. It is also how to find who owns an email after the 409 of `POST /api/staff/hikers`.",
+        "operationId": "searchHikers",
         "security": [
           {
             "sessionCookie": []
@@ -1669,104 +2155,51 @@
         ],
         "parameters": [
           {
-            "name": "bookingId",
-            "in": "path",
+            "name": "q",
+            "in": "query",
             "required": true,
+            "description": "The text to look for, at least 2 characters. Surrounding spaces are removed.",
             "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
+              "type": "string",
+              "minLength": 2
             },
-            "description": "Identifier of the booking.",
-            "example": 45
+            "example": "bianchi"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeBookingRequest"
-              },
-              "examples": {
-                "moveAndGrow": {
-                  "summary": "Another slot and 6 people",
-                  "value": {
-                    "slotId": 13,
-                    "partySize": 6
-                  }
-                },
-                "needsOnly": {
-                  "summary": "Only the dietary needs",
-                  "value": {
-                    "requirements": [
-                      {
-                        "diets": [
-                          "VEGAN"
-                        ],
-                        "allergies": [
-                          "SHELLFISH"
-                        ]
-                      },
-                      {
-                        "otherRequests": "High chair"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "The booking as it is now.",
+            "description": "The regular accounts that match, at most 20.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MyBooking"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Hiker"
+                  }
                 },
-                "example": {
-                  "id": 45,
-                  "slotId": 13,
-                  "date": "2026-11-14",
-                  "startsAt": "13:00",
-                  "endsAt": "14:00",
-                  "partySize": 6,
-                  "tables": [
-                    {
-                      "tableNumber": 5,
-                      "seats": 6
-                    }
-                  ],
-                  "requirements": [
-                    {
-                      "diets": [
-                        "VEGAN"
-                      ],
-                      "otherDiet": null,
-                      "allergies": [
-                        "SHELLFISH"
-                      ],
-                      "otherAllergy": null,
-                      "otherRequests": null,
-                      "hasAllergies": true
-                    },
-                    {
-                      "diets": [],
-                      "otherDiet": null,
-                      "allergies": [],
-                      "otherAllergy": null,
-                      "otherRequests": "High chair",
-                      "hasAllergies": false
-                    }
-                  ]
-                }
+                "example": [
+                  {
+                    "id": 21,
+                    "firstName": "Marco",
+                    "lastName": "Bianchi",
+                    "email": "marco.bianchi@example.com",
+                    "phone": "+39 340 555 1234",
+                    "temporary": false
+                  },
+                  {
+                    "id": 30,
+                    "firstName": "Anna",
+                    "lastName": "Bianchi",
+                    "email": "anna.bianchi@example.com",
+                    "phone": null,
+                    "temporary": false
+                  }
+                ]
               }
             }
           },
           "400": {
-            "description": "The request is invalid: a wrong `bookingId`, no field, an unknown field, a wrong `slotId` or `partySize`, or wrong `requirements` (same rules as when booking, and more lines than the `partySize` sent).",
+            "description": "The text is missing or is shorter than 2 characters.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1774,7 +2207,7 @@
                 },
                 "example": {
                   "error": "ValidationError",
-                  "message": "Send at least one of slotId, partySize and requirements"
+                  "message": "q must have at least 2 characters"
                 }
               }
             }
@@ -1794,7 +2227,7 @@
             }
           },
           "403": {
-            "description": "The authenticated user is not a hiker.",
+            "description": "The authenticated user is not an employee or the warden.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1802,31 +2235,499 @@
                 },
                 "example": {
                   "error": "ForbiddenError",
-                  "message": "Only hikers can change bookings"
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Create a hiker",
+        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The password is never returned: the server stores only its hash and sends it by email to the hiker, so the employee does not see it. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
+        "operationId": "createHiker",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHikerRequest"
+              },
+              "examples": {
+                "regular": {
+                  "summary": "A regular account",
+                  "value": {
+                    "firstName": "Marco",
+                    "lastName": "Bianchi",
+                    "email": "marco.bianchi@example.com",
+                    "phone": "+39 340 555 1234"
+                  }
+                },
+                "temporary": {
+                  "summary": "A temporary hiker",
+                  "value": {
+                    "firstName": "Giulia",
+                    "lastName": "Verdi",
+                    "phone": "+39 333 987 6543"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hiker created. For a regular account the generated password has been sent by email to the hiker; it is not in the response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hiker"
+                },
+                "examples": {
+                  "regular": {
+                    "summary": "A regular account: the password goes to the hiker by email",
+                    "value": {
+                      "id": 21,
+                      "firstName": "Marco",
+                      "lastName": "Bianchi",
+                      "email": "marco.bianchi@example.com",
+                      "phone": "+39 340 555 1234",
+                      "temporary": false
+                    }
+                  },
+                  "temporary": {
+                    "summary": "A temporary hiker: no email, no password",
+                    "value": {
+                      "id": 22,
+                      "firstName": "Giulia",
+                      "lastName": "Verdi",
+                      "email": null,
+                      "phone": "+39 333 987 6543",
+                      "temporary": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: a name is blank, the email or the phone is not valid, or a field is not listed in the request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "lastName must not be blank"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with this email already exists. The answer does not say whose it is: the page finds the account with `GET /api/staff/hikers?q=` and the email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "An account with this email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/slots/{slotId}/seating": {
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Where a party would sit, for a reservation made by the staff",
+        "description": "The same check as `GET /api/slots/{slotId}/seating`, for the employee who reserves for a hiker (MH-07): it says whether a party of that size fits and where it would sit, without booking anything. The only difference is the time limit: the two-hour rule of the hikers does not apply, so a slot can be asked for until it starts. Once it has started the answer is 422. The tables it returns are the ones `POST /api/staff/bookings` then confirms. Nothing is held: if someone books first, the booking answers 409 and the client asks again.",
+        "operationId": "getStaffSeating",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the meal slot.",
+            "example": 12
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of people in the party.",
+            "example": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available. `tables` says where the party would sit, one entry for each table.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatingPlan"
+                },
+                "example": {
+                  "slotId": 12,
+                  "partySize": 3,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 3
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The slot id or the party size is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "partySize must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
                 }
               }
             }
           },
           "404": {
-            "description": "The booking does not exist or is not of this hiker, or the new slot does not exist.",
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not available: the party does not fit in the free seats of the slot, even split over its tables.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "code": "NO_SEATS",
+                  "message": "Not enough free seats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not available: the slot cannot be booked, because it has no tables or it has already started.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "examples": {
-                  "booking": {
-                    "summary": "Booking not found",
+                  "slotStarted": {
                     "value": {
-                      "error": "NotFoundError",
-                      "message": "Booking 45 not found"
+                      "error": "UnprocessableError",
+                      "message": "The slot has already started"
                     }
                   },
+                  "slotNotBookable": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/bookings": {
+      "post": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Book for a hiker",
+        "description": "Creates a booking for the hiker `hikerId`, made by an employee or the warden (MH-07), for example for someone who phones or arrives at the hut. It works like `POST /api/bookings`: the tables are the ones of the seating preview (`GET /api/staff/slots/{slotId}/seating`) and the server books them only if the party would sit exactly there now; otherwise it answers 409 and books nothing. The `code` of the 409 says why: `NO_SEATS` (choose another slot) or `TABLES_CHANGED` (ask for a new preview). The hiker can be a regular account or a temporary one. The two-hour rule of the web booking does not apply: the only time limit is that the slot has not started. A hiker can have one booking per slot. The hiker receives the confirmation email if they have an email, and a temporary hiker has none; if the email fails, the booking stands. The body can also carry the dietary needs and allergies of the guests (MH-05), as the hiker gives them to the employee: the same lines and the same rules as in `POST /api/bookings`. They are saved with the booking, in the same transaction, and the response returns them; the confirmation email lists them.",
+        "operationId": "createStaffBooking",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffBookingRequest"
+              },
+              "example": {
+                "hikerId": 21,
+                "slotId": 12,
+                "partySize": 3,
+                "tables": [
+                  {
+                    "tableNumber": 3,
+                    "seats": 3
+                  }
+                ],
+                "requirements": [
+                  {
+                    "diets": [
+                      "VEGAN"
+                    ],
+                    "allergies": [
+                      "PEANUTS"
+                    ]
+                  },
+                  {
+                    "otherRequests": "No spicy food"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking created. `tables` are the ones sent and `requirements` are the saved needs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                },
+                "example": {
+                  "id": 45,
+                  "date": "2026-10-28",
+                  "slotId": 12,
+                  "partySize": 3,
+                  "tables": [
+                    {
+                      "tableNumber": 3,
+                      "seats": 3
+                    }
+                  ],
+                  "requirements": [
+                    {
+                      "diets": [
+                        "VEGAN"
+                      ],
+                      "otherDiet": null,
+                      "allergies": [
+                        "PEANUTS"
+                      ],
+                      "otherAllergy": null,
+                      "otherRequests": null,
+                      "hasAllergies": true
+                    },
+                    {
+                      "diets": [],
+                      "otherDiet": null,
+                      "allergies": [],
+                      "otherAllergy": null,
+                      "otherRequests": "No spicy food",
+                      "hasAllergies": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: a field is missing, is not valid, or the tables are repeated or do not add up to the party size, or wrong `requirements`: not a list, more lines than `partySize`, an unknown field, a diet or an allergy not in the list or twice, two of VEGETARIAN, VEGAN and PESCATARIAN, an empty or too long text, or a line that says nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "tables must add up to partySize"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot or the hiker does not exist. A user who is not a hiker counts as a hiker that does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
                   "slot": {
-                    "summary": "Slot not found",
                     "value": {
                       "error": "NotFoundError",
-                      "message": "Slot 13 not found"
+                      "message": "Slot 12 not found"
+                    }
+                  },
+                  "hiker": {
+                    "value": {
+                      "error": "NotFoundError",
+                      "message": "Hiker 21 not found"
                     }
                   }
                 }
@@ -1834,7 +2735,7 @@
             }
           },
           "409": {
-            "description": "Nothing changes. `code` `NO_SEATS`: the party does not fit in the free seats of the slot. `code` `BOOKING_CHANGED`: another change of the same booking was saved at the same moment; reload the booking and try again.",
+            "description": "The booking is refused and nothing is booked. The `code` says why: `NO_SEATS` the party does not fit in the free seats of the slot any more; `TABLES_CHANGED` the party still fits, but not at the tables sent (someone booked in between, or they are not the tables of the preview).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1842,13 +2743,19 @@
                 },
                 "examples": {
                   "noSeats": {
-                    "value": { "error": "ConflictError", "message": "Not enough free seats", "code": "NO_SEATS" }
-                  },
-                  "bookingChanged": {
+                    "summary": "The party does not fit any more",
                     "value": {
                       "error": "ConflictError",
-                      "message": "The booking was changed in the meantime: reload it and try again",
-                      "code": "BOOKING_CHANGED"
+                      "code": "NO_SEATS",
+                      "message": "Not enough free seats"
+                    }
+                  },
+                  "tablesChanged": {
+                    "summary": "Other tables than the ones sent",
+                    "value": {
+                      "error": "ConflictError",
+                      "code": "TABLES_CHANGED",
+                      "message": "The chosen tables are no longer the ones proposed for this party"
                     }
                   }
                 }
@@ -1856,32 +2763,29 @@
             }
           },
           "422": {
-            "description": "A rule of the hut fails: the meal of the booking or of the new slot is less than 48 hours away, the booking was cancelled, the new slot has no tables, the hiker already has a booking for the new slot, or there are more lines of dietary needs than people.",
+            "description": "A rule of the hut fails: the slot has no tables, it has already started, or the hiker already has a booking for that slot.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
                 },
                 "examples": {
-                  "changesClosed": {
-                    "summary": "Changes are closed",
+                  "slotStarted": {
                     "value": {
                       "error": "UnprocessableError",
-                      "message": "Bookings can be changed until 48 hours before the meal"
+                      "message": "The slot has already started"
+                    }
+                  },
+                  "slotNotBookable": {
+                    "value": {
+                      "error": "UnprocessableError",
+                      "message": "Slot 12 is not available for booking"
                     }
                   },
                   "alreadyBooked": {
-                    "summary": "Already booked in the new slot",
                     "value": {
                       "error": "UnprocessableError",
-                      "message": "You already have a booking for this slot"
-                    }
-                  },
-                  "tooManyNeeds": {
-                    "summary": "More lines than people",
-                    "value": {
-                      "error": "UnprocessableError",
-                      "message": "There can be at most one requirement per person of the party"
+                      "message": "The hiker already has a booking for this slot"
                     }
                   }
                 }
@@ -2022,9 +2926,12 @@
             "type": "string",
             "enum": [
               "NO_SEATS",
-              "TABLES_CHANGED"
+              "TABLES_CHANGED",
+              "BOOKING_CHANGED",
+              "PASSWORD_CHANGE_REQUIRED",
+              "RESET_LINK_NOT_VALID"
             ],
-            "description": "Present on some 409 answers only, so the client can tell the cases apart: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview)."
+            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
           }
         }
       },
@@ -2044,7 +2951,8 @@
           "firstName",
           "lastName",
           "email",
-          "role"
+          "role",
+          "mustChangePassword"
         ],
         "properties": {
           "id": {
@@ -2073,6 +2981,10 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "mustChangePassword": {
+            "type": "boolean",
+            "description": "True when the staff created the account and the first password, generated by the server and sent to the hiker by email, has not been changed yet. It becomes false when the user changes the password (`POST /api/auth/change-password`) or chooses a new one with the link of a password reset email. While it is true the user can only read `GET /api/auth/me`, change the password or log out: any other request answers 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
           }
         }
       },
@@ -2403,6 +3315,179 @@
           }
         }
       },
+      "Hiker": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "temporary"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the hiker, the `hikerId` of a booking."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true,
+            "description": "Email address. Null for a temporary hiker."
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phone number, if given."
+          },
+          "temporary": {
+            "type": "boolean",
+            "description": "True for a hiker the staff created with a name and, at most, a phone number: it has no email and no password, so it cannot log in or book on the web, and no confirmation email is sent for it. It is only returned by `POST /api/staff/hikers`: the search does not list temporary hikers."
+          }
+        }
+      },
+      "CreateHikerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name. Surrounding spaces are removed; it cannot be blank."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Optional. With an email the hiker gets a regular account that can use the web interface later; without it the hiker is temporary. Stored in lowercase and unique, compared without regard to letter case."
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\s*\\+?[0-9 ]*[0-9][0-9 ]*\\s*$",
+            "description": "Optional, as in the sign up. An empty string or null counts as not given."
+          }
+        }
+      },
+      "CreateStaffBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hikerId",
+          "slotId",
+          "partySize",
+          "tables"
+        ],
+        "properties": {
+          "hikerId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the hiker the booking is for, from `GET /api/staff/hikers` or `POST /api/staff/hikers`."
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the meal slot on the requested date."
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of hikers included in the booking."
+          },
+          "tables": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The tables of the staff seating preview, unchanged. Each table appears once and the seats add up to `partySize`.",
+            "items": {
+              "$ref": "#/components/schemas/TableSeats"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "description": "Optional. The dietary needs and allergies of the party (MH-05), as the hiker tells them to the employee: one line per guest who has any, so at most `partySize` lines. The same lines and the same rules as in `POST /api/bookings`. Omitted or empty: no needs.",
+            "items": {
+              "$ref": "#/components/schemas/RequirementRequest"
+            },
+            "default": []
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "format": "password",
+            "description": "The password the user has now."
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "At least 8 characters, and not the same as the current password."
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The email of the account. It is compared without regard to letter case."
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The token in the link of the password reset email (`...?token=`)."
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "At least 8 characters, as in the sign up."
+          }
+        }
+      },
       "Requirement": {
         "type": "object",
         "required": [
@@ -2541,6 +3626,32 @@
           ]
         }
       },
+      "ChangeBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "description": "What changes: at least one field. What is not sent stays as it is. The tables are chosen by the server.",
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "The slot to move to. It must be at least 48 hours away and have tables."
+          },
+          "partySize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The new number of people."
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequirementRequest"
+            },
+            "description": "The new dietary needs: they replace all the old lines; `[]` removes them. At most one line per person of the (new) party."
+          }
+        }
+      },
       "MyBooking": {
         "type": "object",
         "required": [
@@ -2611,39 +3722,13 @@
             "description": "The last moment of a change, local date and time of the hut (YYYY-MM-DDTHH:MM)."
           }
         }
-      },
-      "ChangeBookingRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "minProperties": 1,
-        "description": "What changes: at least one field. What is not sent stays as it is. The tables are chosen by the server.",
-        "properties": {
-          "slotId": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1,
-            "description": "The slot to move to. It must be at least 48 hours away and have tables."
-          },
-          "partySize": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "The new number of people."
-          },
-          "requirements": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RequirementRequest"
-            },
-            "description": "The new dietary needs: they replace all the old lines; `[]` removes them. At most one line per person of the (new) party."
-          }
-        }
       }
     }
   },
   "tags": [
     {
       "name": "Auth",
-      "description": "Sign up, log in, log out and current user."
+      "description": "Sign up, log in, log out, current user, change of the password and password reset by email."
     },
     {
       "name": "Slots",
@@ -2655,7 +3740,7 @@
     },
     {
       "name": "Staff",
-      "description": "Employee and warden: the table sets and the slots of the hut."
+      "description": "Employee and warden: the table sets and the slots of the hut, and the reservations made for a hiker."
     }
   ]
 }
