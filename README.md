@@ -17,7 +17,7 @@ We do not accept the reuse of our code in proprietary products. Anyone who distr
 ```text
 .github/             workflows, branch rulesets, Pull Request and issue templates
 client/              the web client: React, built with Vite
-docs/                the architecture documents
+docs/                the architecture, the API contract, the mockups, the e2e definitions and the manual test reports
 e2e/                 end-to-end tests: Playwright, with the real client and server
 retrospective_docs/  the retrospective of each sprint
 server/              the API: Node.js and Express
