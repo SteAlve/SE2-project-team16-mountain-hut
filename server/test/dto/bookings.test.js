@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseCreateBooking,
+  parseCreateStaffBooking,
   parseSeatingRequest,
   toBookingDto,
   toSeatingDto,
@@ -40,6 +41,32 @@ describe('parseCreateBooking', () => {
     ['seats that do not add up to the party', { ...valid, partySize: 6 }, 'The seats of the tables must add up to partySize'],
   ])('rejects %s', (_name, body, message) => {
     expect(() => parseCreateBooking(body)).toThrow(new ValidationError(message));
+  });
+});
+
+describe('parseCreateStaffBooking', () => {
+  const valid = {
+    hikerId: 8,
+    slotId: 12,
+    partySize: 2,
+    tables: [{ tableNumber: 1, seats: 2 }],
+    requirements: [{ diets: ['VEGAN'], allergies: ['PEANUTS'] }],
+  };
+
+  it('accepts the shared booking body plus the target hiker', () => {
+    expect(parseCreateStaffBooking(valid)).toEqual({
+      ...valid,
+      requirements: [{
+        diets: ['VEGAN'], otherDiet: null, allergies: ['PEANUTS'], otherAllergy: null, otherRequests: null,
+      }],
+    });
+  });
+
+  it.each([
+    ['a missing hiker id', { ...valid, hikerId: undefined }, 'hikerId must be a positive integer'],
+    ['a hiker id as text', { ...valid, hikerId: '8' }, 'hikerId must be a positive integer'],
+  ])('rejects %s', (_name, body, message) => {
+    expect(() => parseCreateStaffBooking(body)).toThrow(new ValidationError(message));
   });
 });
 

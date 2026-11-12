@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { makeReadSessionCookie, makeRequireAuth } from '../../src/middleware/session.js';
+import { makeReadSessionCookie, makeRequireAuth, makeRequirePasswordChanged } from '../../src/middleware/session.js';
 
 const read = (cookie) => {
   const req = { headers: { cookie } };
@@ -35,5 +35,27 @@ describe('makeRequireAuth', () => {
     const next = vi.fn();
     await makeRequireAuth(async () => { throw err; })({}, {}, next);
     expect(next).toHaveBeenCalledWith(err);
+  });
+});
+
+describe('makeRequirePasswordChanged', () => {
+  it('continues when the domain check allows the user', () => {
+    const next = vi.fn();
+    const check = vi.fn();
+    const req = { user: { id: 1 } };
+
+    makeRequirePasswordChanged(check)(req, {}, next);
+
+    expect(check).toHaveBeenCalledExactlyOnceWith(req.user);
+    expect(next).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it('passes the domain error to next', () => {
+    const error = new Error('must change');
+    const next = vi.fn();
+
+    makeRequirePasswordChanged(() => { throw error; })({ user: { id: 1 } }, {}, next);
+
+    expect(next).toHaveBeenCalledExactlyOnceWith(error);
   });
 });
