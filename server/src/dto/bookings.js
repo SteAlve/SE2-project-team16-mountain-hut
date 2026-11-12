@@ -1,6 +1,8 @@
 /**
  * DTO of slots and bookings: validates the body of POST /api/bookings (with the dietary
- * requirements of the party, MH-05) and the parameters of the seating preview (wrong input throws a ValidationError, 400) and shapes what goes out.
+ * requirements of the party, MH-05), the body of POST /api/staff/bookings (the same booking, for a
+ * hiker the staff chooses, MH-07) and the parameters of the seating preview (wrong input throws a
+ * ValidationError, 400) and shapes what goes out.
  */
 import { ValidationError } from '../domain/errors.js';
 import {
@@ -85,10 +87,11 @@ const requireRequirements = (value, partySize) => {
   return value.map(requireRequirement);
 };
 
-// Body of POST /api/bookings: the tables are the ones the seating preview showed.
-export function parseCreateBooking(body) {
+// The booking of a body, the same for a hiker and for the staff: the tables are the ones the seating
+// preview showed. `otherFields` are the fields that only one of the two bodies has.
+const parseBooking = (body, otherFields) => {
   requireObject(body);
-  rejectUnknownFields(body, ['slotId', 'partySize', 'tables', 'requirements']);
+  rejectUnknownFields(body, ['slotId', 'partySize', 'tables', 'requirements', ...otherFields]);
 
   const partySize = requirePositiveInteger(body.partySize, 'partySize');
   return {
@@ -97,6 +100,15 @@ export function parseCreateBooking(body) {
     tables: requireTables(body.tables, partySize),
     requirements: requireRequirements(body.requirements, partySize),
   };
+};
+
+// Body of POST /api/bookings.
+export const parseCreateBooking = (body) => parseBooking(body, []);
+
+// Body of POST /api/staff/bookings (MH-07): the same, and the hiker the booking is for.
+export function parseCreateStaffBooking(body) {
+  const booking = parseBooking(body, ['hikerId']);
+  return { hikerId: requirePositiveInteger(body.hikerId, 'hikerId'), ...booking };
 }
 
 // Body of PATCH /api/bookings/:bookingId (MH-06): what changes, at least one of slotId, partySize and

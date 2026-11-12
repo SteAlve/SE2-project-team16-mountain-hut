@@ -1,14 +1,18 @@
 /**
- * DTO of the staff endpoints (MH-02): validates what comes in (wrong input throws a ValidationError,
- * 400) and shapes what goes out.
+ * DTO of the staff endpoints: the table sets and the slots (MH-02) and the hikers the staff
+ * reserves for (MH-07). It validates what comes in (wrong input throws a ValidationError, 400) and
+ * shapes what goes out.
  */
 import { ValidationError } from '../domain/errors.js';
 import {
+  optionalPhone,
   rejectUnknownFields,
   requireDate,
+  requireEmail,
   requireObject,
   requirePositiveInteger,
   requirePositiveIntegerText,
+  requireText,
   requireTime,
   toHourMinute,
 } from './fields.js';
@@ -71,6 +75,27 @@ export function parseAssignTableSet(params, body) {
   return { slotId, tableSetId: requirePositiveInteger(body.tableSetId, 'tableSetId') };
 }
 
+// GET /api/staff/hikers?q=rossi. The text must be there; whether it is long enough is a rule of the
+// use case.
+export function parseSearchHikers(query) {
+  const text = query?.q;
+  if (typeof text !== 'string') throw new ValidationError('q is required');
+  return { text };
+}
+
+// POST /api/staff/hikers. With an email the hiker gets an account, without it the hiker is
+// temporary: email is null in that case, and phone is null when it is not given.
+export function parseCreateHiker(body) {
+  requireObject(body);
+  rejectUnknownFields(body, ['firstName', 'lastName', 'email', 'phone']);
+  return {
+    firstName: requireText(body, 'firstName'),
+    lastName: requireText(body, 'lastName'),
+    email: body.email === undefined || body.email === null ? null : requireEmail(body),
+    phone: optionalPhone(body),
+  };
+}
+
 export const toTableSetDto = ({ tableSetId, name, tables, totalSeats }) => ({
   tableSetId,
   name,
@@ -85,4 +110,14 @@ export const toStaffSlotDto = ({ slotId, date, startsAt, endsAt, tableSet, total
   endsAt: toHourMinute(endsAt),
   tableSet: tableSet === null ? null : toTableSetDto(tableSet),
   totalSeats,
+});
+
+// A hiker as the staff sees one (MH-07). `temporary` says that there is no account behind it.
+export const toHikerDto = ({ id, firstName, lastName, email, phone, temporary }) => ({
+  id,
+  firstName,
+  lastName,
+  email,
+  phone,
+  temporary,
 });
