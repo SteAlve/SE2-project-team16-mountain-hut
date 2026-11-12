@@ -1,4 +1,4 @@
-// MH-3 Receive confirmation: the scenarios of docs/MH-3-receive-confirmation-e2e-scenarios.md.
+// MH-3 Receive confirmation: the scenarios of docs/e2e-definitions/MH-3-receive-confirmation-e2e-scenarios.md.
 // The server sends its emails to Mailpit (SMTP_HOST and SMTP_PORT), and the tests read them
 // through the Mailpit API at MAILPIT_URL. Without MAILPIT_URL these tests are skipped.
 import { expect, test } from '@playwright/test';

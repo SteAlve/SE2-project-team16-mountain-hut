@@ -3,7 +3,7 @@
 ## Scope and result
 
 Manual verification of **MH-01 — Book a table**, against the
-[booking mockup](mockups/booking/README.md). Antonio performed the browser
+[booking mockup](../mockups/booking/README.md). Antonio performed the browser
 interactions and confirmed the observations below. Automated results are not
 counted as manual results.
 

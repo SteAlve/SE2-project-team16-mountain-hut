@@ -153,6 +153,7 @@ describe('POST /api/bookings', () => {
     expect(res.status).toBe(201);
     expect(res.body).toEqual({
       id: expect.any(Number), date: slot.date, slotId: slot.slotId, partySize: 2, tables: [T(2, 2)],
+      requirements: [],
     });
     const seats = await get(
       'SELECT hut_table_id AS "tableId", seat_count AS "seatCount" FROM booking_table WHERE booking_id = $1',
