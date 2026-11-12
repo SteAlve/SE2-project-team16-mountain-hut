@@ -12,6 +12,12 @@ export const bookingClosesAt = (mealStartsAt) => mealStartsAt.getTime() - BOOKIN
 
 export const isBookingOpen = (mealStartsAt, now) => now.getTime() <= bookingClosesAt(mealStartsAt);
 
+// When the staff can still enter a reservation for a hiker (MH-07): until the meal starts. The
+// 2-hour rule of the hikers does not apply to them. The start instant itself is included, in the
+// same way as the 2-hour limit of the hikers includes its own instant; whether the exact start is
+// still allowed is not decided by the product owner yet.
+export const isOpenForStaff = (mealStartsAt, now) => now.getTime() <= mealStartsAt.getTime();
+
 // The last instant a booking for this meal can be changed, in milliseconds since 1970.
 export const changesCloseAt = (mealStartsAt) => mealStartsAt.getTime() - CHANGES_CLOSE_BEFORE_MS;
 
