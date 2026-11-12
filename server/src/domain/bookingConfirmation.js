@@ -116,7 +116,7 @@ const needsHtml = (groups) => {
 
 const blazeBar = (color) => `<td width="28" height="6" style="background:${color};font-size:0;line-height:0;">&nbsp;</td>`;
 
-const toHtml = ({ name, ref, date, slotTime, partySize, needs }) => `<!doctype html>
+const toHtml = ({ title, intro, rows, needs }) => `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:${MIST};">
@@ -135,14 +135,10 @@ const toHtml = ({ name, ref, date, slotTime, partySize, needs }) => `<!doctype h
           </tr>
           <tr>
             <td style="padding:32px;">
-              <h1 style="${FONT}margin:0 0 8px;color:${INK};font-size:26px;">Your table is booked</h1>
-              <p style="${FONT}margin:0 0 24px;color:${STONE};font-size:15px;line-height:22px;">Hello ${name}, here are the details of your booking.</p>
+              <h1 style="${FONT}margin:0 0 8px;color:${INK};font-size:26px;">${title}</h1>
+              <p style="${FONT}margin:0 0 24px;color:${STONE};font-size:15px;line-height:22px;">${intro}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${row('Booking reference', ref)}
-                ${row('Name', name)}
-                ${row('Date', date)}
-                ${row('Time', slotTime)}
-                ${row('Party size', partySize)}
+                ${rows.map(([label, value]) => row(label, value)).join('')}
               </table>${needsHtml(needs)}
               <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">See you at the hut!</p>
             </td>
@@ -154,45 +150,83 @@ const toHtml = ({ name, ref, date, slotTime, partySize, needs }) => `<!doctype h
 </body>
 </html>`;
 
-export const bookingConfirmationEmail = ({
-  bookingId,
-  firstName,
-  lastName,
-  email,
-  date,
-  startsAt,
-  endsAt,
-  partySize,
-  requirements = [],
-}) => {
+// The parts both emails share: the rows of the booking and the dietary needs.
+const bookingParts = ({ bookingId, firstName, lastName, date, startsAt, endsAt, partySize, requirements = [] }) => {
   const name = `${firstName} ${lastName}`;
-  const needs = groupNeeds(requirements);
   const ref = reference(bookingId);
   const slotTime = `${time(startsAt)}–${time(endsAt)}`;
+  return {
+    name,
+    ref,
+    needs: groupNeeds(requirements),
+    rows: [
+      ['Booking reference', ref],
+      ['Name', name],
+      ['Date', day(date)],
+      ['Time', slotTime],
+      ['Party size', partySize],
+    ],
+  };
+};
+
+const toText = ({ hello, lead, rows, needs }) => [
+  hello,
+  '',
+  lead,
+  '',
+  ...rows.map(([label, value]) => `${label}: ${value}`),
+  ...(needs.length ? ['', 'Dietary needs:', ...needsText(needs)] : []),
+  '',
+  'See you at the hut!',
+].join('\n');
+
+const htmlRows = (rows) => rows.map(([label, value]) => [label, escapeHtml(String(value))]);
+
+export const bookingConfirmationEmail = ({ email, ...booking }) => {
+  const { name, ref, needs, rows } = bookingParts(booking);
 
   return {
     to: email,
     subject: `Your table is booked (${ref})`,
-    text: [
-      `Hello ${name},`,
-      '',
-      'Your table is booked. These are the details:',
-      '',
-      `Booking reference: ${ref}`,
-      `Name: ${name}`,
-      `Date: ${day(date)}`,
-      `Time: ${slotTime}`,
-      `Party size: ${partySize}`,
-      ...(needs.length ? ['', 'Dietary needs:', ...needsText(needs)] : []),
-      '',
-      'See you at the hut!',
-    ].join('\n'),
+    text: toText({ hello: `Hello ${name},`, lead: 'Your table is booked. These are the details:', rows, needs }),
     html: toHtml({
-      name: escapeHtml(name),
-      ref,
-      date: day(date),
-      slotTime,
-      partySize,
+      title: 'Your table is booked',
+      intro: `Hello ${escapeHtml(name)}, here are the details of your booking.`,
+      rows: htmlRows(rows),
+      needs,
+    }),
+  };
+};
+
+// 'YYYY-MM-DDTHH:MM' -> '10 November 2026, 18:05'
+const moment = (localDateTime) => {
+  const [date, clockTime] = localDateTime.split('T');
+  return `${day(date)}, ${clockTime}`;
+};
+
+/**
+ * The email after a hiker changed a booking (MH-06). It keeps the booking reference, so it says
+ * clearly that the booking changed, when, and that these details replace the ones of the earlier
+ * emails with the same reference. changedAt is the local time of the hut: 'YYYY-MM-DDTHH:MM'.
+ */
+export const bookingChangedEmail = ({ email, changedAt, ...booking }) => {
+  const { name, ref, needs, rows } = bookingParts(booking);
+  const changedRows = [...rows, ['Changed on', moment(changedAt)]];
+  const replaces = `These details replace the ones of the earlier emails for booking ${ref}.`;
+
+  return {
+    to: email,
+    subject: `Your booking has changed (${ref})`,
+    text: toText({
+      hello: `Hello ${name},`,
+      lead: `Your booking has changed. ${replaces} The new details:`,
+      rows: changedRows,
+      needs,
+    }),
+    html: toHtml({
+      title: 'Your booking has changed',
+      intro: `Hello ${escapeHtml(name)}, here are the new details of your booking. ${replaces}`,
+      rows: htmlRows(changedRows),
       needs,
     }),
   };
