@@ -1,0 +1,183 @@
+.needs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: normal;
+  color: var(--ink);
+}
+
+.optional {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--moss-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: normal;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  color: var(--pine);
+}
+
+.help {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--stone);
+}
+
+.narrow {
+  display: none;
+}
+
+/* No lines yet: one dashed box with the text and the button. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--stone);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A folded line: how many guests, the chips, Edit and ×. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+}
+
+.rowInvalid {
+  border-color: var(--error);
+  box-shadow: 0 0 0 0.5px var(--error);
+}
+
+.rowGuests {
+  flex-shrink: 0;
+  width: 64px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+  color: var(--ink);
+}
+
+.chips {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nothing {
+  font-size: 14px;
+  color: var(--stone);
+}
+
+.remove {
+  display: flex;
+  flex-shrink: 0;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 0;
+}
+
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.addButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.counter {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: normal;
+  color: var(--stone);
+}
+
+.over {
+  color: var(--error);
+}
+
+@media (max-width: 991.98px) {
+  .wide {
+    display: none;
+  }
+
+  .narrow {
+    display: inline;
+  }
+
+  .row {
+    gap: 10px;
+    padding: 8px 4px 8px 14px;
+  }
+
+  .rowGuests {
+    width: 58px;
+  }
+
+  /* On a phone a line is removed from its editor. */
+  .row .remove {
+    display: none;
+  }
+
+  .add {
+    gap: 4px 10px;
+  }
+}
