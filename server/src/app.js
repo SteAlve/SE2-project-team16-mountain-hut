@@ -6,7 +6,8 @@
  * Not here: business rules, SQL, request handling.
  *
  * Wired so far: the authentication (sign up, login, logout, who am I), the slots, the
- * seating preview, the booking of a table, its confirmation email, and the table sets
+ * seating preview, the booking of a table, its confirmation email, the bookings of a hiker
+ * and their changes (with an email), and the table sets
  * and slots of the staff.
  * A story adds its own lines in each step.
  */
@@ -46,6 +47,9 @@ import { makeAssignTableSet } from './usecases/assignTableSet.js';
 import { makeAuthenticate } from './usecases/authenticate.js';
 import { makeBookTable } from './usecases/bookTable.js';
 import { makeCreateBooking } from './usecases/createBooking.js';
+import { makeChangeBooking } from './usecases/changeBooking.js';
+import { makeChangeBookingAndNotify } from './usecases/changeBookingAndNotify.js';
+import { makeListMyBookings } from './usecases/listMyBookings.js';
 import { makeCheckSlotOpen } from './usecases/checkSlotOpen.js';
 import { makeCreateStaffSlot } from './usecases/createStaffSlot.js';
 import { makeCreateTableSet } from './usecases/createTableSet.js';
@@ -59,7 +63,11 @@ import { makeRegister } from './usecases/register.js';
 import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
-import { makeCreateBookingController } from './controllers/bookings.js';
+import {
+  makeChangeBookingController,
+  makeCreateBookingController,
+  makeListMyBookingsController,
+} from './controllers/bookings.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
   makeAssignTableSetController,
@@ -107,6 +115,13 @@ const previewSeating = makePreviewSeating({ slots, checkSlotOpen });
 const createBooking = makeCreateBooking({ slots, bookings, checkSlotOpen });
 const mailer = makeMailer(config.mail);
 const bookTable = makeBookTable({ createBooking, bookings, mailer });
+const listMyBookings = makeListMyBookings({ bookings, clock, hutTimeZone: config.hutTimeZone });
+const changeBooking = makeChangeBooking({
+  bookings, slots, checkSlotOpen, clock, hutTimeZone: config.hutTimeZone,
+});
+const changeBookingAndNotify = makeChangeBookingAndNotify({
+  changeBooking, bookings, mailer, clock, hutTimeZone: config.hutTimeZone,
+});
 
 const slotsRouter = makeSlotsRouter({
   listSlotsController: makeListSlotsController({ listSlots }),
@@ -114,6 +129,8 @@ const slotsRouter = makeSlotsRouter({
 });
 const bookingsRouter = makeBookingsRouter({
   createBookingController: makeCreateBookingController({ bookTable }),
+  listMyBookingsController: makeListMyBookingsController({ listMyBookings }),
+  changeBookingController: makeChangeBookingController({ changeBookingAndNotify }),
   requireAuth,
 });
 
