@@ -240,9 +240,10 @@ Hikers, employees and the warden, with email and password. The role is stored wi
 - **Cross-site requests (CSRF):** the cookie is `SameSite=Lax`, state is never changed by `GET`, and the API accepts only JSON bodies, which a form on another site cannot send.
 - **Stealing the session from the page (XSS):** the cookie is `HttpOnly`, and React escapes what it draws.
 - **Stolen database:** passwords are stored only as salted hashes and session ids only as hashes.
-- **Guessing which emails exist:** the same answer and the same work for a wrong password and an unknown email.
+- **Guessing which emails exist:** the same answer and the same work for a wrong password and an unknown email. The request of a password reset (MH-07) also answers `204` whether the email has an account or not, and does not wait for the email.
+- **A stolen password reset link:** only the hash of its token is stored, the link works once and for 24 hours, and a new request makes the previous link stop working.
 
-Not designed yet, to be decided when they are needed: a password reset and a limit on login attempts.
+Not designed yet, to be decided when it is needed: a limit on login attempts.
 
 ### Why sessions and not tokens
 
