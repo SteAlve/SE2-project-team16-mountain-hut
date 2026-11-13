@@ -1,0 +1,116 @@
+.option {
+  display: grid;
+  grid-template-columns: 20px 36px minmax(120px, 1fr) minmax(0, 1.25fr) auto;
+  grid-template-areas: 'radio avatar name email phone';
+  align-items: center;
+  column-gap: 14px;
+  width: 100%;
+  min-height: 62px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+button.option {
+  cursor: pointer;
+}
+
+button.option:hover {
+  border-color: var(--pine);
+}
+
+button.option:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.selected {
+  /* 2px border without moving the content: the extra pixel comes out of the padding */
+  padding: 11px 15px;
+  border: 2px solid var(--pine);
+}
+
+.radio {
+  grid-area: radio;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 50%;
+  background: var(--snow);
+}
+
+.selected .radio {
+  border: 2px solid var(--pine);
+  background: radial-gradient(circle, var(--pine) 0 4.5px, transparent 5px);
+}
+
+.avatar {
+  grid-area: avatar;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--moss-soft);
+  color: var(--pine);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.name {
+  grid-area: name;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.email,
+.phone {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--stone);
+  overflow-wrap: anywhere;
+}
+
+.email {
+  grid-area: email;
+}
+
+.phone {
+  grid-area: phone;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+  /* Name, email and phone on three lines. */
+  .option {
+    grid-template-columns: 20px 36px minmax(0, 1fr);
+    grid-template-areas:
+      'radio avatar name'
+      'radio avatar email'
+      'radio avatar phone';
+    row-gap: 2px;
+    padding: 14px 16px;
+  }
+
+  .selected {
+    padding: 13px 15px;
+  }
+
+  .phone {
+    text-align: left;
+  }
+
+  .email:empty,
+  .phone:empty {
+    display: none;
+  }
+}

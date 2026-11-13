@@ -1,0 +1,51 @@
+.mark {
+  align-self: flex-start;
+  margin-bottom: 6px;
+}
+
+.rows {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 15px;
+}
+
+.row dt {
+  color: var(--stone);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  color: var(--ink);
+}
+
+.row .mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.phone {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  /* On a phone the details are the one line under the title. */
+  .rows,
+  .desktop {
+    display: none;
+  }
+
+  .phone {
+    display: inline;
+  }
+}
