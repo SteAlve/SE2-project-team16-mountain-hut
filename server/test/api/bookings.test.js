@@ -5,6 +5,7 @@ import { clock } from '../../src/clock.js';
 import { config } from '../../src/config.js';
 import { close, get, run } from '../../src/dao/db.js';
 import * as bookingDao from '../../src/dao/bookings.js';
+import * as slots from '../../src/dao/slots.js';
 import * as users from '../../src/dao/users.js';
 import { hash } from '../../src/passwordHasher.js';
 import { cleanBookingData, createSlot, createSlotWithoutTableSet } from '../helpers/bookingFixtures.js';
@@ -843,22 +844,100 @@ describe('PATCH /api/bookings/:bookingId (MH-06)', () => {
     expect((await slotOf(original.slotId)).freeSeats).toBe(2);
   });
 
-  it('refuses a cancelled booking without recreating it or sending a change email', async () => {
+
+  it('refuses changes to a cancelled booking and preserves its data', async () => {
     const slot = await createSlot({ seats: [4] });
     const owner = await loggedIn('change.cancelled@example.com');
-    const created = await owner.post('/api/bookings')
-      .send(bodyOf(slot, 2, [T(1, 2)]))
-      .expect(201);
-    await run('UPDATE booking SET cancelled_at = now() WHERE id = $1', [created.body.id]);
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const rejected = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 });
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [{ tableNumber: 1, seats: 2 }]))
+      .expect(201);
+
+    await run(
+      'UPDATE booking SET cancelled_at = now() WHERE id = $1',
+      [created.body.id],
+    );
+
+    const rejected = await owner
+      .patch(`/api/bookings/${created.body.id}`)
+      .send({ partySize: 3 });
 
     expect(rejected.status).toBe(422);
     expect(rejected.body.message).toBe('This booking was cancelled');
-    expect(await get('SELECT cancelled_at IS NOT NULL AS cancelled, party_size AS "partySize" FROM booking WHERE id = $1', [
-      created.body.id,
-    ])).toEqual({ cancelled: true, partySize: 2 });
-    expect(log).not.toHaveBeenCalled();
+
+    expect(await get(
+      `SELECT
+        cancelled_at IS NOT NULL AS cancelled,
+        party_size AS "partySize"
+      FROM booking
+      WHERE id = $1`,
+      [created.body.id],
+    )).toEqual({
+      cancelled: true,
+      partySize: 2,
+      });
+    });
+});
+
+
+describe('updateBooking transaction (MH-06)', () => {
+  it('rolls back the entire change if saving requirements fails', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const email = 'update.booking.rollback@example.com';
+
+    await users.insert({
+      firstName: 'A',
+      lastName: 'B',
+      email,
+      phone: null,
+      role: 'HIKER',
+      passwordHash: await hash(PASSWORD),
+    });
+
+    const hiker = await get('SELECT id FROM app_user WHERE email = $1', [email]);
+
+    const originalRequirement = {
+      diets: ['VEGAN'],
+      otherDiet: null,
+      allergies: [],
+      otherAllergy: null,
+      otherRequests: null,
+    };
+
+    const created = await bookingDao.createWithTableAssignments({
+      hikerId: hiker.id,
+      slotId: slot.slotId,
+      partySize: 2,
+      tableAssignments: [
+        { tableId: slot.tableIds[0], seatCount: 2 },
+      ],
+      requirements: [originalRequirement],
+    });
+
+    const before = await bookingDao.findById(created.id);
+    const freeBefore = await slots.findAvailableTablesBySlotId(slot.slotId);
+
+    await expect(bookingDao.updateBooking({
+      bookingId: created.id,
+      expected: { slotId: slot.slotId, partySize: 2 },
+      seats: {
+        slotId: slot.slotId,
+        partySize: 3,
+        tableAssignments: [
+          { tableId: slot.tableIds[0], seatCount: 3 },
+        ],
+      },
+      requirements: [{
+        diets: ['KETO'],
+        otherDiet: null,
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      }],
+    })).rejects.toThrow();
+
+    expect(await bookingDao.findById(created.id)).toEqual(before);
+    expect(await slots.findAvailableTablesBySlotId(slot.slotId))
+      .toEqual(freeBefore);
   });
 });

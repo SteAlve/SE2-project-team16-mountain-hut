@@ -133,4 +133,89 @@ describe('MH-06 change email delivery', () => {
       expect.objectContaining({ responseCode: 550 }),
     );
   });
+
+
+it('does not send a change email for a cancelled booking', async () => {
+  const slot = await createSlot({ seats: [4] });
+  const agent = await hiker('cancelled.change.email@example.com');
+
+  const created = await book(agent, slot, 2);
+  expect(created.status).toBe(201);
+
+  await run(
+    'UPDATE booking SET cancelled_at = now() WHERE id = $1',
+    [created.body.id],
+  );
+
+  // Ignore the original booking confirmation email.
+  inbox.clear();
+
+  const rejected = await agent
+    .patch(`/api/bookings/${created.body.id}`)
+    .send({ partySize: 3 });
+
+  expect(rejected.status).toBe(422);
+  expect(rejected.body.message).toBe('This booking was cancelled');
+
+  // No change notification must be sent.
+  expect(inbox.emails).toHaveLength(0);
+
+  // The cancelled booking must remain unchanged.
+  expect(await get(
+    `SELECT
+       cancelled_at IS NOT NULL AS cancelled,
+       party_size AS "partySize"
+     FROM booking
+     WHERE id = $1`,
+    [created.body.id],
+  )).toEqual({
+    cancelled: true,
+    partySize: 2,
+  });
+});
+
+});
+
+
+it('keeps the original booking and sends no email when the destination is full', async () => {
+  const original = await createSlot({ seats: [4] });
+  const destination = await createSlot({ seats: [2] });
+
+  const owner = await hiker('move.owner@example.com');
+  const other = await hiker('move.other@example.com');
+
+  const created = await book(owner, original, 2);
+  expect(created.status).toBe(201);
+
+  const occupying = await book(other, destination, 2);
+  expect(occupying.status).toBe(201);
+
+  inbox.clear();
+
+  const res = await owner
+    .patch(`/api/bookings/${created.body.id}`)
+    .send({ slotId: destination.slotId });
+
+  expect(res.status).toBe(409);
+  expect(res.body.code).toBe('NO_SEATS');
+
+  const saved = await get(
+    `SELECT slot_id AS "slotId", party_size AS "partySize"
+     FROM booking WHERE id = $1`,
+    [created.body.id],
+  );
+
+  expect(saved).toEqual({
+    slotId: original.slotId,
+    partySize: 2,
+  });
+
+  const slotsResponse = await request(app).get('/api/slots').expect(200);
+
+  expect(slotsResponse.body.find(s => s.slotId === original.slotId).freeSeats)
+    .toBe(2);
+  expect(slotsResponse.body.find(s => s.slotId === destination.slotId).freeSeats)
+    .toBe(0);
+
+  expect(inbox.emails).toHaveLength(0);
 });
