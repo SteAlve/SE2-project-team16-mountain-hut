@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseAssignTableSet,
+  parseCreateHiker,
   parseCreateSlot,
   parseCreateTableSet,
   parseListStaffSlots,
+  parseSearchHikers,
+  toHikerDto,
   toStaffSlotDto,
   toTableSetDto,
 } from '../../src/dto/staff.js';
@@ -93,6 +96,33 @@ describe('parseAssignTableSet', () => {
     ['an unknown field', { slotId: '1' }, { tableSetId: 3, date: 'x' }, 'Unknown field: date'],
     ['a body that is not an object', { slotId: '1' }, undefined, 'Request body must be a JSON object'],
   ])('rejects %s', (_name, params, body, message) => fails(() => parseAssignTableSet(params, body), message));
+});
+
+describe('Reserve for a Hiker — hiker DTOs', () => {
+  it('accepts and normalizes a regular hiker profile', () => {
+    expect(parseCreateHiker({ firstName: ' Ada ', lastName: 'Lovelace', email: ' ADA@EXAMPLE.COM ', phone: ' +39 333 ' }))
+      .toEqual({ firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com', phone: '+39 333' });
+  });
+
+  it('accepts a temporary hiker without an email', () => {
+    expect(parseCreateHiker({ firstName: 'Ada', lastName: 'Lovelace' }))
+      .toEqual({ firstName: 'Ada', lastName: 'Lovelace', email: null, phone: null });
+  });
+
+  it.each([
+    ['an unknown field', { firstName: 'A', lastName: 'B', temporary: true }, 'Unknown field: temporary'],
+    ['a missing first name', { lastName: 'B' }, 'firstName is required'],
+    ['an invalid email', { firstName: 'A', lastName: 'B', email: 'bad' }, 'email must be a valid email'],
+  ])('rejects %s', (_name, body, message) => {
+    expect(() => parseCreateHiker(body)).toThrow(new ValidationError(message));
+  });
+
+  it('requires a search query and shapes a hiker', () => {
+    expect(parseSearchHikers({ q: 'ada' })).toEqual({ text: 'ada' });
+    expect(() => parseSearchHikers({})).toThrow(new ValidationError('q is required'));
+    expect(toHikerDto({ id: 1, firstName: 'A', lastName: 'B', email: null, phone: null, temporary: true, passwordHash: 'secret' }))
+      .toEqual({ id: 1, firstName: 'A', lastName: 'B', email: null, phone: null, temporary: true });
+  });
 });
 
 describe('output', () => {
