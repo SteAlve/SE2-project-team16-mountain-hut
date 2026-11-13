@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  parseChangeBooking,
   parseCreateBooking,
   parseSeatingRequest,
   toBookingDto,
@@ -40,6 +41,47 @@ describe('parseCreateBooking', () => {
     ['seats that do not add up to the party', { ...valid, partySize: 6 }, 'The seats of the tables must add up to partySize'],
   ])('rejects %s', (_name, body, message) => {
     expect(() => parseCreateBooking(body)).toThrow(new ValidationError(message));
+  });
+});
+
+describe('parseChangeBooking (MH-06)', () => {
+  it('accepts one or more requested changes and normalizes requirement fields', () => {
+    expect(parseChangeBooking({ bookingId: '45' }, {
+      slotId: 13,
+      partySize: 6,
+      requirements: [{ diets: ['VEGAN'] }],
+    })).toEqual({
+      bookingId: 45,
+      slotId: 13,
+      partySize: 6,
+      requirements: [{
+        diets: ['VEGAN'],
+        otherDiet: null,
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      }],
+    });
+    expect(parseChangeBooking({ bookingId: '45' }, { requirements: [] }))
+      .toEqual({ bookingId: 45, requirements: [] });
+  });
+
+  it.each([
+    ['invalid booking id', { bookingId: '0' }, { partySize: 2 }, 'bookingId must be a positive integer'],
+    ['no changed fields', { bookingId: '45' }, {}, 'Send at least one of slotId, partySize and requirements'],
+    ['unknown field', { bookingId: '45' }, { tables: [] }, 'Unknown field: tables'],
+    ['invalid slot id', { bookingId: '45' }, { slotId: '13' }, 'slotId must be a positive integer'],
+    ['zero party size', { bookingId: '45' }, { partySize: 0 }, 'partySize must be a positive integer'],
+    ['non-integer party size', { bookingId: '45' }, { partySize: 2.5 }, 'partySize must be a positive integer'],
+    ['non-list requirements', { bookingId: '45' }, { requirements: {} }, 'requirements must be an array'],
+    [
+      'more requirement lines than the party size in the request',
+      { bookingId: '45' },
+      { partySize: 1, requirements: [{ diets: ['VEGAN'] }, { allergies: ['GLUTEN'] }] },
+      'There can be at most one requirement per person of the party',
+    ],
+  ])('rejects %s', (_name, params, body, message) => {
+    expect(() => parseChangeBooking(params, body)).toThrow(new ValidationError(message));
   });
 });
 
