@@ -23,7 +23,7 @@ const PASSWORD = 'password123';
 
 const clean = async () => {
   await cleanBookingData();
-  await run("DELETE FROM app_user WHERE email LIKE '%@example.com'");
+  await run("DELETE FROM app_user WHERE email LIKE '%@example.com' OR temporary");
 };
 
 beforeEach(async () => {
@@ -142,6 +142,31 @@ describe('Reserve for a Hiker — staff hiker and password flows', () => {
     expect(await get('SELECT party_size AS "partySize" FROM booking WHERE id = $1', [booking.body.id]))
       .toEqual({ partySize: 3 });
     expect(inbox.emails).toEqual([]);
+  });
+
+  it('sends the confirmation email to a regular hiker booked by staff', async () => {
+    const employee = await staff();
+    const hiker = await employee.post('/api/staff/hikers').send({
+      firstName: 'Regular', lastName: 'Hiker', email: 'regular.hiker@example.com',
+    }).expect(201);
+    inbox.clear();
+    const slot = await createSlot({ date: '2090-12-16', startsAt: '12:00', endsAt: '13:00', seats: [4] });
+
+    const preview = await employee.get(`/api/staff/slots/${slot.slotId}/seating`)
+      .query({ partySize: 2 }).expect(200);
+    const booking = await employee.post('/api/staff/bookings').send({
+      hikerId: hiker.body.id,
+      slotId: slot.slotId,
+      partySize: 2,
+      tables: preview.body.tables,
+    }).expect(201);
+
+    await waitForEmails(1);
+    expect(inbox.emails[0]).toMatchObject({
+      to: 'regular.hiker@example.com',
+      subject: `Your table is booked (QUOTA-${String(booking.body.id).padStart(5, '0')})`,
+    });
+    expect(inbox.emails[0].text).toContain('Hello Regular Hiker,');
   });
 });
 
