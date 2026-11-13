@@ -39,6 +39,10 @@
   padding: 22px 32px;
 }
 
+.withNeeds {
+  padding-bottom: 18px;
+}
+
 .details > div {
   display: flex;
   flex-direction: column;

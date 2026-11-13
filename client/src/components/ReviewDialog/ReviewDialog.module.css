@@ -1,5 +1,5 @@
 .dialog {
-  width: 540px;
+  width: 1100px;
   max-width: calc(100vw - 32px);
   padding: 0;
   border: 0;
@@ -30,6 +30,32 @@
   font-size: 34px;
   font-weight: 700;
   line-height: 1.2;
+}
+
+/* The summary of MH-01 on the left, the dietary needs on the right (MH-05). */
+.columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 16px;
+  width: 380px;
+}
+
+.divider {
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.columns > section {
+  flex: 1 1 0;
 }
 
 .rows {
@@ -93,6 +119,23 @@
 
   .title {
     font-size: 32px;
+  }
+
+  /* On a phone the needs follow the summary, under a line. */
+  .columns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .summary {
+    gap: 14px;
+    width: auto;
+  }
+
+  .divider {
+    width: auto;
+    height: 1px;
   }
 
   /* Confirm is the first button, under the thumb */
