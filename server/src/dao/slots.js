@@ -37,7 +37,9 @@ export const findFromDate = (serviceDate) => all(
   [serviceDate],
 );
 
-export const findAvailableTablesBySlotId = (slotId) => all(
+// exceptBookingId (MH-06): the seats of that booking count as free, so a booking being changed can
+// keep or reuse its own seats.
+export const findAvailableTablesBySlotId = (slotId, { exceptBookingId = null } = {}) => all(
   `
     SELECT
       hut_table.id AS "tableId",
@@ -54,13 +56,14 @@ export const findAvailableTablesBySlotId = (slotId) => all(
       JOIN booking ON booking.id = booking_table.booking_id
       WHERE booking.slot_id = $1
         AND booking.cancelled_at IS NULL
+        AND ($2::INTEGER IS NULL OR booking.id <> $2)
       GROUP BY booking_table.hut_table_id
     ) AS booked_seats ON booked_seats.hut_table_id = hut_table.id
     WHERE slot.id = $1
       AND hut_table.seat_capacity - COALESCE(booked_seats.seat_count, 0) > 0
     ORDER BY hut_table.id
   `,
-  [slotId],
+  [slotId, exceptBookingId],
 );
 
 // The slot with that id, or null. Dates and times are read as text: the driver would turn a DATE

@@ -3,8 +3,8 @@
 ## Scope and result
 
 Manual verification of **MH-04 — Check availability**, against the
-[MH-4 scenarios](MH-4-check-availability-e2e-scenarios.md) and the
-[availability mockup](mockups/availability/README.md), on `dev` after PR #63
+[MH-4 scenarios](../e2e-definitions/MH-4-check-availability-e2e-scenarios.md) and the
+[availability mockup](../mockups/availability/README.md), on `dev` after PR #63
 was merged. Automated results are not counted as manual results.
 
 **30 checklist items: 26 passed and 4 passed with a finding.** The three findings

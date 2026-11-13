@@ -2,7 +2,7 @@
 
 These end-to-end scenarios cover story MH-04 only: a user checks whether a party
 can sit at a given date and time. They follow the availability mockup
-([`docs/mockups/availability`](mockups/availability/README.md)): the search is
+([`docs/mockups/availability`](../mockups/availability/README.md)): the search is
 on the home page, and the answer is on **Book a table**. They use
 Given/When/Then form so they can be translated directly into Playwright tests.
 

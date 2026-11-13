@@ -16,6 +16,8 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-QUOTA <no-reply@quota.example>}
+      # The address of the website, for the links in the emails (log in, choose a new password).
+      APP_URL: ${APP_URL:-http://localhost:3001}
     ports:
       - "${PORT:-3001}:3001"
     depends_on:

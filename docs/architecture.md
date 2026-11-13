@@ -25,7 +25,7 @@ The system has **one external dependency**, the **email service**. It delivers t
 
 - **Web client:** a React single-page application, built with Vite.
 - **API application:** Node.js and Express. It holds all the business rules and the REST API under `/api`. In Docker it also serves the built web client (see [section 6](#6-docker)).
-- **Database:** PostgreSQL. Users, sessions, slots, tables, bookings and waiting lists.
+- **Database:** PostgreSQL. Users, sessions, the links of the password reset, slots, tables, bookings and waiting lists.
 
 The browser talks only to the API, in JSON over HTTP. Only the API talks to the database and to the email service.
 
@@ -48,7 +48,7 @@ The code is in `server/src`.
 | `middleware/` | Code that runs before the controllers: finding out who is calling | nothing: what it needs is handed over |
 | `app.js` | Builds every piece and wires them together | everything |
 | `config.js`, `clock.js`, `index.js` | The only reader of the environment; the only reader of the date; the start of the server | nothing; nothing; `app.js` |
-| `passwordHasher.js`, `sessionTokens.js` | The only place that hashes passwords; the only place that makes and hashes session ids | nothing |
+| `passwordHasher.js`, `passwordGenerator.js`, `sessionTokens.js` | The only place that hashes passwords; the only place that generates the first password of an account made by the staff; the only place that makes and hashes session ids and the tokens of the password reset links | nothing |
 | `mailer.js` | The only place that send emails. | nothing |
 
 **The rule: source-code dependencies point inward, towards the core.** A use case does not import the dao: `app.js` hands it over as a parameter, and likewise for the clock, the mailer, the password hasher, the controllers, the middleware and the routers. ESLint fails on any other import (`server/eslint.config.js`). The diagram above shows who *calls* whom at runtime; the table shows who may *import* whom.
@@ -67,6 +67,7 @@ The code is in `server/src`.
 | `SMTP_PORT` | `587` | The port of the email service |
 | `SMTP_USER`, `SMTP_PASSWORD` | — | The login of the email service, if it asks for one |
 | `MAIL_FROM` | `QUOTA <no-reply@quota.example>` | The sender of the emails |
+| `APP_URL` | `http://localhost:5173` | The address of the website, where the links of the emails lead (log in, choose a new password). Docker sets `http://localhost:3001`, because there the server serves the client |
 | `CLIENT_DIR` | — | The folder of the built client, which the server then serves too; set in the Docker image |
 
 `dao/db.js` is the only module that imports the PostgreSQL driver. It takes the database URL from `config.js` and exports async `get`, `all`, `run` and `inTransaction` helpers. `get` returns one row or `null`, `all` returns an array, and `run` returns `{ rows, rowCount }`. Queries made by DAO functions inside `inTransaction` use the same connection; nested transactions use savepoints.
@@ -75,7 +76,7 @@ The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`, beca
 
 ### Database and scripts
 
-The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions) and `001_booking_schema.sql` (slots, tables, bookings). The scripts in `server/scripts/` are run with npm:
+The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings), `002_booking_requirements.sql` (dietary needs of a booking) and `003_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset). The scripts in `server/scripts/` are run with npm:
 
 | Command | What it does |
 |---|---|
@@ -117,6 +118,18 @@ An id that does not exist gives `404` everywhere, in the path or in the body. Th
 
 Not decided yet (questions for the product owners): whether two slots can overlap in time (today only the same start is refused, so overlapping slots with the same tables could be booked twice), and whether a slot can be created, or given tables, in the past.
 
+### Reservations for a hiker and passwords (MH-07)
+
+An employee or the warden can enter a reservation for a hiker who phones or arrives at the hut. The contract is in [`openapi.json`](openapi.json); these are the rules behind it.
+
+- **The endpoints.** Under `/api/staff`, behind `requireAuth` (the use cases refuse a hiker with `403`): `GET /staff/hikers?q=` (find a regular account), `POST /staff/hikers` (create a regular account or a temporary hiker), `GET /staff/slots/:slotId/seating?partySize=` (the seating preview with the time limit of the staff) and `POST /staff/bookings` (book the tables of that preview for a hiker). Under `/api/auth`: `POST /auth/change-password` (needs a login), and the two steps of the password reset, `POST /auth/password-reset-requests` and `POST /auth/password-resets`, which are open because the hiker who forgot the password cannot log in. In `app.js` the staff booking is the same `bookTable` as the hiker's, wrapped around `createStaffBooking`, with `makeCheckSlotOpenForStaff`; the controllers and the DTOs are those of the staff (`controllers/staff.js`, `dto/staff.js`), and the body of the booking is the one of `POST /api/bookings` plus `hikerId` (`dto/bookings.js`).
+
+- **Two kinds of hiker.** A *regular account* has an email: it can log in and use the website. A *temporary hiker* is a name and, at most, a phone number: no email, no password, no login (the check `app_user_kind` of the database keeps the two apart). The search (`searchHikers`) lists regular accounts only, so each quick entry makes a new temporary hiker.
+- **The booking is the same as the hiker's** (`usecases/reserveTables.js`, used by `createBooking` and by `createStaffBooking`): the same seating, the same `409` codes `NO_SEATS` and `TABLES_CHANGED`, the dietary needs of MH-05, one booking per hiker per slot. What changes is who books and until when: the staff can reserve until the meal starts (`domain/bookingWindow.js`, `isOpenForStaff`; the 2-hour rule does not apply), through `makeCheckSlotOpenForStaff`. A user who is not a hiker counts as a hiker that does not exist (`404`). A temporary hiker has no email, so `bookTable` sends no confirmation for them.
+- **The first password.** For a regular account, `createHiker` generates a password (`passwordGenerator.js`: 12 characters in three groups of four, without look-alike characters), stores only its hash with `mustChangePassword` true, and sends the password to the hiker by email (`domain/hikerAccountEmail.js`). The employee never sees it. If the email fails the account still exists and the hiker can use the password reset.
+- **Change it at the first login.** While `mustChangePassword` is true, `domain/passwordChange.js` (`requirePasswordChanged`) refuses every request with `403` and the code `PASSWORD_CHANGE_REQUIRED`, except who-am-I, the change of the password and the logout. In `app.js` there are two guards: `requireLogin` only finds who is calling (`middleware/session.js`, `makeRequireAuth`) and is in front of who-am-I and the change of the password; `requireAuth` is `requireLogin` followed by `makeRequirePasswordChanged` and is in front of every other protected path, so a new endpoint is protected unless somebody chooses the other guard. The public paths (the slots, the seating preview, sign up, login, logout and the password reset) do not look at the session, so they are not stopped. `changePassword` asks for the current password and refuses a new one that is the same (`422`); `updatePassword` clears the flag.
+- **Password reset by email.** `requestPasswordReset` stores a link for the account of the email (a new one replaces the previous) and sends it (`domain/passwordResetEmail.js`). It always answers the same, and does not wait for the email, so nobody can tell which emails are registered. Only the hash of the token is stored; the link works **once** and for **24 hours** (`domain/passwordReset.js`: the product owner's answer in issue #44 of the course repository; the reset email says it too, from the same number, as in the [emails mockup](mockups/emails/README.md)). `resetPassword` uses the link, changes the password and clears `mustChangePassword` in one transaction; a link that expired, was used, was replaced or never existed is always `422` with the code `RESET_LINK_NOT_VALID`. It does not log the user in.
+
 ### Example: a request, start to finish: `POST /api/bookings`
 
 This shows how the layers work together. The endpoints, with their requests, answers and errors, are in [`docs/openapi.json`](openapi.json).
@@ -138,16 +151,16 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer (today only the two reasons of a booking `409`: `NO_SEATS` and `TABLES_CHANGED`).
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`).
 
 | Error | Status | Meaning |
 |---|---|---|
 | `ValidationError` (and malformed JSON) | `400` | the input is wrong |
 | `UnauthorizedError` | `401` | nobody is logged in |
-| `ForbiddenError` | `403` | logged in, but not allowed |
+| `ForbiddenError` | `403` | logged in, but not allowed (or a generated password still to change, `PASSWORD_CHANGE_REQUIRED`) |
 | `NotFoundError` (and an unknown path under `/api`) | `404` | the thing asked for is not there (an unknown slot, in the preview and in the booking) |
 | `ConflictError` | `409` | not possible in the current state (the party does not fit, `NO_SEATS`, or the tables are not the ones now proposed, `TABLES_CHANGED`; the email is already registered) |
-| `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal, slot not bookable, a second booking for the same slot) |
+| `UnprocessableError` | `422` | a rule of the hut fails (booking closed less than 2 hours before the meal, or for the staff once the meal has started; slot not bookable; a second booking for the same slot; a wrong current password; a password reset link that does not work, `RESET_LINK_NOT_VALID`) |
 | anything else | `500` | unexpected |
 
 ### Why it is built this way
@@ -195,7 +208,7 @@ Only some endpoints need a login. The **public** ones stay open: the availabilit
 |---|---|---|
 | `UnauthorizedError` (`401`), `ForbiddenError` (`403`) | `domain/errors.js` | Already there; the middleware in `app.js` turns them into status codes |
 | `login`, `logout`, `authenticate` | `usecases/` | Check the credentials and create or delete the session; given a session id, return the user or fail with `401`. Who may do what is checked here, on the user the controller hands over |
-| `users`, `sessions` | `dao/` | Find a user by email; create, find and delete a session |
+| `users`, `sessions`, `passwordResets` | `dao/` | Find a user by email; find and search the hikers (MH-07), create a hiker or a temporary hiker, change a password; create, find and delete a session; store the link of a password reset and use it once |
 | `parseLogin`, `toUserDto` | `dto/` | Validate email and password; shape the user without the password hash |
 | Login and logout controllers | `controllers/` | Call the use case, then set or clear the cookie. The cookie is an HTTP detail, so it never reaches a use case |
 | `requireAuth` | `middleware/` | Reads the cookie, asks `authenticate` who is calling and puts the user in `req.user` |
@@ -227,9 +240,10 @@ Hikers, employees and the warden, with email and password. The role is stored wi
 - **Cross-site requests (CSRF):** the cookie is `SameSite=Lax`, state is never changed by `GET`, and the API accepts only JSON bodies, which a form on another site cannot send.
 - **Stealing the session from the page (XSS):** the cookie is `HttpOnly`, and React escapes what it draws.
 - **Stolen database:** passwords are stored only as salted hashes and session ids only as hashes.
-- **Guessing which emails exist:** the same answer and the same work for a wrong password and an unknown email.
+- **Guessing which emails exist:** the same answer and the same work for a wrong password and an unknown email. The request of a password reset (MH-07) also answers `204` whether the email has an account or not, and does not wait for the email.
+- **A stolen password reset link:** only the hash of its token is stored, the link works once and for 24 hours, and a new request makes the previous link stop working.
 
-Not designed yet, to be decided when they are needed: a password reset and a limit on login attempts.
+Not designed yet, to be decided when it is needed: a limit on login attempts.
 
 ### Why sessions and not tokens
 
