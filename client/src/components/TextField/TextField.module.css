@@ -78,6 +78,26 @@
   right: 44px;
 }
 
+/* The magnifier of a search field, on the left. */
+
+.search .input {
+  padding-left: 42px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--stone);
+  pointer-events: none;
+}
+
+/* The browser's own clear button of type="search" would sit under the error icon. */
+.input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
 /* The browser's own reveal button (Edge) would sit next to ours. */
 .input::-ms-reveal {
   display: none;
