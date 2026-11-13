@@ -3,15 +3,18 @@
  * A dialog on desktop, a sheet from the bottom on a phone. Back (or Esc) keeps every choice.
  * `tables` is [{ tableNumber, seats }], the seating preview: a split party gets a sentence that says why.
  * `notice` (optional) is shown on top, e.g. when the tables changed just before confirming.
+ * `needs` (hooks/useDietaryNeeds) are the dietary needs of the party (MH-05): on a computer they
+ * are the right column, on a phone they follow the summary, right above Confirm booking.
  */
 import { useEffect, useRef } from 'react';
 import { formatLongDay, formatTimeRange } from '../../lib/bookingDates.js';
 import { Alert } from '../Alert/Alert.jsx';
 import { Button } from '../Button/Button.jsx';
+import { DietaryNeeds } from '../DietaryNeeds/DietaryNeeds.jsx';
 import { PartySeats } from '../PartySeats/PartySeats.jsx';
 import styles from './ReviewDialog.module.css';
 
-export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPending, onBack, onConfirm, partyHeading }) {
+export function ReviewDialog({ open, date, slot, partySize, tables, needs, notice, isPending, onBack, onConfirm, partyHeading }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -35,28 +38,36 @@ export function ReviewDialog({ open, date, slot, partySize, tables, notice, isPe
           <span className={styles.handle} aria-hidden="true" />
           <h2 id="review-title" className={styles.title}>Check your booking</h2>
           {notice && <Alert variant="info">{notice}</Alert>}
-          <dl className={styles.rows}>
-            <div className={styles.row}>
-              <dt>Day</dt>
-              <dd>{formatLongDay(date)}</dd>
-            </div>
-            <div className={styles.row}>
-              <dt>Time</dt>
-              <dd>{formatTimeRange(slot.startsAt, slot.endsAt)}</dd>
-            </div>
-            <div className={styles.row}>
-              <dt>People</dt>
-              <dd>{partySize}</dd>
-            </div>
-          </dl>
+          <div className={styles.columns}>
+            <div className={styles.summary}>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Day</dt>
+                  <dd>{formatLongDay(date)}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>Time</dt>
+                  <dd>{formatTimeRange(slot.startsAt, slot.endsAt)}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>People</dt>
+                  <dd>{partySize}</dd>
+                </div>
+              </dl>
 
-          <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
-          {tables?.length > 1 && (
-            <p className={styles.note}>
-              No single table has {partySize} free seats at this time, so your party is split
-              over {tables.length} tables.
-            </p>
-          )}
+              <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
+              {tables?.length > 1 && (
+                <p className={styles.note}>
+                  No single table has {partySize} free seats at this time, so your party is split
+                  over {tables.length} tables.
+                </p>
+              )}
+            </div>
+
+            <span className={styles.divider} aria-hidden="true" />
+
+            <DietaryNeeds needs={needs} partySize={partySize} disabled={isPending} />
+          </div>
 
           <div className={styles.actions}>
             <Button variant="outline" size="small" className={styles.back} disabled={isPending} onClick={onBack}>

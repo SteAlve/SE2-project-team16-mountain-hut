@@ -1,0 +1,128 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px 16px;
+  border: 1.5px solid var(--pine);
+  border-radius: 12px;
+  background: var(--snow);
+}
+
+.invalid {
+  border-color: var(--error);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal;
+  color: var(--ink);
+}
+
+.remove {
+  display: flex;
+  flex-shrink: 0;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 0;
+}
+
+.error {
+  margin: -4px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--error);
+}
+
+.count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* A group label: "DIET" and a hint in words, side by side (they wrap on a phone). */
+.label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  margin: 0;
+  line-height: normal;
+}
+
+.group {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.66px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--pine);
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--stone);
+}
+
+.count .label {
+  flex: 1 1 0;
+}
+
+.count .hint {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.narrow {
+  display: none;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 130px);
+  gap: 10px;
+}
+
+@media (max-width: 991.98px) {
+  .wide {
+    display: none;
+  }
+
+  .narrow {
+    display: inline;
+  }
+
+  .label > .hint {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
