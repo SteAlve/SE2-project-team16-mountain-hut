@@ -4,6 +4,8 @@ import { app } from '../../src/app.js';
 import { clock } from '../../src/clock.js';
 import { config } from '../../src/config.js';
 import { close, get, run } from '../../src/dao/db.js';
+import * as bookingDao from '../../src/dao/bookings.js';
+import * as slots from '../../src/dao/slots.js';
 import * as users from '../../src/dao/users.js';
 import { hash } from '../../src/passwordHasher.js';
 import { cleanBookingData, createSlot, createSlotWithoutTableSet } from '../helpers/bookingFixtures.js';
@@ -339,5 +341,603 @@ describe('POST /api/bookings', () => {
       'SELECT SUM(seat_count)::INT AS seats FROM booking_table WHERE slot_id = $1', [slot.slotId],
     );
     expect(used.seats).toBe(4);
+  });
+});
+
+describe('GET /api/bookings (MH-06)', () => {
+  const inDb = (slot, hikerId) => bookingDao.createWithTableAssignments({
+    hikerId,
+    slotId: slot.slotId,
+    partySize: 1,
+    tableAssignments: [{ tableId: slot.tableIds[0], seatCount: 1 }],
+  });
+
+  it('returns an empty list when the hiker has no bookings', async () => {
+    const owner = await loggedIn('my-bookings.empty@example.com');
+
+    await owner.get('/api/bookings').expect(200, []);
+  });
+
+  it('lists only this hiker active bookings from hut-local today, including started meals, in date/time order', async () => {
+    const now = clock.at('2090-11-08', '12:00', config.hutTimeZone);
+    const sessionExpiry = new Date('2090-12-01T00:00:00Z');
+    vi.spyOn(clock, 'now').mockReturnValue(now);
+    vi.spyOn(clock, 'after').mockReturnValue(sessionExpiry);
+    vi.spyOn(clock, 'today').mockReturnValue('2090-11-08');
+    const owner = await loggedIn('my-bookings.owner@example.com');
+    await loggedIn('my-bookings.other@example.com');
+    const ownerRow = await get('SELECT id FROM app_user WHERE email = $1', ['my-bookings.owner@example.com']);
+    const otherRow = await get('SELECT id FROM app_user WHERE email = $1', ['my-bookings.other@example.com']);
+
+    const yesterday = await createSlot({ date: '2090-11-07', startsAt: '12:00', endsAt: '13:00', seats: [2] });
+    const startedToday = await createSlot({ date: '2090-11-08', startsAt: '11:00', endsAt: '12:00', seats: [2] });
+    const laterToday = await createSlot({ date: '2090-11-08', startsAt: '18:00', endsAt: '19:00', seats: [2] });
+    const upcoming = await createSlot({ date: '2090-11-11', startsAt: '12:00', endsAt: '13:00', seats: [2] });
+    const cancelled = await createSlot({ date: '2090-11-12', startsAt: '12:00', endsAt: '13:00', seats: [2] });
+    const someoneElses = await createSlot({ date: '2090-11-13', startsAt: '12:00', endsAt: '13:00', seats: [2] });
+    await inDb(yesterday, ownerRow.id);
+    const startedBooking = await inDb(startedToday, ownerRow.id);
+    const laterBooking = await inDb(laterToday, ownerRow.id);
+    const upcomingBooking = await inDb(upcoming, ownerRow.id);
+    const cancelledBooking = await inDb(cancelled, ownerRow.id);
+    await inDb(someoneElses, otherRow.id);
+    await run('UPDATE booking SET cancelled_at = $2 WHERE id = $1', [cancelledBooking.id, now]);
+
+    const response = await owner.get('/api/bookings');
+
+    expect(response.status).toBe(200);
+    expect(response.body.map(({ id }) => id)).toEqual([
+      startedBooking.id, laterBooking.id, upcomingBooking.id,
+    ]);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: startedBooking.id,
+        date: '2090-11-08',
+        startsAt: '11:00',
+        canChange: false,
+        changeableUntil: '2090-11-06T11:00',
+      }),
+      expect.objectContaining({
+        id: laterBooking.id,
+        date: '2090-11-08',
+        startsAt: '18:00',
+        canChange: false,
+        changeableUntil: '2090-11-06T18:00',
+      }),
+      expect.objectContaining({
+        id: upcomingBooking.id,
+        date: '2090-11-11',
+        startsAt: '12:00',
+        canChange: true,
+        changeableUntil: '2090-11-09T12:00',
+      }),
+    ]);
+    expect((await request(app).get('/api/bookings')).status).toBe(401);
+    const employee = await loggedIn('my-bookings.employee@example.com', 'EMPLOYEE');
+    expect((await employee.get('/api/bookings')).status).toBe(403);
+  });
+});
+
+describe('PATCH /api/bookings/:bookingId (MH-06)', () => {
+  const T = (tableNumber, seats) => ({ tableNumber, seats });
+
+  it('changes party size, reassigns seats around another booking, and persists the result', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [6, 6] });
+    const owner = await loggedIn('change.reassign@example.com');
+    const other = await loggedIn('change.other@example.com');
+    const created = await owner.post('/api/bookings')
+      .send({
+        ...bodyOf(slot, 4, [T(1, 4)]),
+        requirements: [{ diets: ['VEGAN'] }],
+      })
+      .expect(201);
+    await other.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 6 });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({
+      id: created.body.id,
+      slotId: slot.slotId,
+      partySize: 6,
+      tables: [T(2, 6)],
+      requirements: [{ diets: ['VEGAN'], allergies: [], hasAllergies: false }],
+    });
+    const afterReload = await owner.get('/api/bookings').expect(200);
+    expect(afterReload.body.find(({ id }) => id === created.body.id)).toMatchObject({
+      slotId: slot.slotId,
+      partySize: 6,
+      tables: [T(2, 6)],
+      requirements: [{ diets: ['VEGAN'], allergies: [], hasAllergies: false }],
+    });
+    const assigned = await get(
+      `SELECT hut_table.table_number AS "tableNumber", booking_table.seat_count AS seats
+       FROM booking_table JOIN hut_table ON hut_table.id = booking_table.hut_table_id
+       WHERE booking_table.booking_id = $1`,
+      [created.body.id],
+    );
+    expect(assigned).toEqual({ tableNumber: 2, seats: 6 });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(4);
+  });
+
+  it("counts the booking's own seats as free when the party grows on its current table", async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.reuse-own-seats@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(2);
+
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 4 });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({
+      id: created.body.id,
+      partySize: 4,
+      tables: [T(1, 4)],
+    });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(0);
+    expect(await get(
+      'SELECT seat_count AS seats FROM booking_table WHERE booking_id = $1 AND slot_id = $2',
+      [created.body.id, slot.slotId],
+    )).toEqual({ seats: 4 });
+  });
+
+  it('updates dietary needs without changing the slot, party size or assigned tables', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [4, 2] });
+    const owner = await loggedIn('change.diet@example.com');
+    const created = await owner.post('/api/bookings')
+      .send({
+        ...bodyOf(slot, 2, [T(2, 2)]),
+        requirements: [{ diets: ['VEGAN'] }],
+      })
+      .expect(201);
+    const originalTables = await get(
+      'SELECT hut_table.table_number AS "tableNumber", booking_table.seat_count AS seats FROM booking_table JOIN hut_table ON hut_table.id = booking_table.hut_table_id WHERE booking_table.booking_id = $1',
+      [created.body.id],
+    );
+
+    const newRequirements = [
+      {
+        diets: ['VEGAN'],
+        otherDiet: 'Halal',
+        allergies: ['GLUTEN'],
+        otherAllergy: 'Sesame',
+        otherRequests: 'No spicy food',
+      },
+      { diets: ['LACTOSE_FREE'], otherRequests: 'Small portion' },
+    ];
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ requirements: newRequirements });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({
+      slotId: slot.slotId,
+      partySize: 2,
+      tables: [T(2, 2)],
+      requirements: [
+        {
+          diets: ['VEGAN'],
+          otherDiet: 'Halal',
+          allergies: ['GLUTEN'],
+          otherAllergy: 'Sesame',
+          otherRequests: 'No spicy food',
+          hasAllergies: true,
+        },
+        {
+          diets: ['LACTOSE_FREE'],
+          otherDiet: null,
+          allergies: [],
+          otherAllergy: null,
+          otherRequests: 'Small portion',
+          hasAllergies: false,
+        },
+      ],
+    });
+    expect(await get(
+      'SELECT hut_table.table_number AS "tableNumber", booking_table.seat_count AS seats FROM booking_table JOIN hut_table ON hut_table.id = booking_table.hut_table_id WHERE booking_table.booking_id = $1',
+      [created.body.id],
+    )).toEqual(originalTables);
+    expect((await owner.get('/api/bookings').expect(200)).body.find(({ id }) => id === created.body.id))
+      .toMatchObject({
+        requirements: [
+          expect.objectContaining({ otherDiet: 'Halal', otherAllergy: 'Sesame', otherRequests: 'No spicy food' }),
+          expect.objectContaining({ diets: ['LACTOSE_FREE'], otherRequests: 'Small portion' }),
+        ],
+      });
+
+    const cleared = await owner.patch(`/api/bookings/${created.body.id}`).send({ requirements: [] });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.requirements).toEqual([]);
+    expect(cleared.body.tables).toEqual([T(2, 2)]);
+    expect((await owner.get('/api/bookings').expect(200)).body.find(({ id }) => id === created.body.id))
+      .toMatchObject({ requirements: [], tables: [T(2, 2)] });
+  });
+
+  it('releases the seats no longer needed when the party shrinks', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [6] });
+    const owner = await loggedIn('change.shrink@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 4, [T(1, 4)]))
+      .expect(201);
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(2);
+
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 2 });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({ partySize: 2, tables: [T(1, 2)] });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(4);
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({ id: created.body.id, partySize: 2 }),
+    );
+  });
+
+  it('refuses to shrink below the number of saved requirement lines without changing the booking', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.shrink-needs@example.com');
+    const created = await owner.post('/api/bookings')
+      .send({
+        ...bodyOf(slot, 2, [T(1, 2)]),
+        requirements: [{ diets: ['VEGAN'] }, { allergies: ['GLUTEN'] }],
+      })
+      .expect(201);
+
+    const rejected = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 1 });
+
+    expect(rejected.status).toBe(422);
+    expect(rejected.body.message).toBe('There can be at most one requirement per person of the party');
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({
+        id: created.body.id,
+        partySize: 2,
+        tables: [T(1, 2)],
+        requirements: [
+          expect.objectContaining({ diets: ['VEGAN'] }),
+          expect.objectContaining({ allergies: ['GLUTEN'] }),
+        ],
+      }),
+    );
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(2);
+  });
+
+  it('rejects an increase without enough seats and leaves all original data unchanged', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.full.owner@example.com');
+    const other = await loggedIn('change.full.other@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+    await other.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    const rejected = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 });
+
+    expect(rejected.status).toBe(409);
+    expect(rejected.body).toMatchObject({ error: 'ConflictError', code: 'NO_SEATS' });
+    const afterReload = await owner.get('/api/bookings').expect(200);
+    expect(afterReload.body.find(({ id }) => id === created.body.id)).toMatchObject({
+      id: created.body.id,
+      slotId: slot.slotId,
+      partySize: 2,
+      tables: [T(1, 2)],
+      requirements: [],
+    });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(0);
+  });
+
+  it('rejects an increase when the original booking is inside the 48-hour window', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const date = '2090-11-20';
+    const slot = await createSlot({ date, seats: [4] });
+    const deadline = clock.at(date, '12:00', config.hutTimeZone).getTime() - (48 * 60 * 60 * 1000);
+    const now = new Date(deadline + 1);
+    vi.spyOn(clock, 'now').mockReturnValue(now);
+    vi.spyOn(clock, 'after').mockImplementation((ms) => new Date(now.getTime() + ms));
+    const owner = await loggedIn('change.original-closed@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    const rejected = await owner.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 });
+
+    expect(rejected.status).toBe(422);
+    expect(rejected.body.message).toBe('Bookings can be changed until 48 hours before the meal');
+    expect(await get('SELECT slot_id AS "slotId", party_size AS "partySize" FROM booking WHERE id = $1', [
+      created.body.id,
+    ])).toEqual({ slotId: slot.slotId, partySize: 2 });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(2);
+  });
+
+  it('rejects moving to a destination inside its 48-hour window without changing the original booking', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const original = await createSlot({ date: '2090-11-20', startsAt: '12:00', endsAt: '13:00', seats: [4] });
+    const destination = await createSlot({ date: '2090-11-19', startsAt: '18:00', endsAt: '19:00', seats: [4] });
+    const now = clock.at(original.date, '12:00', config.hutTimeZone).getTime() - (48 * 60 * 60 * 1000);
+    vi.spyOn(clock, 'now').mockReturnValue(new Date(now));
+    vi.spyOn(clock, 'after').mockImplementation((ms) => new Date(now + ms));
+    const owner = await loggedIn('change.destination-closed@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(original, 2, [T(1, 2)]))
+      .expect(201);
+
+    const rejected = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ slotId: destination.slotId });
+
+    expect(rejected.status).toBe(422);
+    expect(rejected.body.message).toBe('Bookings can be changed until 48 hours before the meal');
+    expect(await get('SELECT slot_id AS "slotId", party_size AS "partySize" FROM booking WHERE id = $1', [
+      created.body.id,
+    ])).toEqual({ slotId: original.slotId, partySize: 2 });
+    expect((await slotOf(original.slotId)).freeSeats).toBe(2);
+    expect((await slotOf(destination.slotId)).freeSeats).toBe(4);
+  });
+
+  it('moves a booking to the destination slot and frees its seats in the original slot', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const original = await createSlot({ seats: [4] });
+    const destination = await createSlot({ seats: [4], startsAt: '18:00', endsAt: '19:00' });
+    const owner = await loggedIn('change.move@example.com');
+    const created = await owner.post('/api/bookings')
+      .send({
+        ...bodyOf(original, 2, [T(1, 2)]),
+        requirements: [{ diets: ['VEGAN'] }],
+      })
+      .expect(201);
+
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ slotId: destination.slotId });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({
+      id: created.body.id,
+      date: destination.date,
+      slotId: destination.slotId,
+      startsAt: '18:00',
+      endsAt: '19:00',
+      partySize: 2,
+      tables: [T(1, 2)],
+      requirements: [{ diets: ['VEGAN'], allergies: [], hasAllergies: false }],
+    });
+    expect((await slotOf(original.slotId)).freeSeats).toBe(4);
+    expect((await slotOf(destination.slotId)).freeSeats).toBe(2);
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({
+        id: created.body.id, slotId: destination.slotId, startsAt: '18:00', requirements: created.body.requirements,
+      }),
+    );
+  });
+
+  it('allows an update at the exact 48-hour deadline', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const date = '2090-11-20';
+    const slot = await createSlot({ date, seats: [4] });
+    const deadline = clock.at(date, '12:00', config.hutTimeZone).getTime() - (48 * 60 * 60 * 1000);
+    const now = new Date(deadline);
+    vi.spyOn(clock, 'now').mockReturnValue(now);
+    vi.spyOn(clock, 'after').mockImplementation((ms) => new Date(now.getTime() + ms));
+    const owner = await loggedIn('change.boundary@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    const changed = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ requirements: [{ diets: ['VEGAN'] }] });
+
+    expect(changed.status).toBe(200);
+    expect(changed.body.requirements).toMatchObject([{ diets: ['VEGAN'], allergies: [] }]);
+  });
+
+  it('requires an authenticated hiker and hides another hiker booking', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.owner@example.com');
+    const other = await loggedIn('change.not-owner@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    expect((await request(app).patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 })).status).toBe(401);
+    const forbidden = await other.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 });
+    expect(forbidden.status).toBe(404);
+    const employee = await loggedIn('change.employee@example.com', 'EMPLOYEE');
+    const warden = await loggedIn('change.warden@example.com', 'WARDEN');
+    expect((await employee.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 })).status).toBe(403);
+    expect((await warden.patch(`/api/bookings/${created.body.id}`).send({ partySize: 3 })).status).toBe(403);
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({ id: created.body.id, partySize: 2 }),
+    );
+  });
+
+  it('rejects malformed or invalid changes without modifying the booking', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [6] });
+    const owner = await loggedIn('change.invalid@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+    const invalidBodies = [
+      {},
+      { tables: [T(1, 2)] },
+      { partySize: 0 },
+      { partySize: 2.5 },
+      { requirements: [{ diets: ['VEGAN', 'VEGETARIAN'] }] },
+      { requirements: [{ diets: ['UNKNOWN'] }] },
+      { partySize: 1, requirements: [{ diets: ['VEGAN'] }, { allergies: ['GLUTEN'] }] },
+    ];
+
+    for (const body of invalidBodies) {
+      expect((await owner.patch(`/api/bookings/${created.body.id}`).send(body)).status).toBe(400);
+    }
+    expect((await owner.patch('/api/bookings/not-an-id').send({ partySize: 3 })).status).toBe(400);
+    expect(await get('SELECT slot_id AS "slotId", party_size AS "partySize" FROM booking WHERE id = $1', [
+      created.body.id,
+    ])).toEqual({ slotId: slot.slotId, partySize: 2 });
+    expect((await slotOf(slot.slotId)).freeSeats).toBe(4);
+  });
+
+  it('rejects more requirement lines than the existing party when partySize is omitted', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.too-many-needs@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [T(1, 2)]))
+      .expect(201);
+
+    const rejected = await owner.patch(`/api/bookings/${created.body.id}`).send({
+      requirements: [{ diets: ['VEGAN'] }, { allergies: ['GLUTEN'] }, { allergies: ['MILK'] }],
+    });
+
+    expect(rejected.status).toBe(422);
+    expect(rejected.body.message).toBe('There can be at most one requirement per person of the party');
+    expect((await owner.get('/api/bookings').expect(200)).body.find(({ id }) => id === created.body.id))
+      .toMatchObject({ partySize: 2, requirements: [] });
+  });
+
+  it('returns 404 for a missing booking or a missing destination slot', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const original = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.not-found@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(original, 2, [T(1, 2)]))
+      .expect(201);
+
+    expect((await owner.patch('/api/bookings/999999999').send({ partySize: 1 })).status).toBe(404);
+    const missingSlot = await owner.patch(`/api/bookings/${created.body.id}`).send({ slotId: 999999999 });
+    expect(missingSlot.status).toBe(404);
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({ id: created.body.id, slotId: original.slotId, partySize: 2 }),
+    );
+    expect((await slotOf(original.slotId)).freeSeats).toBe(2);
+  });
+
+  it('rejects moving to a slot without tables or one already booked by the hiker', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const original = await createSlot({ seats: [4] });
+    const noTables = await createSlotWithoutTableSet();
+    const occupied = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.destination-failures@example.com');
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(original, 2, [T(1, 2)]))
+      .expect(201);
+    await owner.post('/api/bookings')
+      .send(bodyOf(occupied, 1, [T(1, 1)]))
+      .expect(201);
+
+    const noTablesResponse = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ slotId: noTables.slotId });
+    expect(noTablesResponse.status).toBe(422);
+    const duplicateResponse = await owner.patch(`/api/bookings/${created.body.id}`)
+      .send({ slotId: occupied.slotId });
+    expect(duplicateResponse.status).toBe(422);
+    expect(duplicateResponse.body.message).toBe('You already have a booking for this slot');
+    expect((await owner.get('/api/bookings').expect(200)).body).toContainEqual(
+      expect.objectContaining({ id: created.body.id, slotId: original.slotId, partySize: 2 }),
+    );
+    expect((await slotOf(original.slotId)).freeSeats).toBe(2);
+  });
+
+
+  it('refuses changes to a cancelled booking and preserves its data', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const owner = await loggedIn('change.cancelled@example.com');
+
+    const created = await owner.post('/api/bookings')
+      .send(bodyOf(slot, 2, [{ tableNumber: 1, seats: 2 }]))
+      .expect(201);
+
+    await run(
+      'UPDATE booking SET cancelled_at = now() WHERE id = $1',
+      [created.body.id],
+    );
+
+    const rejected = await owner
+      .patch(`/api/bookings/${created.body.id}`)
+      .send({ partySize: 3 });
+
+    expect(rejected.status).toBe(422);
+    expect(rejected.body.message).toBe('This booking was cancelled');
+
+    expect(await get(
+      `SELECT
+        cancelled_at IS NOT NULL AS cancelled,
+        party_size AS "partySize"
+      FROM booking
+      WHERE id = $1`,
+      [created.body.id],
+    )).toEqual({
+      cancelled: true,
+      partySize: 2,
+      });
+    });
+});
+
+
+describe('updateBooking transaction (MH-06)', () => {
+  it('rolls back the entire change if saving requirements fails', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const email = 'update.booking.rollback@example.com';
+
+    await users.insert({
+      firstName: 'A',
+      lastName: 'B',
+      email,
+      phone: null,
+      role: 'HIKER',
+      passwordHash: await hash(PASSWORD),
+    });
+
+    const hiker = await get('SELECT id FROM app_user WHERE email = $1', [email]);
+
+    const originalRequirement = {
+      diets: ['VEGAN'],
+      otherDiet: null,
+      allergies: [],
+      otherAllergy: null,
+      otherRequests: null,
+    };
+
+    const created = await bookingDao.createWithTableAssignments({
+      hikerId: hiker.id,
+      slotId: slot.slotId,
+      partySize: 2,
+      tableAssignments: [
+        { tableId: slot.tableIds[0], seatCount: 2 },
+      ],
+      requirements: [originalRequirement],
+    });
+
+    const before = await bookingDao.findById(created.id);
+    const freeBefore = await slots.findAvailableTablesBySlotId(slot.slotId);
+
+    await expect(bookingDao.updateBooking({
+      bookingId: created.id,
+      expected: { slotId: slot.slotId, partySize: 2 },
+      seats: {
+        slotId: slot.slotId,
+        partySize: 3,
+        tableAssignments: [
+          { tableId: slot.tableIds[0], seatCount: 3 },
+        ],
+      },
+      requirements: [{
+        diets: ['KETO'],
+        otherDiet: null,
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      }],
+    })).rejects.toThrow();
+
+    expect(await bookingDao.findById(created.id)).toEqual(before);
+    expect(await slots.findAvailableTablesBySlotId(slot.slotId))
+      .toEqual(freeBefore);
   });
 });

@@ -1,5 +1,7 @@
+
 import { describe, expect, it } from 'vitest';
 import {
+  parseChangeBooking,
   parseCreateBooking,
   parseCreateStaffBooking,
   parseSeatingRequest,
@@ -57,7 +59,11 @@ describe('parseCreateStaffBooking', () => {
     expect(parseCreateStaffBooking(valid)).toEqual({
       ...valid,
       requirements: [{
-        diets: ['VEGAN'], otherDiet: null, allergies: ['PEANUTS'], otherAllergy: null, otherRequests: null,
+        diets: ['VEGAN'],
+        otherDiet: null,
+        allergies: ['PEANUTS'],
+        otherAllergy: null,
+        otherRequests: null,
       }],
     });
   });
@@ -66,13 +72,58 @@ describe('parseCreateStaffBooking', () => {
     ['a missing hiker id', { ...valid, hikerId: undefined }, 'hikerId must be a positive integer'],
     ['a hiker id as text', { ...valid, hikerId: '8' }, 'hikerId must be a positive integer'],
   ])('rejects %s', (_name, body, message) => {
-    expect(() => parseCreateStaffBooking(body)).toThrow(new ValidationError(message));
+    expect(() => parseCreateStaffBooking(body))
+      .toThrow(new ValidationError(message));
+  });
+});
+
+describe('parseChangeBooking (MH-06)', () => {
+  it('accepts one or more requested changes and normalizes requirement fields', () => {
+    expect(parseChangeBooking({ bookingId: '45' }, {
+      slotId: 13,
+      partySize: 6,
+      requirements: [{ diets: ['VEGAN'] }],
+    })).toEqual({
+      bookingId: 45,
+      slotId: 13,
+      partySize: 6,
+      requirements: [{
+        diets: ['VEGAN'],
+        otherDiet: null,
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      }],
+    });
+
+    expect(parseChangeBooking({ bookingId: '45' }, { requirements: [] }))
+      .toEqual({ bookingId: 45, requirements: [] });
+  });
+
+  it.each([
+    ['invalid booking id', { bookingId: '0' }, { partySize: 2 }, 'bookingId must be a positive integer'],
+    ['no changed fields', { bookingId: '45' }, {}, 'Send at least one of slotId, partySize and requirements'],
+    ['unknown field', { bookingId: '45' }, { tables: [] }, 'Unknown field: tables'],
+    ['invalid slot id', { bookingId: '45' }, { slotId: '13' }, 'slotId must be a positive integer'],
+    ['zero party size', { bookingId: '45' }, { partySize: 0 }, 'partySize must be a positive integer'],
+    ['non-integer party size', { bookingId: '45' }, { partySize: 2.5 }, 'partySize must be a positive integer'],
+    ['non-list requirements', { bookingId: '45' }, { requirements: {} }, 'requirements must be an array'],
+    [
+      'more requirement lines than the party size in the request',
+      { bookingId: '45' },
+      { partySize: 1, requirements: [{ diets: ['VEGAN'] }, { allergies: ['GLUTEN'] }] },
+      'There can be at most one requirement per person of the party',
+    ],
+  ])('rejects %s', (_name, params, body, message) => {
+    expect(() => parseChangeBooking(params, body))
+      .toThrow(new ValidationError(message));
   });
 });
 
 describe('parseSeatingRequest', () => {
   it('reads the slot of the path and the party size of the query as numbers', () => {
-    expect(parseSeatingRequest({ slotId: '12' }, { partySize: '6' })).toEqual({ slotId: 12, partySize: 6 });
+    expect(parseSeatingRequest({ slotId: '12' }, { partySize: '6' }))
+      .toEqual({ slotId: 12, partySize: 6 });
   });
 
   it.each([
@@ -93,23 +144,58 @@ describe('parseSeatingRequest', () => {
 describe('output', () => {
   it('writes the times of a slot as HH:MM and keeps the closing time as it is', () => {
     expect(toSlotDto({
-      slotId: 1, date: '2026-10-28', startsAt: '12:00:00', endsAt: '13:30:00', freeSeats: 0,
-      bookingOpen: false, bookingClosesAt: '2026-10-28T10:00', tableSetId: 9,
+      slotId: 1,
+      date: '2026-10-28',
+      startsAt: '12:00:00',
+      endsAt: '13:30:00',
+      freeSeats: 0,
+      bookingOpen: false,
+      bookingClosesAt: '2026-10-28T10:00',
+      tableSetId: 9,
     })).toEqual({
-      slotId: 1, date: '2026-10-28', startsAt: '12:00', endsAt: '13:30', freeSeats: 0,
-      bookingOpen: false, bookingClosesAt: '2026-10-28T10:00',
+      slotId: 1,
+      date: '2026-10-28',
+      startsAt: '12:00',
+      endsAt: '13:30',
+      freeSeats: 0,
+      bookingOpen: false,
+      bookingClosesAt: '2026-10-28T10:00',
     });
   });
 
   it('shapes the seating and the booking with the table numbers and seats only', () => {
-    const tables = [{ tableNumber: 3, seats: 4, tableId: 99 }, { tableNumber: 5, seats: 2 }];
+    const tables = [
+      { tableNumber: 3, seats: 4, tableId: 99 },
+      { tableNumber: 5, seats: 2 },
+    ];
+
     expect(toSeatingDto({ slotId: 1, partySize: 6, tables, extra: 1 }))
-      .toEqual({ slotId: 1, partySize: 6, tables: [{ tableNumber: 3, seats: 4 }, { tableNumber: 5, seats: 2 }] });
-    expect(toBookingDto({ id: 5, date: '2026-10-28', slotId: 1, partySize: 6, tables, hikerId: 3 }))
       .toEqual({
-        id: 5, date: '2026-10-28', slotId: 1, partySize: 6,
-        tables: [{ tableNumber: 3, seats: 4 }, { tableNumber: 5, seats: 2 }],
-        requirements: [],
+        slotId: 1,
+        partySize: 6,
+        tables: [
+          { tableNumber: 3, seats: 4 },
+          { tableNumber: 5, seats: 2 },
+        ],
       });
+
+    expect(toBookingDto({
+      id: 5,
+      date: '2026-10-28',
+      slotId: 1,
+      partySize: 6,
+      tables,
+      hikerId: 3,
+    })).toEqual({
+      id: 5,
+      date: '2026-10-28',
+      slotId: 1,
+      partySize: 6,
+      tables: [
+        { tableNumber: 3, seats: 4 },
+        { tableNumber: 5, seats: 2 },
+      ],
+      requirements: [],
+    });
   });
 });
