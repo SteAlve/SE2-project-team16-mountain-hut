@@ -20,8 +20,13 @@ observable behavior:
    with the visible text **Changes closed on…** and the deadline.
 3. The edit form is a **Change your booking** dialog, populated with the saved
    values. Day and time choices are radio controls inside accessible
-   **radiogroup** components; Playwright locates them by role and visible name.
-   Identify party size and dietary controls by their accessible roles and labels.
+   **radiogroup** components; Playwright locates them by role and accessible name.
+   A day radio is named like `Fri 20 Nov`. A time radio's name includes the range
+   and available seats, for example `13:00 – 14:00 18 seats free`. Match the start
+   of the time name: use `/^13:00/` for a slot starting at 13:00, not `/13:00/`,
+   which also matches `12:00 – 13:00`. Party size is an accessible **group** named
+   **How many people**, with **One fewer** and **One more** buttons. Identify
+   dietary controls by their accessible roles and labels.
 4. The dialog has accessible **Save changes** and **Close** actions.
 5. Saving shows **Saving…** with the **Save changes** action disabled until the
    server responds. On success,
@@ -127,9 +132,10 @@ Run this scenario with each data set:
 1. The hiker opens **Edit** for the booking.
 2. The hiker changes only the date or time specified by the selected data set,
    using the radio controls in their accessible radiogroups, located by role and
-   visible day/time name, without changing party size or dietary requirements. For
-   a date-only change, preserve the selected
-   start time when the new date offers an eligible slot with that start time.
+   the day/time names described in the frontend contract, with time names matched
+   from the start, without changing party size or dietary requirements. For a
+   date-only change, preserve the selected start time when the new date offers an
+   eligible slot with that start time that is not marked **Full**.
 3. The hiker selects **Save changes**.
 4. The hiker reloads or reopens **My bookings**.
 
@@ -150,10 +156,15 @@ Run this scenario with each data set:
    message makes clear that the new details replace the earlier details for
    that reference.
 
-Date-selection fallback: if the new date has no eligible slot at the saved start
-time, the time remains unselected and **Save changes** is disabled. No change is
-submitted until the hiker selects an eligible time radio. Closing the dialog at
-this point preserves the original booking and sends no change email.
+Date-selection fallback: an eligible destination time slot must satisfy the
+booking-change rules and have available capacity for the requested party. If the
+new date has no eligible slot at the saved start time, including when a slot at
+that start time exists but is marked **Full**, do not preserve or automatically
+select it. No time remains selected and **Save changes** is disabled until the
+hiker selects an eligible time radio. Closing the dialog at this point preserves
+the original booking and sends no change email. This differs from the invalid
+dietary-requirement combination in Scenario 4: there, **Save changes** remains
+enabled, but client-side validation blocks the PATCH request.
 
 ## Scenario 3: Increasing the party size succeeds and reassigns tables
 
@@ -170,7 +181,8 @@ this point preserves the original booking and sends no change email.
 **When**
 
 1. The hiker opens **Edit** for the booking.
-2. The hiker increases the party size to `6` and selects **Save changes**.
+2. The hiker increases the party size to `6` using **One more** in the
+   **How many people** group and selects **Save changes**.
 3. The hiker reloads or reopens **My bookings**.
 
 **Then**
@@ -196,7 +208,8 @@ this point preserves the original booking and sends no change email.
 **When**
 
 1. The hiker opens **Edit** for the booking.
-2. The hiker reduces the party size to `2` and selects **Save changes**.
+2. The hiker reduces the party size to `2` using **One fewer** in the
+   **How many people** group and selects **Save changes**.
 3. The hiker reloads or reopens **My bookings** and checks availability for
    the same slot.
 
@@ -218,18 +231,22 @@ this point preserves the original booking and sends no change email.
 
 **When**
 
-1. The hiker attempts to reduce the party to `2` while keeping all `3` entries.
+1. The hiker reduces the party to `2` while keeping all `3` entries and clicks
+   the enabled **Save changes** button.
 2. Separately, an authenticated API request attempts the same reduction with
    `PATCH /api/bookings/:bookingId` and body `{"partySize": 2}`, omitting
    `requirements` so the server checks the existing entries.
 
 **Then**
 
-1. The UI prevents submission of the invalid combination until the number of
-   guests with requirements is reduced to at most `2`; do not force a disabled action.
-2. The API request returns `422 Unprocessable Entity` because the retained
+1. **Save changes** remains enabled, and the UI displays the red validation message
+   `more than your party: remove a line or lower its guests`.
+2. Clicking **Save changes** sends no `PATCH /api/bookings/:bookingId` request.
+   The browser E2E test verifies both the visible validation message and that no
+   PATCH request was sent.
+3. The separate API request returns `422 Unprocessable Entity` because the retained
    requirements exceed the new party size.
-3. Both prevented/rejected attempts leave the original booking and allocation
+4. Both prevented/rejected attempts leave the original booking and table allocation
    unchanged and send no change email.
 
 ## Scenario 5: Changing dietary requirements keeps the table allocation
@@ -381,6 +398,12 @@ Run this scenario with each data set:
 2. Re-read the saved booking and verify the changed values.
 3. If the slot or party size changed, the system assigns seats according to
    MH-01 and releases the old allocation.
+4. As a separate negative boundary case, repeat from a fresh original fixture
+   with the server clock fixed at `T + 1 ms`. For each data set, keep the meal
+   start instants unchanged and perform the same otherwise valid booking-change
+   operation as the booking's actual owner. The change is rejected with `422`,
+   the original booking and allocation remain unchanged, and no change email is
+   sent. Verify the error's API mapping at server/API level.
 
 ## Scenario 10: A hiker cannot change another hiker's booking
 
@@ -406,11 +429,6 @@ Use an API-level authorization attempt; editing is a dialog, not a direct edit U
    booking. Hiker A's list contains only Hiker A's bookings.
 2. Both bookings retain all their original values and table allocations.
 3. No change email is sent to either hiker.
-4. As a separate negative boundary case, repeat from a fresh original
-   fixture with the server clock fixed at `T + 1 ms`: the same request
-   is rejected with `422`, the original booking and allocation remain
-   unchanged, and no change email is sent. Verify the error's API
-   mapping at server/API level.
 
 ## Sources
 
