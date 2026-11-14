@@ -1,7 +1,8 @@
 // When a hiker can still book (MH-01): up to 2 hours before the meal starts, that moment included.
-// When a hiker can still change a booking (MH-06): up to 48 hours before the meal starts, that moment
-// included. The team reads "within 48 hours from the date booked" as "until 48 hours before the
-// meal" (team decision of 10 Nov 2026, not asked to the product owner).
+// When a hiker can still change a booking (MH-06): at least 48 hours must remain before the meal
+// starts, with the exact 48-hour boundary included. When moving to another slot, this applies to
+// both the original and destination slots, as confirmed by the product owner in issue #43:
+// https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/43
 // The times arrive as parameters: domain/ never reads the clock.
 const HOUR_MS = 60 * 60 * 1000;
 const BOOKING_CLOSES_BEFORE_MS = 2 * HOUR_MS;
