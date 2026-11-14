@@ -3,6 +3,8 @@
  * A dialog on desktop, a sheet from the bottom on a phone. The booking is filled in with the same three steps
  * as Book a table (Day, How many people, Time), "After the change" says what would be saved, and the dietary
  * needs are edited as in MH-05. Nothing is saved until Save changes; Close (or Esc) leaves the booking as it is.
+ * While a guest's needs are being edited (screen 8) the steps and "After the change" give way to "Your booking",
+ * a summary of the booking, so the editor has the room it needs; the choices already made are kept.
  * `booking` is the saved booking; `change` is what hooks/useChangeBooking returns.
  */
 import { formatDay, formatTimeRange } from '../../lib/bookingDates.js';
@@ -17,14 +19,16 @@ import { StepHeading } from '../StepHeading/StepHeading.jsx';
 import { TimeSlot } from '../TimeSlot/TimeSlot.jsx';
 import styles from './ChangeBookingDialog.module.css';
 
-function footerText({ alert, needsOnly }) {
+function footerText({ alert, needsOnly, editingNeeds, seatsChange }) {
   if (alert) return 'Your booking has not changed.';
+  if (editingNeeds && !seatsChange) return 'Dietary changes need no availability check.';
   return needsOnly ? 'Day, time and tables unchanged.' : 'Nothing is saved yet.';
 }
 
 export function ChangeBookingDialog({ booking, change, today, onClose, onSave }) {
   const { date, slot, partySize, needs, needsOnly, isPending, alert } = change;
   const seatsChange = 'slotId' in change.changes || 'partySize' in change.changes;
+  const editingNeeds = needs.openKey !== null;
 
   return (
     <Modal
@@ -40,7 +44,7 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
       isPending={isPending}
       onCancel={onClose}
       onSubmit={onSave}
-      extra={<p className={styles.footer}>{footerText({ alert, needsOnly })}</p>}
+      extra={<p className={styles.footer}>{footerText({ alert, needsOnly, editingNeeds, seatsChange })}</p>}
       actions={
         <>
           <Button variant="outline" size="small" disabled={isPending} onClick={onClose}>
@@ -52,8 +56,30 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
         </>
       }
     >
-      <div className={styles.columns}>
+      <div className={`${styles.columns} ${editingNeeds ? styles.needsMode : ''}`}>
         <div className={styles.steps}>
+          {editingNeeds ? (
+            <section className={styles.after} aria-labelledby="change-now-title">
+              <h3 id="change-now-title" className={styles.afterTitle}>Your booking</h3>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Day</dt>
+                  <dd>{formatDay(date)}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>Time</dt>
+                  <dd className={styles.mono}>
+                    {slot ? formatTimeRange(slot.startsAt, slot.endsAt) : formatTimeRange(booking.startsAt, booking.endsAt)}
+                  </dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>People</dt>
+                  <dd>{partySize}</dd>
+                </div>
+              </dl>
+            </section>
+          ) : (
+            <>
           <section className={styles.step}>
             <StepHeading id="change-step-day" number={1} title="Day" done />
             <DayStrip
@@ -91,10 +117,12 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
               <p className={styles.hint}>{change.isLoading ? 'Loading the times…' : 'No times on this day.'}</p>
             )}
           </section>
+            </>
+          )}
         </div>
 
         <div className={styles.side}>
-          {needsOnly ? (
+          {editingNeeds ? null : needsOnly ? (
             <Alert variant="info">
               Only the dietary needs changed. No availability check is needed and your tables stay the same.
             </Alert>

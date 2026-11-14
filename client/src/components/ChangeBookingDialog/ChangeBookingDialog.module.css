@@ -51,6 +51,18 @@
   gap: 12px;
 }
 
+.needsMode .steps {
+  flex: none;
+  width: 380px;
+}
+
+.needsMode .side {
+  flex: 1;
+  width: auto;
+  padding-left: 32px;
+  border-left: 1px solid var(--line);
+}
+
 .side {
   display: flex;
   flex: none;
@@ -129,8 +141,14 @@
     width: 100%;
   }
 
-  .side {
+  .side,
+  .needsMode .steps {
     width: 100%;
+  }
+
+  .needsMode .side {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .slots {
