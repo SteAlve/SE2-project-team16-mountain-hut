@@ -90,6 +90,123 @@ describe('slots dao', () => {
 });
 
 describe('bookings dao', () => {
+  it.each([
+    ['slotId', (slot, partySize, staleSlot) => ({ slotId: staleSlot, partySize })],
+    ['partySize', (slot, partySize) => ({ slotId: slot.slotId, partySize: partySize + 1 })],
+  ])('rejects an update with a stale expected %s and leaves persisted data unchanged', async (_field, staleExpected) => {
+    const slot = await createSlot({ seats: [4] });
+    const otherSlot = await createSlot({ seats: [4] });
+    const requirements = [{
+      diets: ['VEGETARIAN'],
+      otherDiet: null,
+      allergies: [],
+      otherAllergy: null,
+      otherRequests: null,
+    }];
+    const booking = await bookings.createWithTableAssignments({
+      hikerId: hiker.id,
+      slotId: slot.slotId,
+      partySize: 2,
+      tableAssignments: [{ tableId: slot.tableIds[0], seatCount: 2 }],
+      requirements,
+    });
+    const beforeBooking = await bookings.findById(booking.id);
+    const beforeAvailability = await Promise.all([
+      slots.findAvailableTablesBySlotId(slot.slotId),
+      slots.findAvailableTablesBySlotId(otherSlot.slotId),
+    ]);
+    const expected = staleExpected(slot, 2, otherSlot.slotId);
+
+    await expect(bookings.updateBooking({ bookingId: booking.id, expected }))
+      .rejects.toMatchObject({ code: 'BOOKING_CHANGED' });
+
+    expect(await bookings.findById(booking.id)).toEqual(beforeBooking);
+    expect(await Promise.all([
+      slots.findAvailableTablesBySlotId(slot.slotId),
+      slots.findAvailableTablesBySlotId(otherSlot.slotId),
+    ])).toEqual(beforeAvailability);
+  });
+
+  it('rejects reducing party size below the existing requirement count without changing the booking', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const requirements = [
+      {
+        diets: ['VEGETARIAN'],
+        otherDiet: null,
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      },
+      {
+        diets: [],
+        otherDiet: 'No dairy',
+        allergies: [],
+        otherAllergy: null,
+        otherRequests: null,
+      },
+    ];
+    const booking = await bookings.createWithTableAssignments({
+      hikerId: hiker.id,
+      slotId: slot.slotId,
+      partySize: 3,
+      tableAssignments: [{ tableId: slot.tableIds[0], seatCount: 3 }],
+      requirements,
+    });
+    const beforeBooking = await bookings.findById(booking.id);
+    const beforeAvailability = await slots.findAvailableTablesBySlotId(slot.slotId);
+
+    await expect(bookings.updateBooking({
+      bookingId: booking.id,
+      expected: { slotId: slot.slotId, partySize: 3 },
+      seats: {
+        slotId: slot.slotId,
+        partySize: 1,
+        tableAssignments: [{ tableId: slot.tableIds[0], seatCount: 1 }],
+      },
+    })).rejects.toMatchObject({ code: 'TOO_MANY_REQUIREMENTS' });
+
+    expect(await bookings.findById(booking.id)).toEqual(beforeBooking);
+    expect(await slots.findAvailableTablesBySlotId(slot.slotId)).toEqual(beforeAvailability);
+  });
+
+  it("rejects moving a booking into the hiker's other booked slot without changing either booking", async () => {
+    const originalSlot = await createSlot({ seats: [4] });
+    const destinationSlot = await createSlot({ seats: [4] });
+    const bookingA = await book(originalSlot, hiker, 2, [
+      { tableId: originalSlot.tableIds[0], seatCount: 2 },
+    ]);
+    const bookingB = await book(destinationSlot, hiker, 2, [
+      { tableId: destinationSlot.tableIds[0], seatCount: 2 },
+    ]);
+    const beforeBookings = await Promise.all([
+      bookings.findById(bookingA.id),
+      bookings.findById(bookingB.id),
+    ]);
+    const beforeAvailability = await Promise.all([
+      slots.findAvailableTablesBySlotId(originalSlot.slotId),
+      slots.findAvailableTablesBySlotId(destinationSlot.slotId),
+    ]);
+
+    await expect(bookings.updateBooking({
+      bookingId: bookingA.id,
+      expected: { slotId: originalSlot.slotId, partySize: 2 },
+      seats: {
+        slotId: destinationSlot.slotId,
+        partySize: 2,
+        tableAssignments: [{ tableId: destinationSlot.tableIds[0], seatCount: 2 }],
+      },
+    })).rejects.toMatchObject({ code: 'DUPLICATE_BOOKING' });
+
+    expect(await Promise.all([
+      bookings.findById(bookingA.id),
+      bookings.findById(bookingB.id),
+    ])).toEqual(beforeBookings);
+    expect(await Promise.all([
+      slots.findAvailableTablesBySlotId(originalSlot.slotId),
+      slots.findAvailableTablesBySlotId(destinationSlot.slotId),
+    ])).toEqual(beforeAvailability);
+  });
+
   it('keeps bookings and free seats independent when slots reuse the same tables', async () => {
     const first = await createSlot({ date: '2090-08-20', seats: [4] });
     const secondRow = await get(
