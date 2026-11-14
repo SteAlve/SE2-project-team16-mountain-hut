@@ -7,12 +7,13 @@
  */
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/AuthProvider.js';
-import { STAFF_ROLES } from './lib/roles.js';
+import { ROLES, STAFF_ROLES } from './lib/roles.js';
 import { bookingRouteKey } from './lib/availabilitySearch.js';
 import { AppLayout } from './pages/AppLayout/AppLayout.jsx';
 import { BookTablePage } from './pages/BookTablePage/BookTablePage.jsx';
 import { HomePage } from './pages/HomePage/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage/LoginPage.jsx';
+import { MyBookingsPage } from './pages/MyBookingsPage/MyBookingsPage.jsx';
 import { RequireRole } from './pages/RequireRole.jsx';
 import { SignUpPage } from './pages/SignUpPage/SignUpPage.jsx';
 import { SlotsPage } from './pages/SlotsPage/SlotsPage.jsx';
@@ -34,6 +35,15 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             {/* Public: anyone sees the availability; the page itself asks to log in to book. */}
             <Route path="/book" element={<BookTableRoute />} />
+            {/* Only hikers have bookings: the staff goes back to its start page. */}
+            <Route
+              path="/bookings"
+              element={
+                <RequireRole roles={[ROLES.HIKER]} page="see your bookings">
+                  <MyBookingsPage />
+                </RequireRole>
+              }
+            />
             <Route
               path="/slots"
               element={

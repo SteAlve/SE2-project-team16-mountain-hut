@@ -147,3 +147,45 @@ export function groupRequirements(requirements) {
   }
   return [...groups.values()];
 }
+
+// Do two lists of requirements (one per guest) ask the same? The order of the guests does not count.
+export function sameRequirements(a, b) {
+  if (a.length !== b.length) return false;
+  const keys = (list) => list.map(sameNeedsKey).sort();
+  return JSON.stringify(keys(a)) === JSON.stringify(keys(b));
+}
+
+// The saved requirements (one per guest) back as lines of the editor, so a booking can be edited:
+// guests with exactly the same needs share one line, in the order of their first guest. The
+// inverse of toRequirements().
+export function requirementsToLines(requirements = []) {
+  const groups = new Map();
+  for (const requirement of requirements) {
+    const key = sameNeedsKey(requirement);
+    const group = groups.get(key);
+    if (group) group.guests += 1;
+    else {
+      groups.set(key, {
+        guests: 1,
+        diets: [...(requirement.diets ?? []), ...(typeof requirement.otherDiet === 'string' ? [OTHER] : [])],
+        otherDiet: requirement.otherDiet ?? '',
+        allergies: [...(requirement.allergies ?? []), ...(typeof requirement.otherAllergy === 'string' ? [OTHER] : [])],
+        otherAllergy: requirement.otherAllergy ?? '',
+        otherRequests: requirement.otherRequests ?? '',
+      });
+    }
+  }
+  return [...groups.values()].map((line, i) => ({ key: i + 1, ...line }));
+}
+
+// The chips of a whole booking, one for each different need (a diet or an allergy named by
+// several guests appears once), in the order of the guests. [{ kind: 'allergy' | 'diet', name }]
+export function bookingChips(requirements = []) {
+  const seen = new Set();
+  return requirements.flatMap(needChips).filter((chip) => {
+    const id = `${chip.kind}:${chip.name}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}

@@ -14,6 +14,10 @@
   width: 760px;
 }
 
+.wider {
+  width: 1000px;
+}
+
 .dialog::backdrop {
   background: rgb(14 32 25 / 0.55);
 }
@@ -70,7 +74,8 @@
 
 @media (max-width: 991.98px) {
   .dialog,
-  .wide {
+  .wide,
+  .wider {
     width: 100%;
     max-width: 100%;
     max-height: calc(100dvh - 60px);

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  bookingChips,
   countGuests,
   emptyLine,
   groupRequirements,
@@ -9,6 +10,8 @@ import {
   lineErrors,
   needChips,
   OTHER,
+  requirementsToLines,
+  sameRequirements,
   toggleAllergy,
   toggleDiet,
   toRequirements,
@@ -118,4 +121,52 @@ test('the same needs chosen in another order are one group', () => {
   const b = { ...a, diets: ['LACTOSE_FREE', 'VEGAN'], allergies: ['EGGS', 'MILK'] };
   assert.equal(groupRequirements([a, b]).length, 1);
   assert.equal(groupRequirements([a, b])[0].count, 2);
+});
+
+const saved = (extra) => ({ diets: [], otherDiet: null, allergies: [], otherAllergy: null, otherRequests: null, hasAllergies: false, ...extra });
+
+test('saved requirements become lines: equal guests share a line, in the order of the first guest', () => {
+  const lines = requirementsToLines([
+    saved({ diets: ['VEGAN'] }),
+    saved({ allergies: ['PEANUTS'], hasAllergies: true }),
+    saved({ diets: ['VEGAN'] }),
+  ]);
+  assert.equal(lines.length, 2);
+  assert.deepEqual(lines.map((l) => [l.key, l.guests, l.diets, l.allergies]), [
+    [1, 2, ['VEGAN'], []],
+    [2, 1, [], ['PEANUTS']],
+  ]);
+});
+
+test('a saved other diet, other allergy and request come back into the line, with Other chosen', () => {
+  const [line] = requirementsToLines([saved({ otherDiet: 'halal', otherAllergy: 'sesame', otherRequests: 'No spicy food' })]);
+  assert.deepEqual(line.diets, ['OTHER']);
+  assert.equal(line.otherDiet, 'halal');
+  assert.deepEqual(line.allergies, ['OTHER']);
+  assert.equal(line.otherAllergy, 'sesame');
+  assert.equal(line.otherRequests, 'No spicy food');
+});
+
+test('lines of saved requirements go back to the same requirements', () => {
+  const requirements = [
+    saved({ diets: ['VEGETARIAN', 'LACTOSE_FREE'], otherAllergy: 'sesame', allergies: ['EGGS'] }),
+    saved({ otherRequests: 'High chair' }),
+  ];
+  assert.equal(sameRequirements(toRequirements(requirementsToLines(requirements)), requirements), true);
+});
+
+test('requirements are compared without the order of the guests and without the extra fields of the server', () => {
+  assert.equal(sameRequirements([saved({ diets: ['VEGAN'] }), saved({ allergies: ['FISH'] })], [{ allergies: ['FISH'] }, { diets: ['VEGAN'] }]), true);
+  assert.equal(sameRequirements([saved({ diets: ['VEGAN'] })], [{ diets: ['VEGETARIAN'] }]), false);
+  assert.equal(sameRequirements([saved({ diets: ['VEGAN'] })], []), false);
+});
+
+test('the chips of a booking list each need once', () => {
+  const chips = bookingChips([
+    saved({ diets: ['VEGAN'], allergies: ['PEANUTS'] }),
+    saved({ diets: ['VEGAN'] }),
+    saved({ allergies: ['PEANUTS', 'GLUTEN'] }),
+  ]);
+  assert.deepEqual(chips.map((c) => c.name), ['Peanuts', 'Vegan', 'Gluten']);
+  assert.deepEqual(bookingChips([]), []);
 });

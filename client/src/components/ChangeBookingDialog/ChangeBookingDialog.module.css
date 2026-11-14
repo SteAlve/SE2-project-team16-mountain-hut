@@ -1,0 +1,140 @@
+.reference {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--mist);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.66px;
+  vertical-align: middle;
+  color: var(--stone);
+}
+
+.columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.steps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--stone);
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 16px;
+  width: 340px;
+}
+
+.after {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 20px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--snow);
+}
+
+.afterTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.rows {
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 15px;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row dt {
+  color: var(--stone);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.muted {
+  font-weight: 500;
+  color: #9aa5a0;
+}
+
+.footer {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--stone);
+}
+
+@media (max-width: 991.98px) {
+  .columns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    width: 100%;
+  }
+
+  .side {
+    width: 100%;
+  }
+
+  .slots {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+    gap: 10px;
+  }
+}
