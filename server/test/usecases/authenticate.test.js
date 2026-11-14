@@ -6,7 +6,7 @@ import { NOW, setup } from './auth-fixtures.js';
 describe('authenticate use case', () => {
   it('returns the user for a live session', async () => {
     const t = setup();
-    t.rows.push({ id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', phone: null, role: 'HIKER' });
+    t.rows.push({ id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', phone: null, role: 'HIKER', mustChangePassword: true });
     t.stored.push({ tokenHash: 'hash-session-id', userId: 1, expiresAt: new Date(NOW.getTime() + 1000) });
     const authenticate = makeAuthenticate({ sessions: t.sessions, tokens: t.tokens, clock: t.clock });
 
