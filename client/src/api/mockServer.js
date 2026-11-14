@@ -103,6 +103,23 @@ function seat(slot, partySize) {
 
 const sameTables = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// The dietary needs of a booking (MH-05), saved as the server does: one per guest, at most one per
+// person, texts trimmed (null when not sent), hasAllergies worked out. null when they are wrong.
+const text = (value) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+function toRequirements(requirements = [], partySize) {
+  if (!Array.isArray(requirements) || requirements.length > partySize) return null;
+  const saved = requirements.map((r) => ({
+    diets: r?.diets ?? [],
+    otherDiet: text(r?.otherDiet),
+    allergies: r?.allergies ?? [],
+    otherAllergy: text(r?.otherAllergy),
+    otherRequests: text(r?.otherRequests),
+  }));
+  const empty = (r) => !r.diets.length && !r.allergies.length && !r.otherDiet && !r.otherAllergy && !r.otherRequests;
+  if (saved.some(empty)) return null;
+  return saved.map((r) => ({ ...r, hasAllergies: r.allergies.length > 0 || r.otherAllergy !== null }));
+}
+
 const json = (status, body) =>
   new Response(body === null ? null : JSON.stringify(body), {
     status,
@@ -156,6 +173,8 @@ function route(method, url, body) {
     if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers can create bookings');
     const { slotId, partySize, tables } = body ?? {};
     if (!(partySize >= 1) || !Array.isArray(tables)) return fail(400, 'ValidationError', 'Invalid booking');
+    const requirements = toRequirements(body.requirements, partySize);
+    if (!requirements) return fail(400, 'ValidationError', 'Invalid requirements');
     const slot = SLOTS.find((s) => s.slotId === slotId);
     const closed = checkOpen(slot, slotId);
     if (closed) return closed;
@@ -185,7 +204,7 @@ function route(method, url, body) {
       slot.tables.find((t) => t.tableNumber === tableNumber).free -= seats;
     });
     booked.add(`${user.id}#${slotId}`);
-    return json(201, { id: nextBookingId++, date: slot.date, slotId, partySize, tables: requested });
+    return json(201, { id: nextBookingId++, date: slot.date, slotId, partySize, tables: requested, requirements });
   }
 
   return fail(404, 'NotFoundError', `No mock for ${method} ${path}`);

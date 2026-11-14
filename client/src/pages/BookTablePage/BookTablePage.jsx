@@ -1,6 +1,7 @@
 /**
  * BOOK A TABLE (story MH-01, mockup docs/mockups/booking): the hiker chooses the day, how many
- * they are and a time, checks the booking and confirms it.
+ * they are and a time, checks the booking and confirms it. In the check the hiker can also give
+ * the dietary needs and allergies of the party (MH-05, mockup docs/mockups/dietary).
  * The availability is public; booking needs a logged-in hiker. A visitor who is not logged in
  * chooses first and is sent to the login at Review booking, with `state: { from, page }`; the
  * choices travel in the URL of `from` (?date=&people=&slot=), so they are still there after the login.
@@ -19,6 +20,7 @@ import { StepHeading } from '../../components/StepHeading/StepHeading.jsx';
 import { TimeSlot } from '../../components/TimeSlot/TimeSlot.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useBookTable } from '../../hooks/useBookTable.js';
+import { useDietaryNeeds } from '../../hooks/useDietaryNeeds.js';
 import { usePublicAvailability } from '../../hooks/usePublicAvailability.js';
 import { formatTime, toDay } from '../../lib/bookingDates.js';
 import { readBookingSearch, withoutReviewFlag } from '../../lib/availabilitySearch.js';
@@ -36,6 +38,8 @@ export function BookTablePage() {
   const { from, to, isSearch } = initial;
   const book = useBookTable(initial);
   const { date, slot, partySize, now } = book;
+  // Kept outside the dialog: Back and a failed booking keep the lines.
+  const needs = useDietaryNeeds(partySize);
   // The server refuses a booking by the staff (403): say it now, not at Confirm.
   const isStaff = STAFF_ROLES.includes(user?.role);
   const seatingAnswer = usePublicAvailability(slot, partySize, book.updateSlots);
@@ -72,7 +76,20 @@ export function BookTablePage() {
   };
 
   const handleConfirm = async () => {
-    if ((await book.confirm()) === 'login') goToLogin();
+    // A line that cannot be sent stays open in the dialog, with the problem marked.
+    if (!needs.check()) return;
+    if ((await book.confirm(needs.requirements)) === 'login') goToLogin();
+  };
+
+  // Back keeps the lines, folded: the next check shows them as rows.
+  const backFromReview = () => {
+    needs.open(null);
+    book.back();
+  };
+
+  const bookAnother = () => {
+    needs.reset();
+    book.startOver();
   };
 
   if (book.booking) {
@@ -83,7 +100,7 @@ export function BookTablePage() {
             booking={book.booking}
             firstName={user?.firstName}
             onHome={() => navigate('/')}
-            onBookAnother={book.startOver}
+            onBookAnother={bookAnother}
           />
         </main>
       </div>
@@ -199,10 +216,11 @@ export function BookTablePage() {
         slot={slot}
         partySize={partySize}
         tables={book.tables}
+        needs={needs}
         partyHeading={isSearch && book.tables ? `${book.tables.map(({ seats }) => seats).join(' + ')} seats` : undefined}
         notice={book.reviewNotice}
         isPending={book.isPending}
-        onBack={book.back}
+        onBack={backFromReview}
         onConfirm={handleConfirm}
       />
     </div>
