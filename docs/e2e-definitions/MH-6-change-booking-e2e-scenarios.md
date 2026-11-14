@@ -19,9 +19,9 @@ observable behavior:
 2. Each booking has an accessible **Edit** action, disabled when changes are closed,
    with the visible text **Changes closed on…** and the deadline.
 3. The edit form is a **Change your booking** dialog, populated with the saved
-   values. Identify date and time choices by their accessible **radio** roles and
-   visible day/time labels; identify party size and dietary controls by their
-   accessible roles and labels.
+   values. Day and time choices are radio controls inside accessible
+   **radiogroup** components; Playwright locates them by role and visible name.
+   Identify party size and dietary controls by their accessible roles and labels.
 4. The dialog has accessible **Save changes** and **Close** actions.
 5. Saving shows **Saving…** with the **Save changes** action disabled until the
    server responds. On success,
@@ -45,6 +45,8 @@ observable behavior:
 4. When moving a booking to another slot, at least 48 hours must remain before
    both the original and destination meals. The exact boundary is included for
    each slot.
+   The UI offers only destination days and time slots eligible under this rule;
+   this client-side filtering does not replace server-side deadline validation.
 5. Changing the slot or party size triggers seat assignment again using the
    MH-01 rules. The booking's current seats are available during reassignment.
    If the new party cannot be seated, the change is refused and the original
@@ -55,9 +57,11 @@ observable behavior:
    [issue #41](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/41).
    A rejected or abandoned change does not send a successful-change email.
 8. The server enforces the 48-hour deadline using its clock and the hut's time
-   zone. Browser time does not control server time. Browser scenarios use fixtures
-   comfortably inside or outside the window; exact-boundary assertions use a fixed
-   server-side clock, as specified in Scenario 9.
+   zone. Browser and server clocks may differ; browser time does not control
+   server time. Browser scenarios use fixtures comfortably inside or outside the
+   window; exact-boundary assertions use the existing injected server clock, as
+   specified in Scenario 9. Do not assume additional API response fields or
+   clock-synchronization infrastructure.
 
 ## Test data and environment
 
@@ -73,16 +77,17 @@ observable behavior:
 5. For persistence checks, reload or reopen **My bookings** and verify the
    saved booking rather than relying only on the editor's displayed values.
 6. The current E2E setup starts a separate server process and provides no shared
-   browser/server clock control. Do not use browser clock mocking to claim that
-   the server is at an exact deadline. Scenario 9 uses the existing change use
-   case's injected clock for deterministic server-level assertions; an HTTP E2E
-   version requires server-clock control that is not currently provided.
+   browser/server clock control; their clocks may differ. Do not use browser clock
+   mocking to claim that the server is at an exact deadline. Scenario 9 uses the
+   existing change use case's injected clock for deterministic server-level
+   assertions; an HTTP E2E version requires server-clock control that is not
+   currently provided.
 
 ## Scenario 1: The edit dialog shows saved values and closing discards edits
 
 **Given**
 
-1. A hiker is logged in and has an active booking.
+1. A hiker is logged in and has an active booking more than 48 hours away.
 2. The booking's reference, date, time, party size, dietary requirements, and
    assigned tables are recorded.
 
@@ -121,8 +126,9 @@ Run this scenario with each data set:
 
 1. The hiker opens **Edit** for the booking.
 2. The hiker changes only the date or time specified by the selected data set,
-   using the radios identified by their visible day/time labels, without changing
-   party size or dietary requirements. For a date-only change, preserve the selected
+   using the radio controls in their accessible radiogroups, located by role and
+   visible day/time name, without changing party size or dietary requirements. For
+   a date-only change, preserve the selected
    start time when the new date offers an eligible slot with that start time.
 3. The hiker selects **Save changes**.
 4. The hiker reloads or reopens **My bookings**.
@@ -253,12 +259,16 @@ this point preserves the original booking and sends no change email.
 
 ## Scenario 6: Increasing the party size is refused when there are not enough seats
 
+The currently selected slot remains selectable in the edit dialog even when its
+publicly reported `freeSeats` are below the requested party size. For reassignment,
+availability includes the booking's own occupied seats.
+
 **Given**
 
 1. A hiker is logged in and has an active booking more than 48 hours away.
 2. The slot does not have enough seats for the requested party size, even after
-   the booking's current allocation is made available for reassignment.
-   Calculate this capacity including the booking's own occupied seats: for example,
+   the booking's current allocation is made available for reassignment. Calculate
+   this capacity including the booking's own occupied seats: for example,
    `4` seats held by this booking plus `2` other free seats allow a party of `6`,
    but not `7`. Use the latter as the rejected request; a public availability count
    that excludes the original allocation is not sufficient to establish failure.
@@ -268,19 +278,22 @@ this point preserves the original booking and sends no change email.
 
 **When**
 
-1. The hiker opens **Edit**, increases the party size beyond the available
-   capacity, and selects **Save changes**.
+1. The hiker opens **Edit**, confirms the current slot remains selectable despite
+   its public `freeSeats` being below the requested party size, increases the party
+   size beyond the total capacity available for reassignment, and selects
+   **Save changes**.
 2. The hiker reloads or reopens **My bookings**.
 
 **Then**
 
-1. The change is refused and a visible error explains that there are not enough
-   seats.
+1. The change is refused with `NO_SEATS`, and a visible error explains that there
+   are not enough seats.
 2. The booking retains its original reference, date, time, party size,
    requirements, and table allocation.
 3. The original booking is still unchanged after reload.
 4. The original seats have not been released.
-5. No change email is sent.
+5. No change email is sent; the failed change leaves the booking, table allocation,
+   and email state unchanged.
 
 ## Scenario 7: Edit is disabled when the original meal is less than 48 hours away
 
@@ -368,10 +381,6 @@ Run this scenario with each data set:
 2. Re-read the saved booking and verify the changed values.
 3. If the slot or party size changed, the system assigns seats according to
    MH-01 and releases the old allocation.
-4. As a separate negative boundary case, repeat from a fresh original fixture
-   with the server clock fixed at `T + 1 ms`: the same request is rejected with
-   `422`, the original booking and allocation remain unchanged, and no change
-   email is sent. Verify the error's API mapping at server/API level.
 
 ## Scenario 10: A hiker cannot change another hiker's booking
 
