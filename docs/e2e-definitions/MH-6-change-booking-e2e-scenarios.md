@@ -406,6 +406,11 @@ Use an API-level authorization attempt; editing is a dialog, not a direct edit U
    booking. Hiker A's list contains only Hiker A's bookings.
 2. Both bookings retain all their original values and table allocations.
 3. No change email is sent to either hiker.
+4. As a separate negative boundary case, repeat from a fresh original
+   fixture with the server clock fixed at `T + 1 ms`: the same request
+   is rejected with `422`, the original booking and allocation remain
+   unchanged, and no change email is sent. Verify the error's API
+   mapping at server/API level.
 
 ## Sources
 
