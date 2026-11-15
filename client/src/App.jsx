@@ -1,7 +1,8 @@
 /**
  * APP: the root of the client, the only file that knows every page.
  * It holds the router, with one route for each page, inside the AuthProvider (who is logged in).
- * Login and sign-up have their own layout; every other page sits under the navbar (AppLayout).
+ * Login, sign-up and the password pages have their own layout; every other page sits under the
+ * navbar (AppLayout).
  * A protected page is wrapped in RequireRole, with the words the login shows ("Log in to <page>.").
  * Not here: data, logic, the markup of a screen (that is pages/).
  */
@@ -11,9 +12,13 @@ import { STAFF_ROLES } from './lib/roles.js';
 import { bookingRouteKey } from './lib/availabilitySearch.js';
 import { AppLayout } from './pages/AppLayout/AppLayout.jsx';
 import { BookTablePage } from './pages/BookTablePage/BookTablePage.jsx';
+import { ChangePasswordPage } from './pages/ChangePasswordPage/ChangePasswordPage.jsx';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage/ForgotPasswordPage.jsx';
 import { HomePage } from './pages/HomePage/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage/LoginPage.jsx';
+import { NewReservationPage } from './pages/NewReservationPage/NewReservationPage.jsx';
 import { RequireRole } from './pages/RequireRole.jsx';
+import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage.jsx';
 import { SignUpPage } from './pages/SignUpPage/SignUpPage.jsx';
 import { SlotsPage } from './pages/SlotsPage/SlotsPage.jsx';
 import { StaffOnlyPage } from './pages/StaffOnlyPage/StaffOnlyPage.jsx';
@@ -30,6 +35,10 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          {/* The password (MH-07): the reset by email is open; the change needs a login. */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             {/* Public: anyone sees the availability; the page itself asks to log in to book. */}
@@ -39,6 +48,14 @@ export default function App() {
               element={
                 <RequireRole roles={STAFF_ROLES} page="see the slots and tables" denied={<StaffOnlyPage />}>
                   <SlotsPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/reservations/new"
+              element={
+                <RequireRole roles={STAFF_ROLES} page="enter a reservation" denied={<StaffOnlyPage />}>
+                  <NewReservationPage />
                 </RequireRole>
               }
             />
