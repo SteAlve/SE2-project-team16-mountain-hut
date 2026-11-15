@@ -159,6 +159,93 @@ describe('the dietary needs in the text of the email', () => {
   });
 });
 
+describe('guests with the same needs in a different order', () => {
+  const sectionOf = (html) => html.match(/Dietary needs<\/h2>[\s\S]*?<\/table>/)[0];
+
+  it('are one group when the same diets are given in another order', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'] }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'] }),
+    ]);
+    expect(needsLines(text)).toEqual(['- 2 guests: Diet: Vegan, Lactose-free']);
+  });
+
+  it('are one group when the same allergies are given in another order', () => {
+    const { text } = emailFor([
+      withAllergies({ allergies: ['EGGS', 'MILK', 'PEANUTS'] }),
+      withAllergies({ allergies: ['PEANUTS', 'EGGS', 'MILK'] }),
+      withAllergies({ allergies: ['MILK', 'PEANUTS', 'EGGS'] }),
+    ]);
+    expect(needsLines(text)).toEqual(['- 3 guests: Allergies: Eggs, Milk, Peanuts']);
+  });
+
+  it('are one group when both the diets and the allergies are in another order', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['PESCATARIAN', 'LACTOSE_FREE'], allergies: ['GLUTEN', 'FISH'], otherRequests: 'No onions' }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'PESCATARIAN'], allergies: ['FISH', 'GLUTEN'], otherRequests: 'No onions' }),
+    ]);
+    expect(needsLines(text)).toEqual(['- 2 guests: Allergies: Gluten, Fish · Diet: Pescatarian, Lactose-free · "No onions"']);
+  });
+
+  it('are one row in the HTML, with how many they are', () => {
+    const { html } = emailFor([
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'], allergies: ['EGGS', 'MILK'] }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'], allergies: ['MILK', 'EGGS'] }),
+    ]);
+    const section = sectionOf(html);
+    expect(section.match(/<tr>/g)).toHaveLength(1);
+    expect(section).toMatch(/>2 guests<\/td>/);
+  });
+
+  it('are joined with the guests in between, and a line of other needs stays apart', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'] }),
+      withAllergies({ diets: ['VEGETARIAN'] }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'] }),
+    ]);
+    expect(needsLines(text)).toEqual([
+      '- 2 guests: Diet: Vegan, Lactose-free',
+      '- 1 guest: Diet: Vegetarian',
+    ]);
+  });
+
+  it('are not joined when the diets or the allergies are really different', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['VEGAN'] }),
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'] }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'], allergies: ['EGGS'] }),
+      withAllergies({ allergies: ['EGGS', 'MILK'] }),
+      withAllergies({ allergies: ['MILK'] }),
+    ]);
+    expect(needsLines(text)).toEqual([
+      '- 1 guest: Diet: Vegan',
+      '- 1 guest: Diet: Vegan, Lactose-free',
+      '- 1 guest: Allergies: Eggs · Diet: Lactose-free, Vegan',
+      '- 1 guest: Allergies: Eggs, Milk',
+      '- 1 guest: Allergies: Milk',
+    ]);
+  });
+
+  it('are not joined when only the order is the same but a free text differs', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'], otherDiet: 'Halal' }),
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'], otherDiet: 'Kosher' }),
+    ]);
+    expect(needsLines(text)).toEqual([
+      '- 1 guest: Diet: Vegan, Lactose-free, Halal',
+      '- 1 guest: Diet: Lactose-free, Vegan, Kosher',
+    ]);
+  });
+
+  it('do not change the order the first guest of the group gave', () => {
+    const { text } = emailFor([
+      withAllergies({ diets: ['LACTOSE_FREE', 'VEGAN'] }),
+      withAllergies({ diets: ['VEGAN', 'LACTOSE_FREE'] }),
+    ]);
+    expect(needsLines(text)).toEqual(['- 2 guests: Diet: Lactose-free, Vegan']);
+  });
+});
+
 describe('the dietary needs in the HTML of the email', () => {
   const sectionOf = (html) => html.match(/Dietary needs<\/h2>[\s\S]*?<\/table>/)[0];
 

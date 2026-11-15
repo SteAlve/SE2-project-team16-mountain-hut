@@ -258,6 +258,94 @@ describe('the lines the dao refuses before it touches the database', () => {
   });
 });
 
+describe('at most one line of needs for each person of the party', () => {
+  const seatsLeft = async (slot, freeSeats) => {
+    expect(await slots.findAvailableTablesBySlotId(slot.slotId)).toEqual([
+      { tableId: slot.tableIds[0], tableNumber: 1, seatCapacity: 6, freeSeats },
+    ]);
+  };
+  const savedBookings = async (slot) =>
+    (await get('SELECT COUNT(*)::INT AS n FROM booking WHERE slot_id = $1', [slot.slotId])).n;
+  const savedLines = async (slot) => (await get(
+    'SELECT COUNT(*)::INT AS n FROM booking_requirement WHERE booking_id IN (SELECT id FROM booking WHERE slot_id = $1)',
+    [slot.slotId],
+  )).n;
+
+  it('refuses more lines than people, and creates no booking', async () => {
+    const slot = await createSlot({ seats: [6] });
+
+    await expect(book(slot, hiker, 2, oneTable(slot, 2), [
+      line({ diets: ['VEGAN'] }),
+      line({ diets: ['VEGETARIAN'] }),
+      line({ allergies: ['EGGS'] }),
+    ])).rejects.toThrow(new RangeError('There can be at most one requirement per person of the party.'));
+
+    expect(await savedBookings(slot)).toBe(0);
+    expect(await savedLines(slot)).toBe(0);
+    expect(await get('SELECT COUNT(*)::INT AS n FROM booking_table WHERE slot_id = $1', [slot.slotId])).toEqual({ n: 0 });
+    await seatsLeft(slot, 6);
+    expect(await bookings.hasActiveBooking(hiker.id, slot.slotId)).toBe(false);
+  });
+
+  it('refuses one line more than people, the smallest excess', async () => {
+    const slot = await createSlot({ seats: [6] });
+
+    await expect(book(slot, hiker, 1, oneTable(slot, 1), [
+      line({ diets: ['VEGAN'] }),
+      line({ diets: ['VEGAN'] }),
+    ])).rejects.toBeInstanceOf(RangeError);
+
+    expect(await savedBookings(slot)).toBe(0);
+    await seatsLeft(slot, 6);
+  });
+
+  it('refuses the lines of a big excess without touching the seats of the other bookings', async () => {
+    const slot = await createSlot({ seats: [6] });
+    await book(slot, other, 2, oneTable(slot, 2), [line({ diets: ['VEGAN'] })]);
+
+    await expect(book(slot, hiker, 1, oneTable(slot, 1), Array.from({ length: 5 }, () => line({ diets: ['VEGAN'] }))))
+      .rejects.toBeInstanceOf(RangeError);
+
+    expect(await savedBookings(slot)).toBe(1);
+    expect(await savedLines(slot)).toBe(1);
+    await seatsLeft(slot, 4);
+  });
+
+  it('accepts as many lines as people', async () => {
+    const slot = await createSlot({ seats: [6] });
+
+    const booking = await book(slot, hiker, 3, oneTable(slot, 3), [
+      line({ diets: ['VEGAN'] }),
+      line({ allergies: ['EGGS'] }),
+      line({ otherRequests: 'High chair' }),
+    ]);
+
+    expect(booking.requirements).toHaveLength(3);
+    expect(await savedLines(slot)).toBe(3);
+  });
+
+  it('is checked on the party size of the booking, not on the seats of the table', async () => {
+    const slot = await createSlot({ seats: [6] });
+
+    await expect(book(slot, hiker, 2, oneTable(slot, 2), Array.from({ length: 3 }, () => line({ diets: ['VEGAN'] }))))
+      .rejects.toBeInstanceOf(RangeError);
+    const booking = await book(slot, hiker, 2, oneTable(slot, 2), Array.from({ length: 2 }, () => line({ diets: ['VEGAN'] })));
+
+    expect(booking.requirements).toHaveLength(2);
+  });
+
+  it('can book again after the refusal', async () => {
+    const slot = await createSlot({ seats: [6] });
+    await expect(book(slot, hiker, 1, oneTable(slot, 1), [line({ diets: ['VEGAN'] }), line({ diets: ['VEGAN'] })]))
+      .rejects.toBeInstanceOf(RangeError);
+
+    const booking = await book(slot, hiker, 1, oneTable(slot, 1), [line({ diets: ['VEGAN'] })]);
+
+    expect(booking.requirements).toHaveLength(1);
+    expect(await savedBookings(slot)).toBe(1);
+  });
+});
+
 describe('the table of the needs', () => {
   it('is removed with its booking', async () => {
     const slot = await createSlot({ seats: [4] });
