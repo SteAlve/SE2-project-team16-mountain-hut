@@ -55,8 +55,9 @@ the following observable behaviour to users and Playwright tests.
 1. Each test uses unique names and email addresses for newly created hikers.
 2. Tests use a dedicated E2E database and do not depend on data created by
    another test.
-3. Tests use future dates and controlled time, or a test clock, for all
-   time-sensitive scenarios.
+3. Tests use future dates for normal scenarios. Time-boundary scenarios use
+   short-lived database fixtures or update the relevant database timestamp;
+   browser-only clock mocking is not used as a substitute for server time.
 4. The test environment sends mail through Mailpit; no real mailbox is used.
 5. Mailpit messages are filtered by unique recipient and cleared or recorded
    before each scenario.
@@ -254,32 +255,26 @@ the same product rule to the reset link.
 3. No email is sent, because the temporary hiker has no email address.
 4. The temporary hiker cannot log in or make a public booking.
 
-## Scenario 7: The staff time rule is different from the hiker rule
+## Scenario 7: Staff can reserve inside the hiker's two-hour window
 
 **Given**
 
 1. An employee is logged in and has selected a hiker.
-2. A slot has enough free seats and starts at a controlled time.
-3. The test clock is controlled so the slot can be checked at its boundary.
+2. A slot has enough free seats and starts shortly after the test begins.
+3. The slot starts less than two hours from the current server time but has not
+   started yet.
 
 **When**
 
-1. The employee tries to reserve the slot less than two hours before its start,
-   but before it starts.
-2. The employee saves the reservation.
-3. In a separate run, the employee tries to reserve the same slot at its exact
-   start time.
-4. In another run, the employee tries after the start time.
+1. The employee selects the slot.
+2. The employee selects **Save reservation** before the slot starts.
 
 **Then**
 
-1. The reservation before the start succeeds even though it is inside the
-   hiker's two-hour window.
-2. At the exact start time, the time is unavailable and the reservation is not
-   saved.
-3. After the start time, the time is unavailable and the reservation is not
-   saved.
-4. The employee sees **Started at HH:MM** or the documented equivalent.
+1. The reservation is saved successfully.
+2. The staff reservation is accepted even though the slot starts within the
+   hiker's two-hour booking window.
+3. **Reservation saved** is displayed.
 
 ## Scenario 8: A party that does not fit cannot be reserved
 
@@ -340,14 +335,16 @@ the same product rule to the reset link.
 
 **Then**
 
-1. For email A, creation is rejected with the documented `409` response.
-2. The page searches for the existing hiker and offers to choose that hiker.
+1. Both attempts receive the same documented `409` conflict response from the
+   server.
+2. After the conflict for email A, the client searches for regular hikers using
+   that email and offers the existing hiker.
 3. Choosing the existing hiker closes the dialog and selects them for the
    reservation.
-4. For email B, the page says the email is already in use and asks for another
-   email.
-5. The staff account's name is not revealed as a hiker search result.
-6. No duplicate account is created in either case.
+4. After the conflict for email B, the hiker search returns no result and the
+   page asks the employee to enter another email.
+5. The staff account's name, role and account details are not revealed.
+6. No duplicate account is created.
 
 ## Scenario 11: The slot can start between choosing and saving
 
@@ -356,12 +353,12 @@ the same product rule to the reset link.
 1. An employee is logged in and has selected a hiker.
 2. A slot is available before its start and has enough seats.
 3. The employee has selected the slot and opened the reservation summary.
-4. The controlled clock is just before the slot start.
+4. The E2E fixture records the slot ID and its seating proposal.
 
 **When**
 
-1. The test advances the clock past the slot start before the employee selects
-   **Save reservation**.
+1. Before saving, the test updates that slot in the E2E database so its start
+   time is already in the past.
 2. The employee selects **Save reservation**.
 
 **Then**
@@ -370,8 +367,7 @@ the same product rule to the reset link.
 2. The page says **This time has already started. Choose another time.**
 3. No reservation is created.
 4. The hiker, day and people choices are kept.
-5. The times are refreshed; the started slot is no longer selected and shows
-   **Started at HH:MM**.
+5. The times are refreshed and the started slot is no longer selectable.
 
 ## Scenario 12: A newly created regular hiker can log in and change the password
 
@@ -392,10 +388,11 @@ the same product rule to the reset link.
 **Then**
 
 1. Login succeeds and the hiker is marked as required to change the password.
-2. Protected booking actions are blocked before the password change.
+2. The client sends the hiker to **Change password** before allowing normal
+   booking use.
 3. The password-change operation succeeds.
-4. The hiker can use protected pages after choosing the new password.
-5. The generated password is not entered or edited by the employee in the
+4. The hiker can use protected booking pages after changing the password.
+5. The generated password is never entered or edited by the employee in the
    reservation flow.
 
 ## Scenario 13: A hiker can recover a newly created account by email
@@ -429,23 +426,24 @@ the same product rule to the reset link.
 
 1. A regular hiker account exists with a unique email.
 2. The hiker has requested a password reset and received the reset email.
-3. The test clock is controlled.
+3. The reset row exists in the E2E database.
 
 **When**
 
-1. The test advances the clock to just before 24 hours after the reset link was
-   issued and verifies that the link still works.
-2. The test requests another reset link, then advances the clock to 24 hours
-   after that link was issued.
-3. The hiker opens the expired link and submits a new password.
+1. The test updates that reset row so `expires_at` is earlier than the current
+   database time.
+2. The hiker opens the reset link and submits a new password.
 
 **Then**
 
-1. The link works just before the 24-hour limit.
-2. The link is rejected at or after the 24-hour limit.
-3. The page says **This link no longer works** or the documented equivalent.
-4. The old password remains unchanged after the expired-link attempt.
-5. A new reset request can issue a new working link.
+1. The request is rejected as an invalid reset link.
+2. The page says **This link no longer works** or the documented equivalent.
+3. The old password remains unchanged.
+4. No password reset is completed.
+
+The reset lifetime of exactly 24 hours can be verified separately by inspecting
+the stored `created_at` and `expires_at` values; the E2E test does not need to
+advance the server clock.
 
 ## Scenario 15: A rejected seat allocation does not create a reservation
 
