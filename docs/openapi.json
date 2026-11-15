@@ -887,7 +887,7 @@
           "Bookings"
         ],
         "summary": "List my bookings",
-        "description": "The bookings of the logged-in hiker from today on (today of the hut, so today's meals are listed even when they have started), in order of day and time. Cancelled bookings are not listed. Each booking says if it can still be changed (`canChange`) and until when (`changeableUntil`): changes close 48 hours before the meal (team reading of MH-06, not confirmed by the product owner).",
+        "description": "The bookings of the logged-in hiker from today on (today of the hut, so today's meals are listed even when they have started), in order of day and time. Cancelled bookings are not listed. Each booking says if it can still be changed (`canChange`) and until when (`changeableUntil`): changes close 48 hours before the meal starts, with the exact deadline included (product owner, [issue #43](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/43)).",
         "operationId": "listMyBookings",
         "security": [
           {
@@ -999,7 +999,7 @@
           "Bookings"
         ],
         "summary": "Change a booking",
-        "description": "Changes the slot, the party size, the dietary needs of a booking, or some of them (MH-06). Only the hiker who made the booking can change it, until 48 hours before the meal; a new slot must also be at least 48 hours away. A new slot or party size is seated again like a new booking in that slot (product owner, issue #38): the seats of the booking count as free, so it can keep or reuse them, and the server chooses the tables. There is no preview: the change succeeds, or it is refused and nothing changes. A change of the dietary needs only does not check the seats and keeps the tables. After the change, the hiker receives an email \"Your booking has changed\" with the same booking reference, the new details and the moment of the change; it says that it replaces the earlier emails of that booking. If the email fails, the change still stands.",
+        "description": "Changes the slot, the party size, the dietary needs of a booking, or some of them (MH-06). Only the hiker who made the booking can change it, when at least 48 hours remain before the booked meal starts. When moving to another slot, both the original and destination slots must start at least 48 hours after the change request; exactly 48 hours is allowed in both checks (product owner, [issue #43](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/43)). A new slot or party size is seated again like a new booking in that slot (product owner, issue #38): the seats of the booking count as free, so it can keep or reuse them, and the server chooses the tables. There is no preview: the change succeeds, or it is refused and nothing changes. A change of the dietary needs only does not check the seats and keeps the tables. After the change, the hiker receives an email \"Your booking has changed\" with the same booking reference, the new details and the moment of the change; it says that it replaces the earlier emails of that booking. If the email fails, the change still stands.",
         "operationId": "changeBooking",
         "security": [
           {
@@ -3636,7 +3636,7 @@
             "type": "integer",
             "format": "int64",
             "minimum": 1,
-            "description": "The slot to move to. It must be at least 48 hours away and have tables."
+            "description": "The slot to move to. Its start must be at least 48 hours after the change request (exactly 48 hours is allowed), and it must have tables."
           },
           "partySize": {
             "type": "integer",
@@ -3714,12 +3714,12 @@
           },
           "canChange": {
             "type": "boolean",
-            "description": "True while the booking can still be changed: until 48 hours before the meal."
+            "description": "True while the booking can still be changed: until 48 hours before the meal starts, with the exact deadline included."
           },
           "changeableUntil": {
             "type": "string",
             "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
-            "description": "The last moment of a change, local date and time of the hut (YYYY-MM-DDTHH:MM)."
+            "description": "The inclusive deadline for changing the booking, 48 hours before the booked meal starts, as the local date and time of the hut (YYYY-MM-DDTHH:MM)."
           }
         }
       }

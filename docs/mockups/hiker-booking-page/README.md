@@ -1,0 +1,148 @@
+# Hiker booking page mockup (MH-06, MH-08)
+
+Mockup for stories **MH-06 Change a booking** and **MH-08 Cancel a booking**, used by the hiker frontend and backend tasks and their tests.
+
+> "As a hiker I want to change the date, time, party size, or requirements of my booking so that the reservation reflects my current plans."
+
+> "As a hiker I want to cancel a table booking so that the hut can make the places available to other guests."
+
+One new page, **My bookings**, lists the bookings of the hiker who is logged in. On each booking the hiker can change it (a dialog) or cancel it (a confirmation).
+
+**Figma (source of truth):** page *MH-06 My Booking Page* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page. Most of them are already used by the [booking](../booking/README.md), [dietary](../dietary/README.md) and [login](../login/README.md) mockups: navbar, step heading, day, people stepper, time slot, party seats, alert, button, need chip, the guest needs editor and the phone bars. This story adds:
+
+- *Navbar / Hiker with My bookings*: the hiker navbar with a third link, **My bookings**, after *The hut* and *Book a table*.
+- *Booking card*: one booking of the list. Variants: `State` (Editable, Locked) and `Size` (Desktop, Phone). *Locked* is the booking that can no longer be changed: *Edit* is faded and a line says when changes closed.
+
+Same QUOTA brand, colours and fonts.
+
+## Rules on these screens
+
+Everything shown comes from the story or from the product owner's clarifications. Nothing from later stories.
+
+| Source | Rule |
+|---|---|
+| Story MH-06 | The hiker can change the day, the time, the party size or the requirements (dietary needs and allergies) of a booking. |
+| Product owner | Changes are admitted within 48 hours from the date booked. |
+| Product owner | A change of the party size is subject to the automatic verification of availability. The server does it when the change is saved: the party is seated again like a new booking in that slot, and the seats of the booking count as free, so it can keep them (product owner, [#38](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/38)). |
+| Story MH-08 | The hiker can cancel a booking, so the places are available to other guests. |
+| Product owner | There are no time constraints: a hiker can cancel a reservation at any time. |
+| Team decision (confirmed by the product owner) | The 48 hours are counted back from the booked time: a booking on 27/09 from 13:00 to 14:00 can be changed until 13:00 on 25/09. |
+| Team decision (confirmed by the product owner) | The dietary needs follow the same 48 hours as every other change. |
+| Product owner (as the team reports it) | The 48 hours count twice: before the time of the current booking (the hiker can change it) and before the time of the new booking (the hiker can choose it). The new day and time must start at least 48 hours from now. The 2-hour limit of a new booking ([#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7)) does not apply to changes. |
+| Team decision | Until a change is confirmed the old booking stays as it is. If the change fails, nothing changes. |
+| Team decision | The page lists only the bookings of the hiker, from today on, that are not cancelled. Past and cancelled bookings are not listed. |
+| Team decision | There is **no availability check before saving**: the server has no preview for a change. *Save changes* works, or it is refused and nothing changes. The server chooses the tables for the new day, time or party size, and the hiker does not see them before saving. A change of the dietary needs only does not check the seats and keeps the tables. |
+| Backend ([PR #94](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/94)) | `GET /api/bookings` lists the bookings of the hiker, and `PATCH /api/bookings/:bookingId` changes one (`slotId`, `partySize` and `requirements`, one or more of them). The API for the cancellation comes with MH-08. |
+| Team decision (confirmed by the product owner) | A saved change and a confirmed cancellation are emailed to the hiker ([emails mockup](../emails/README.md), emails 3 and 4). A failed change sends no email. |
+
+## The flow
+
+1. **My bookings** (screen 1) lists the upcoming bookings in date order. Each booking shows the day, the time, the booking reference, how many people, the tables, the dietary needs and two buttons: *Edit* and *Cancel booking*. A booking that can still be changed says "Change until *day* · *time*". When the 48 hours have passed, *Edit* is faded and the line says "Changes closed on *day* · *time*"; *Cancel booking* still works. A hiker with no upcoming bookings sees a message and a *Book a table* button (screen 2).
+2. **Edit** opens the *Change your booking* dialog on top of the list (screen 3). It has the booking filled in, with the same three steps as *Book a table*: **Day**, **How many people** and **Time**. On the right, *After the change* shows the new day, time and people, and under it the **Dietary needs and allergies**. Nothing changes until the hiker saves. The new day and time must start at least 48 hours from now, like the booking being changed.
+3. **Save changes** sends the change. There is no availability check before it. It works, or it is refused and nothing changes, and the old booking stays as it is:
+   - No seats (screen 4, `409` `NO_SEATS`): a red note says the new time cannot hold the party. The hiker can pick another time or close the dialog.
+   - Already booked (screen 5, `422`): the hiker already has a booking for the new day and time.
+   - Changes closed (screen 6, `422`): the 48 hours passed, or the new time starts in less than 48 hours.
+   - Changed meanwhile (screen 7, `409` `BOOKING_CHANGED`): the same booking was changed at the same moment. The hiker reloads it and tries again.
+4. **Dietary needs** (screens 8 and 9). *+ Add a guest's needs* and *Edit* on a guest line open the same editor as [MH-05](../dietary/README.md) inside the dialog. The dialog is wider to fit it (screen 8). When only the dietary needs change, the seats are not checked and the tables stay the same (screen 9).
+5. When the change is saved, the dialog closes and the list shows the new details with a green note (screen 10). The hiker is emailed the new details.
+6. **Cancel booking** asks to confirm, with the same dialog as *Log out* (screen 11): "Cancel this booking?" with *Keep booking* and *Cancel booking*. It is open at any time, also on a booking whose *Edit* is faded.
+7. **Confirming** frees the seats for other guests. The booking leaves the list at once and a green note says so (screen 12). The hiker is emailed a confirmation.
+
+## Screens
+
+| # | Screen | Image |
+|---|---|---|
+| 1 | My bookings: the first booking is past the 48 hours, *Edit* is faded | ![My bookings](01-my-bookings.png) |
+| 2 | No upcoming bookings | ![No upcoming bookings](02-no-upcoming-bookings.png) |
+| 3 | Change a booking: the dialog with the booking filled in | ![Change a booking](03-change-a-booking.png) |
+| 4 | No seats for the change (`409`, `NO_SEATS`) | ![No seats](04-no-seats.png) |
+| 5 | Already booked in the new time (`422`) | ![Already booked](05-already-booked.png) |
+| 6 | Changes are closed (`422`) | ![Changes closed](06-changes-closed.png) |
+| 7 | Booking changed meanwhile (`409`, `BOOKING_CHANGED`) | ![Changed meanwhile](07-changed-meanwhile.png) |
+| 8 | Adding or editing a guest's needs | ![Guest needs](08-guest-needs.png) |
+| 9 | Change only the dietary needs | ![Only dietary needs](09-change-only-dietary-needs.png) |
+| 10 | Booking changed | ![Booking changed](10-booking-changed.png) |
+| 11 | Cancel a booking | ![Cancel a booking](11-cancel-a-booking.png) |
+| 12 | Booking cancelled | ![Booking cancelled](12-booking-cancelled.png) |
+
+### On a phone
+
+This is the same website in a phone browser, not a separate app. Below 992 px (react-bootstrap `lg`) the layout changes:
+
+- The page becomes one column, and the *Good to know* box goes under the list.
+- The navbar folds into the menu button, where *My bookings* is.
+- In a booking card, *Edit* and *Cancel booking* are under the booking, and the line about the 48 hours wraps.
+- The change dialog becomes a sheet from the bottom. It scrolls: the image shows it in full.
+- The confirmation dialog is narrowed to fit the phone.
+
+| # | Screen | Image |
+|---|---|---|
+| 1 | My bookings | ![My bookings on a phone](phone/01-my-bookings.png) |
+| 2 | Change a booking: no seats | ![No seats on a phone](phone/02-change-no-seats.png) |
+| 3 | Cancel a booking | ![Cancel a booking on a phone](phone/03-cancel-a-booking.png) |
+| 4 | Booking changed | ![Booking changed on a phone](phone/04-booking-changed.png) |
+
+The sheet has the same steps and rules as desktop screens 3 to 9, and the dietary needs editor is the phone one of [MH-05](../dietary/README.md).
+
+## Fields and rules
+
+### My bookings
+
+| Part | Rule |
+|---|---|
+| Which bookings | The hiker's own, from today on, not cancelled. In date order. |
+| Day, time | The day (*THU 15 Jul*) and the time of the slot (*12:00 – 13:00*). |
+| Reference | `QUOTA-` + the booking id in 5 digits, as in the confirmation email. |
+| People and tables | How many people, and the tables with their seats (*T3 · 4*). |
+| Dietary needs | One chip per need. "No dietary needs" when the booking has none. When there are many, a black **+*N*** chip shows how many are not listed: on a phone with more than 2 needs (the first 2 are shown), on a computer when the chips do not fit on one line. |
+| Edit | Open until 48 hours before the start of the slot. After that it is faded and cannot be pressed. |
+| Cancel booking | Always open. |
+| Line under the buttons | Editable: "Change until *Thu 15 Jul · 13:00*". Locked: "Changes closed on *Tue 13 Jul · 12:00*". |
+
+### Change your booking
+
+| Field | Rule |
+|---|---|
+| Day | Only the days at least 48 hours away. The current day of the booking is chosen. |
+| How many people | From 1. The server checks that the party fits when the change is saved. |
+| Time | A time of that day that starts at least 48 hours from now. Each time says how many seats are free (`GET /api/slots`). |
+| Dietary needs and allergies | Optional, as in [MH-05](../dietary/README.md): one line per group of guests with the same needs, and the guests counted must not be more than the people. |
+
+## Texts and server answers
+
+| When | What the hiker sees |
+|---|---|
+| Page subtitle | Your upcoming tables. Change a booking until 48 hours before it; cancel at any time. |
+| *Good to know* | You can change a booking until 48 hours before its time. · You can only change to a time that starts at least 48 hours from now. · You can cancel a booking at any time. · Every change or cancellation is emailed to you. |
+| No bookings | **No upcoming bookings.** Tables you book will appear here, from today on. Cancelled and past bookings are not listed. Button: *Book a table*. |
+| Dialog | **Change your booking** and the reference. "Now: Sat 17 Jul · 13:00 – 14:00 · 4 people. Nothing changes until you save." Buttons: *Close*, *Save changes*. |
+| Footer of the dialog | "Nothing is saved yet." For dietary needs only: "Day, time and tables unchanged." |
+| Tables | In *After the change*: "Chosen when you save". The server picks the tables. |
+| No seats (`409`, `NO_SEATS`) | Red note: "There are not enough free seats at *HH:MM* – *HH:MM* for *N* people. Your booking stays as it is." Nothing is saved and no email is sent. |
+| Already booked (`422`) | Red note: "You already have a booking for this slot. Choose another day or time." (the server message). Every choice is kept. |
+| Changes closed (`422`) | Red note: "Bookings can be changed until 48 hours before the meal. Your booking stays as it is." (the server message, then the line). The same answer comes when the new time starts in less than 48 hours. |
+| Changed meanwhile (`409`, `BOOKING_CHANGED`) | Red note: "This booking was changed in the meantime. Reload it and try again." |
+| Only dietary needs changed | Blue note: "Only the dietary needs changed. No availability check is needed and your tables stay the same." Button: *Save changes*. |
+| Changed | Green note on the list: "Booking *QUOTA-00001* changed. We emailed you the new details." |
+| Past the 48 hours | *Edit* is faded and the line says when changes closed. Also `PATCH` answers `422` (screen 6). |
+| Cancel dialog | **Cancel this booking?** "Your table for 4 on Sat 17 Jul, 13:00 – 14:00 will be freed for other guests. We will email you a confirmation." Buttons: *Keep booking*, *Cancel booking*. |
+| Cancelled | Green note on the list: "Booking *QUOTA-00001* cancelled. We emailed you a confirmation." |
+| Not logged in (`401`) | The login page (login mockup, screen 4). |
+| Booking or slot not found (`404`) | Something went wrong on our side. Try again in a minute. |
+| Server or network down | Something went wrong on our side. Try again in a minute. |
+
+## Left out on purpose
+
+These belong to other stories or were not asked for:
+
+- The staff view of changed and cancelled bookings.
+- Past and cancelled bookings in the list.
+- A waiting list for a full time (MH-16).
+
+## Open questions
+
+- **The cancellation API.** `GET /api/bookings` and `PATCH /api/bookings/:bookingId` are decided ([PR #94](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/94)). The endpoint to cancel comes with MH-08.
+- **The times inside the 48 hours.** The mockup does not show how a time that starts in less than 48 hours looks in the time list. The day strip offers only days at least 48 hours away. The days and times of the screens are examples.
+
+Sample data (hut, names, references, dates, tables) is invented for the mockup.
