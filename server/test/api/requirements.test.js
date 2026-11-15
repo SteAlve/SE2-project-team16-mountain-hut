@@ -1,7 +1,7 @@
 // MH-05 Provide party requirements: the whole path of POST /api/bookings with the dietary needs of
 // the guests, from the HTTP request to the database and to the confirmation email. Only the email
 // service is replaced, by the SMTP server of test/helpers/smtpInbox.js (as in confirmationEmail.test.js).
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { startSmtpInbox } from '../helpers/smtpInbox.js';
 
@@ -65,7 +65,7 @@ const freeSeats = async (slot) =>
   (await request(app).get('/api/slots')).body.find((s) => s.slotId === slot.slotId).freeSeats;
 
 describe('POST /api/bookings with dietary needs (MH-05)', () => {
-  it('saves and answers the example of the story: three lines for three subsets of the party', async () => {
+  it('saves and answers three different lines for a party of six', async () => {
     const slot = await createSlot({ seats: [4, 2] });
     const agent = await hiker('needs.story@example.com');
 
@@ -88,6 +88,60 @@ describe('POST /api/bookings with dietary needs (MH-05)', () => {
         saved({ diets: ['VEGETARIAN', 'LACTOSE_FREE'], hasAllergies: false }),
       ],
     });
+  });
+
+  it('saves and answers the example of the product owner: four guests in three groups', async () => {
+    const slot = await createSlot({ seats: [4] });
+    const agent = await hiker('needs.po@example.com');
+
+    // "1 vegan, peanut allergy" · "1 shellfish allergy" · "2 vegetarians": one requirement for each guest.
+    const res = await book(agent, slot, 4, [
+      { diets: ['VEGAN'], allergies: ['PEANUTS'] },
+      { allergies: ['SHELLFISH'] },
+      { diets: ['VEGETARIAN'] },
+      { diets: ['VEGETARIAN'] },
+    ]);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({
+      id: expect.any(Number),
+      date: slot.date,
+      slotId: slot.slotId,
+      partySize: 4,
+      tables: [{ tableNumber: 1, seats: 4 }],
+      requirements: [
+        saved({ diets: ['VEGAN'], allergies: ['PEANUTS'], hasAllergies: true }),
+        saved({ allergies: ['SHELLFISH'], hasAllergies: true }),
+        saved({ diets: ['VEGETARIAN'] }),
+        saved({ diets: ['VEGETARIAN'] }),
+      ],
+    });
+
+    const rows = await all(
+      `SELECT diets, other_diet AS "otherDiet", allergies, other_allergy AS "otherAllergy",
+              other_requests AS "otherRequests", has_allergies AS "hasAllergies"
+       FROM booking_requirement WHERE booking_id = $1 ORDER BY id`,
+      [res.body.id],
+    );
+    expect(rows).toEqual([
+      saved({ diets: ['VEGAN'], allergies: ['PEANUTS'], hasAllergies: true }),
+      saved({ allergies: ['SHELLFISH'], hasAllergies: true }),
+      saved({ diets: ['VEGETARIAN'] }),
+      saved({ diets: ['VEGETARIAN'] }),
+    ]);
+
+    // The two vegetarians are two rows in the database and one group in the email.
+    expect(inbox.emails).toHaveLength(1);
+    const { text, html } = inbox.emails[0];
+    expect(text).toContain([
+      'Dietary needs:',
+      '- 1 guest: Allergies: Peanuts · Diet: Vegan',
+      '- 1 guest: Allergies: Shellfish',
+      '- 2 guests: Diet: Vegetarian',
+    ].join('\n'));
+    expect(text.match(/^- \d+ guests?:/gm)).toHaveLength(3);
+    expect(html.match(/>2 guests<\/td>/g)).toHaveLength(1);
+    expect(html.match(/>1 guest<\/td>/g)).toHaveLength(2);
   });
 
   it('saves the lines with the booking, in the same order', async () => {
@@ -344,6 +398,89 @@ describe('the confirmation email carries the dietary needs (MH-05)', () => {
 
     expect(res.status).toBe(400);
     expect(inbox.emails).toEqual([]);
+  });
+
+  it('goes to each hiker with only the needs of their own booking', async () => {
+    const slot = await createSlot({ seats: [4, 4] });
+    const first = await hiker('needs.first@example.com');
+    const second = await hiker('needs.second@example.com');
+
+    expect((await book(first, slot, 2, [{ diets: ['VEGAN'], allergies: ['PEANUTS'] }, { diets: ['VEGAN'], allergies: ['PEANUTS'] }])).status).toBe(201);
+    expect((await book(second, slot, 3, [{ allergies: ['SHELLFISH'] }, { diets: ['PESCATARIAN'], otherRequests: 'No onions' }])).status).toBe(201);
+
+    expect(inbox.emails).toHaveLength(2);
+    const to = (address) => inbox.emails.filter((email) => email.envelope.to.includes(address));
+    const [forFirst] = to('needs.first@example.com');
+    const [forSecond] = to('needs.second@example.com');
+    expect(to('needs.first@example.com')).toHaveLength(1);
+    expect(to('needs.second@example.com')).toHaveLength(1);
+
+    expect(forFirst.text).toContain('Party size: 2');
+    expect(forFirst.text).toContain('- 2 guests: Allergies: Peanuts · Diet: Vegan');
+    for (const other of ['Shellfish', 'Pescatarian', 'No onions']) {
+      expect(forFirst.text).not.toContain(other);
+      expect(forFirst.html).not.toContain(other);
+    }
+
+    expect(forSecond.text).toContain('Party size: 3');
+    expect(forSecond.text).toContain('- 1 guest: Allergies: Shellfish');
+    expect(forSecond.text).toContain('- 1 guest: Diet: Pescatarian · "No onions"');
+    for (const other of ['Peanuts', 'Vegan']) {
+      expect(forSecond.text).not.toContain(other);
+      expect(forSecond.html).not.toContain(other);
+    }
+  });
+
+  it('has the needs of the booking only, not those of an earlier booking of the same hiker', async () => {
+    const slots = [await createSlot({ seats: [4] }), await createSlot({ seats: [4], startsAt: '14:00', endsAt: '15:00' })];
+    const agent = await hiker('needs.twice@example.com');
+
+    await book(agent, slots[0], 1, [{ allergies: ['FISH'] }]);
+    await book(agent, slots[1], 1, [{ diets: ['VEGAN'] }]);
+
+    expect(inbox.emails).toHaveLength(2);
+    expect(inbox.emails[0].text).toContain('Allergies: Fish');
+    expect(inbox.emails[0].text).not.toContain('Vegan');
+    expect(inbox.emails[1].text).toContain('Diet: Vegan');
+    expect(inbox.emails[1].text).not.toContain('Fish');
+  });
+
+  it('when the email service refuses it, the booking and its needs are still saved and answered', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    inbox.refuse = true;
+    const slot = await createSlot({ seats: [4] });
+    const agent = await hiker('needs.mail.refused@example.com');
+
+    const res = await book(agent, slot, 3, [
+      { diets: ['VEGAN'], allergies: ['PEANUTS'] },
+      { allergies: ['SHELLFISH'], otherRequests: 'No mushrooms, please' },
+      { diets: ['VEGETARIAN', 'LACTOSE_FREE'] },
+    ]);
+
+    expect(res.status).toBe(201);
+    expect(res.body.requirements).toEqual([
+      saved({ diets: ['VEGAN'], allergies: ['PEANUTS'], hasAllergies: true }),
+      saved({ allergies: ['SHELLFISH'], otherRequests: 'No mushrooms, please', hasAllergies: true }),
+      saved({ diets: ['VEGETARIAN', 'LACTOSE_FREE'] }),
+    ]);
+    const rows = await all(
+      `SELECT diets, allergies, other_requests AS "otherRequests", has_allergies AS "hasAllergies"
+       FROM booking_requirement WHERE booking_id = $1 ORDER BY id`,
+      [res.body.id],
+    );
+    expect(rows).toEqual([
+      { diets: ['VEGAN'], allergies: ['PEANUTS'], otherRequests: null, hasAllergies: true },
+      { diets: [], allergies: ['SHELLFISH'], otherRequests: 'No mushrooms, please', hasAllergies: true },
+      { diets: ['VEGETARIAN', 'LACTOSE_FREE'], allergies: [], otherRequests: null, hasAllergies: false },
+    ]);
+    expect(await bookingCount(slot)).toBe(1);
+    expect(await freeSeats(slot)).toBe(1);
+    expect(inbox.emails).toEqual([]);
+    expect(error).toHaveBeenCalledWith(
+      `The confirmation email of booking ${res.body.id} was not sent:`,
+      expect.objectContaining({ responseCode: 550 }),
+    );
+    error.mockRestore();
   });
 
   it('is sent with the needs even if the hiker only wrote requests for the kitchen', async () => {
