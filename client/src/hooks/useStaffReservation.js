@@ -151,11 +151,17 @@ export function useStaffReservation() {
     }
     const time = formatTime(failed.startsAt);
     // A 422 of the booking is the time that started or a booking the hiker already has for it. A
-    // new preview tells which: it fails only when the time started.
+    // new preview tells which: the server checks the time before the seats, so a preview that
+    // answers, or fails with NO_SEATS, means the time is still open. A 422 means it started. Any
+    // other failure (the server cannot be reached, the session ended...) tells neither: it is shown.
     if (error.status === 422 && step === 'booking') {
-      const stillOpen = await getStaffSeating(failed.slotId, partySize).then(() => true, (e) => e.status !== 422);
-      if (stillOpen) {
+      const check = await getStaffSeating(failed.slotId, partySize).then(() => null, (e) => e);
+      if (check === null || check.code === 'NO_SEATS') {
         setAlert(`${hikerName(hiker)} already has a booking at ${time} ${onDay(date, new Date())}. Choose another time.`);
+        return;
+      }
+      if (check.status !== 422) {
+        await showFailure(check, failed, 'preview');
         return;
       }
     }
