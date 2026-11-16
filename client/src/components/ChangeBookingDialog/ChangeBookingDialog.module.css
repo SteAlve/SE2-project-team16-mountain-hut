@@ -51,25 +51,6 @@
   gap: 12px;
 }
 
-/* The measures of Check your booking: the summary 380 px, 28 px, a line, 28 px, the needs. */
-.needsMode {
-  gap: 0;
-}
-
-.needsMode .steps {
-  flex: none;
-  width: 380px;
-  margin-right: 28px;
-}
-
-.needsMode .side {
-  flex: 1;
-  align-self: stretch;
-  width: auto;
-  padding-left: 28px;
-  border-left: 1px solid var(--line);
-}
-
 .side {
   display: flex;
   flex: none;
@@ -148,22 +129,8 @@
     width: 100%;
   }
 
-  .side,
-  .needsMode .steps {
+  .side {
     width: 100%;
-  }
-
-  .needsMode {
-    gap: 18px;
-  }
-
-  .needsMode .steps {
-    margin-right: 0;
-  }
-
-  .needsMode .side {
-    padding-left: 0;
-    border-left: 0;
   }
 
   .slots {

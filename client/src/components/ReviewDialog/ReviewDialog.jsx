@@ -4,13 +4,15 @@
  * `tables` is [{ tableNumber, seats }], the seating preview: a split party gets a sentence that says why.
  * `notice` (optional) is shown on top, e.g. when the tables changed just before confirming.
  * `needs` (hooks/useDietaryNeeds) are the dietary needs of the party (MH-05): on a computer they
- * are the right column, on a phone they follow the summary, right above Confirm booking.
+ * are the right column, on a phone they follow the summary, right above Confirm booking. Adding or
+ * editing a guest's needs opens a popup over this dialog with only that line (GuestNeedsDialog).
  */
 import { useEffect, useRef } from 'react';
 import { formatLongDay, formatTimeRange } from '../../lib/bookingDates.js';
 import { Alert } from '../Alert/Alert.jsx';
 import { Button } from '../Button/Button.jsx';
 import { DietaryNeeds } from '../DietaryNeeds/DietaryNeeds.jsx';
+import { GuestNeedsDialog } from '../GuestNeedsDialog/GuestNeedsDialog.jsx';
 import { PartySeats } from '../PartySeats/PartySeats.jsx';
 import styles from './ReviewDialog.module.css';
 
@@ -24,61 +26,64 @@ export function ReviewDialog({ open, date, slot, partySize, tables, needs, notic
   }, [open]);
 
   return (
-    <dialog
-      ref={ref}
-      className={styles.dialog}
-      aria-labelledby="review-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!isPending) onBack();
-      }}
-    >
-      {open && slot && (
-        <div className={styles.body}>
-          <span className={styles.handle} aria-hidden="true" />
-          <h2 id="review-title" className={styles.title}>Check your booking</h2>
-          {notice && <Alert variant="info">{notice}</Alert>}
-          <div className={styles.columns}>
-            <div className={styles.summary}>
-              <dl className={styles.rows}>
-                <div className={styles.row}>
-                  <dt>Day</dt>
-                  <dd>{formatLongDay(date)}</dd>
-                </div>
-                <div className={styles.row}>
-                  <dt>Time</dt>
-                  <dd>{formatTimeRange(slot.startsAt, slot.endsAt)}</dd>
-                </div>
-                <div className={styles.row}>
-                  <dt>People</dt>
-                  <dd>{partySize}</dd>
-                </div>
-              </dl>
+    <>
+      <dialog
+        ref={ref}
+        className={styles.dialog}
+        aria-labelledby="review-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!isPending) onBack();
+        }}
+      >
+        {open && slot && (
+          <div className={styles.body}>
+            <span className={styles.handle} aria-hidden="true" />
+            <h2 id="review-title" className={styles.title}>Check your booking</h2>
+            {notice && <Alert variant="info">{notice}</Alert>}
+            <div className={styles.columns}>
+              <div className={styles.summary}>
+                <dl className={styles.rows}>
+                  <div className={styles.row}>
+                    <dt>Day</dt>
+                    <dd>{formatLongDay(date)}</dd>
+                  </div>
+                  <div className={styles.row}>
+                    <dt>Time</dt>
+                    <dd>{formatTimeRange(slot.startsAt, slot.endsAt)}</dd>
+                  </div>
+                  <div className={styles.row}>
+                    <dt>People</dt>
+                    <dd>{partySize}</dd>
+                  </div>
+                </dl>
 
-              <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
-              {tables?.length > 1 && (
-                <p className={styles.note}>
-                  No single table has {partySize} free seats at this time, so your party is split
-                  over {tables.length} tables.
-                </p>
-              )}
+                <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
+                {tables?.length > 1 && (
+                  <p className={styles.note}>
+                    No single table has {partySize} free seats at this time, so your party is split
+                    over {tables.length} tables.
+                  </p>
+                )}
+              </div>
+
+              <span className={styles.divider} aria-hidden="true" />
+
+              <DietaryNeeds needs={needs} partySize={partySize} disabled={isPending} />
             </div>
 
-            <span className={styles.divider} aria-hidden="true" />
-
-            <DietaryNeeds needs={needs} partySize={partySize} disabled={isPending} />
+            <div className={styles.actions}>
+              <Button variant="outline" size="small" className={styles.back} disabled={isPending} onClick={onBack}>
+                Back
+              </Button>
+              <Button className={styles.confirm} disabled={isPending} onClick={onConfirm} autoFocus>
+                {isPending ? 'Booking…' : 'Confirm booking'}
+              </Button>
+            </div>
           </div>
-
-          <div className={styles.actions}>
-            <Button variant="outline" size="small" className={styles.back} disabled={isPending} onClick={onBack}>
-              Back
-            </Button>
-            <Button className={styles.confirm} disabled={isPending} onClick={onConfirm} autoFocus>
-              {isPending ? 'Booking…' : 'Confirm booking'}
-            </Button>
-          </div>
-        </div>
-      )}
-    </dialog>
+        )}
+      </dialog>
+      {open && slot && needs.openKey !== null && <GuestNeedsDialog needs={needs} partySize={partySize} disabled={isPending} />}
+    </>
   );
 }

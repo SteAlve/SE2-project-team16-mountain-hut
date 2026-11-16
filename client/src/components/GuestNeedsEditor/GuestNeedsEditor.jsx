@@ -1,9 +1,8 @@
 /**
- * The open editor of one line of dietary needs (Figma "Guest needs editor", MH-05 screens 2-3):
+ * The editor of one line of dietary needs, inside components/GuestNeedsDialog (Figma "Guest needs editor", MH-05 screens 2-3):
  * how many guests, the Diet cards, the Allergies cards, the Other fields and Other requests.
  * `line` is a line of lib/dietaryNeeds.js; `maxGuests` is the top of the Guests stepper.
  * `errors` is lineErrors(line) once Confirm checked it, otherwise {}.
- * `onDone`, when given, adds a Done button that folds the line (the change of a booking, MH-06).
  */
 import { useEffect, useId, useRef } from 'react';
 import eggs from '../../assets/dietary/eggs.svg';
@@ -20,7 +19,6 @@ import treeNuts from '../../assets/dietary/tree-nuts.svg';
 import vegan from '../../assets/dietary/vegan.svg';
 import vegetarian from '../../assets/dietary/vegetarian.svg';
 import { ALLERGIES, DIETS, guests, OTHER } from '../../lib/dietaryNeeds.js';
-import { Button } from '../Button/Button.jsx';
 import { NeedCard } from '../NeedCard/NeedCard.jsx';
 import { PeopleStepper } from '../PeopleStepper/PeopleStepper.jsx';
 import { TextField } from '../TextField/TextField.jsx';
@@ -48,7 +46,6 @@ export function GuestNeedsEditor({
   onToggleAllergy,
   onText,
   onRemove,
-  onDone,
 }) {
   const id = useId();
   const ref = useRef(null);
@@ -159,14 +156,6 @@ export function GuestNeedsEditor({
         disabled={disabled}
         onChange={text('otherRequests')}
       />
-
-      {onDone && (
-        <div className={styles.done}>
-          <Button variant="outline" size="small" disabled={disabled} onClick={onDone}>
-            Done
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

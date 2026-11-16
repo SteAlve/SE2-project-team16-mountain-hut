@@ -5,10 +5,13 @@
  *
  *   lines                  the lines, in the order they were added (see lib/dietaryNeeds.js)
  *   openKey                the key of the line being edited, or null: only one is open at a time
+ *   adding                 the open line was just added (not opened with Edit)
  *   counted                the guests counted in all the lines; tooMany when more than the party
  *   errors                 { [key]: lineErrors } of the lines checked by Confirm, only the wrong ones
  *   add()                  a new line of 1 guest, open; folds the one being edited
  *   open(key), remove(key)
+ *   cancel()               leaves the open line as it was when it was opened (a line just added goes away)
+ *                          and folds it: Cancel of the guest's needs popup (MH-06)
  *   setGuests(key, n)      from 1, up to the guests not counted yet
  *   toggleDiet(key, code), toggleAllergy(key, code)
  *   setText(key, field, value)   field is 'otherDiet', 'otherAllergy' or 'otherRequests'
@@ -38,6 +41,8 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
   // Lines checked by a Confirm show their errors while they are fixed; a new line starts clean.
   const [checkedKeys, setCheckedKeys] = useState(() => new Set());
   const nextKey = useRef(lines.length + 1);
+  // The open line as it was when it was opened (null for a line just added), for cancel().
+  const [before, setBefore] = useState(null);
 
   const counted = countGuests(lines);
   const free = partySize - counted;
@@ -49,12 +54,25 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
     if (free <= 0) return;
     const key = nextKey.current++;
     setLines((current) => [...current, emptyLine(key)]);
+    setBefore(null);
     setOpenKey(key);
+  };
+
+  const open = (key) => {
+    setBefore(lines.find((line) => line.key === key) ?? null);
+    setOpenKey(key);
+  };
+
+  const cancel = () => {
+    if (openKey === null) return;
+    if (before) update(openKey, () => before);
+    else setLines((current) => current.filter((line) => line.key !== openKey));
+    setOpenKey(null);
   };
 
   const remove = (key) => {
     setLines((current) => current.filter((line) => line.key !== key));
-    setOpenKey((open) => (open === key ? null : open));
+    setOpenKey((current) => (current === key ? null : current));
   };
 
   // Lowering is always allowed (also when the party became smaller), raising only into free places.
@@ -67,13 +85,14 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
   const check = () => {
     setCheckedKeys(new Set(lines.map((line) => line.key)));
     const wrong = lines.find((line) => !isValidLine(line));
-    if (wrong) setOpenKey(wrong.key);
+    if (wrong && wrong.key !== openKey) open(wrong.key);
     return !wrong && !tooMany;
   };
 
-  // Done with the open line: it folds when it is valid; otherwise the problem is marked and the line stays open.
+  // Done with the open line: it folds when it is valid; otherwise its problems are marked and it stays open.
   const fold = () => {
-    if (lines.some((line) => !isValidLine(line))) check();
+    const line = lines.find((l) => l.key === openKey);
+    if (line && !isValidLine(line)) setCheckedKeys((current) => new Set(current).add(line.key));
     else setOpenKey(null);
   };
 
@@ -92,12 +111,14 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
   return {
     lines,
     openKey,
+    adding: openKey !== null && before === null,
     counted,
     tooMany,
     errors,
     add,
-    open: setOpenKey,
+    open,
     remove,
+    cancel,
     setGuests,
     toggleDiet: (key, code) => update(key, (line) => toggleDiet(line, code)),
     toggleAllergy: (key, code) => update(key, (line) => toggleAllergy(line, code)),
