@@ -49,6 +49,13 @@
   background: var(--mist);
 }
 
+/* A button that cannot be used is faded, so it does not look like one that is broken. */
+.outline:disabled,
+.ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .ghost {
   background: transparent;
   color: var(--ink);
