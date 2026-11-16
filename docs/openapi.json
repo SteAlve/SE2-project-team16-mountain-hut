@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.8.0",
-    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, changing a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+    "version": "1.9.0",
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, changing and cancelling a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -1227,6 +1227,122 @@
                       "message": "There can be at most one requirement per person of the party"
                     }
                   }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bookings"
+        ],
+        "summary": "Cancel a booking",
+        "description": "Cancels a booking of the logged-in hiker (MH-08), so its seats are free again for other guests at once. There is no time limit: a hiker can cancel at any time (product owner, MH-08), also when the booking can no longer be changed. The booking is kept with the moment it was cancelled, but it no longer counts: it leaves `GET /api/bookings`, its seats count as free, and the hiker can book the same slot again. After the cancellation, the hiker receives an email \"Your booking has been cancelled\" with the booking reference, the details of the cancelled booking and the moment of the cancellation. If the email fails, the cancellation still stands.",
+        "operationId": "cancelBooking",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "description": "Identifier of the booking.",
+            "example": 45
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The booking is cancelled. No content."
+          },
+          "400": {
+            "description": "The `bookingId` is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "bookingId must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not a hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only hikers can cancel bookings"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The booking does not exist or is not of this hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Booking 45 not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The booking was already cancelled (also when two cancellations of the same booking arrive at the same moment: only one succeeds).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "message": "This booking was already cancelled"
                 }
               }
             }

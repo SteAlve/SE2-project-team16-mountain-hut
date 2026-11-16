@@ -5,7 +5,7 @@ const isPositiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 // A failure the use case can tell apart (it cannot import this file): the `code` of the error.
 //   SEATS_UNAVAILABLE   a table has fewer free seats than asked, e.g. a booking came in just before
 //   DUPLICATE_BOOKING   the hiker already has an active booking for the slot
-//   BOOKING_NOT_FOUND   the booking to change does not exist or was cancelled (MH-06)
+//   BOOKING_NOT_FOUND   the booking to change or cancel does not exist or was cancelled (MH-06, MH-08)
 const fail = (code, message) => Object.assign(new RangeError(message), { code });
 
 // A guest line of the dietary needs (MH-05): diets and allergies (arrays), otherDiet, otherAllergy and
@@ -405,4 +405,28 @@ export const updateBooking = async ({ bookingId, expected, seats = null, require
 
     return findById(bookingId);
   });
+};
+
+/**
+ * Cancels a booking (MH-08): it keeps its row, with the moment it was cancelled. Every count of the
+ * free seats leaves out cancelled bookings, so its seats are free again at once, and the hiker can
+ * book the same slot again (the one-booking-per-slot index skips cancelled bookings too).
+ * The UPDATE checks again that the booking is still active, with the row locked: of two cancellations
+ * at the same moment only one succeeds, and a change saved just before still counts.
+ */
+export const cancelBooking = async ({ bookingId, cancelledAt }) => {
+  if (!isPositiveInteger(bookingId)) {
+    throw new TypeError('bookingId must be a positive safe integer.');
+  }
+  if (!(cancelledAt instanceof Date) || Number.isNaN(cancelledAt.getTime())) {
+    throw new TypeError('cancelledAt must be a valid Date.');
+  }
+
+  const cancelled = await get(
+    'UPDATE booking SET cancelled_at = $2 WHERE id = $1 AND cancelled_at IS NULL RETURNING id',
+    [bookingId, cancelledAt],
+  );
+  if (!cancelled) {
+    throw fail('BOOKING_NOT_FOUND', `Booking ${bookingId} does not exist or was cancelled.`);
+  }
 };
