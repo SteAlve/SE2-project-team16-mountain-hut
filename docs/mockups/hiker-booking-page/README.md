@@ -8,7 +8,7 @@ Mockup for stories **MH-06 Change a booking** and **MH-08 Cancel a booking**, us
 
 One new page, **My bookings**, lists the bookings of the hiker who is logged in. On each booking the hiker can change it (a dialog) or cancel it (a confirmation).
 
-**Figma (source of truth):** page *MH-06 My Booking Page* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page. Most of them are already used by the [booking](../booking/README.md), [dietary](../dietary/README.md) and [login](../login/README.md) mockups: navbar, step heading, day, people stepper, time slot, party seats, alert, button, need chip, the guest needs editor and the phone bars. This story adds:
+**Figma (source of truth):** page *MH-06 My Booking Page* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page. Most of them are already used by the [booking](../booking/README.md), [dietary](../dietary/README.md) and [login](../login/README.md) mockups: navbar, step heading, day, people stepper, time slot, party seats, alert, button, need chip, the guest needs editor (in its popup) and the phone bars. This story adds:
 
 - *Navbar / Hiker with My bookings*: the hiker navbar with a third link, **My bookings**, after *The hut* and *Book a table*.
 - *Booking card*: one booking of the list. Variants: `State` (Editable, Locked) and `Size` (Desktop, Phone). *Locked* is the booking that can no longer be changed: *Edit* is faded and a line says when changes closed.
@@ -44,7 +44,7 @@ Everything shown comes from the story or from the product owner's clarifications
    - Already booked (screen 5, `422`): the hiker already has a booking for the new day and time.
    - Changes closed (screen 6, `422`): the 48 hours passed, or the new time starts in less than 48 hours.
    - Changed meanwhile (screen 7, `409` `BOOKING_CHANGED`): the same booking was changed at the same moment. The hiker reloads it and tries again.
-4. **Dietary needs** (screens 8 and 9). *+ Add a guest's needs* and *Edit* on a guest line open the same editor as [MH-05](../dietary/README.md) inside the dialog. The dialog is wider to fit it (screen 8). When only the dietary needs change, the seats are not checked and the tables stay the same (screen 9).
+4. **Dietary needs** (screens 8 and 9). *+ Add a guest's needs* and *Edit* on a guest line open the same popup as [MH-05](../dietary/README.md) over the dialog, with only that line (screen 8). The steps and *After the change* stay as they are behind it. **Done** keeps the line, **Cancel** leaves it as it was, and nothing is saved until *Save changes*. When only the dietary needs change, the seats are not checked and the tables stay the same (screen 9).
 5. When the change is saved, the dialog closes and the list shows the new details with a green note (screen 10). The hiker is emailed the new details.
 6. **Cancel booking** asks to confirm, with the same dialog as *Log out* (screen 11): "Cancel this booking?" with *Keep booking* and *Cancel booking*. It is open at any time, also on a booking whose *Edit* is faded.
 7. **Confirming** frees the seats for other guests. The booking leaves the list at once and a green note says so (screen 12). The hiker is emailed a confirmation.
@@ -60,7 +60,7 @@ Everything shown comes from the story or from the product owner's clarifications
 | 5 | Already booked in the new time (`422`) | ![Already booked](05-already-booked.png) |
 | 6 | Changes are closed (`422`) | ![Changes closed](06-changes-closed.png) |
 | 7 | Booking changed meanwhile (`409`, `BOOKING_CHANGED`) | ![Changed meanwhile](07-changed-meanwhile.png) |
-| 8 | Adding or editing a guest's needs | ![Guest needs](08-guest-needs.png) |
+| 8 | Adding or editing a guest's needs, in a popup over the dialog | ![Guest needs](08-guest-needs.png) |
 | 9 | Change only the dietary needs | ![Only dietary needs](09-change-only-dietary-needs.png) |
 | 10 | Booking changed | ![Booking changed](10-booking-changed.png) |
 | 11 | Cancel a booking | ![Cancel a booking](11-cancel-a-booking.png) |
@@ -83,7 +83,7 @@ This is the same website in a phone browser, not a separate app. Below 992 px (r
 | 3 | Cancel a booking | ![Cancel a booking on a phone](phone/03-cancel-a-booking.png) |
 | 4 | Booking changed | ![Booking changed on a phone](phone/04-booking-changed.png) |
 
-The sheet has the same steps and rules as desktop screens 3 to 9, and the dietary needs editor is the phone one of [MH-05](../dietary/README.md).
+The sheet has the same steps and rules as desktop screens 3 to 9. A guest's needs open in a second sheet over it, as in [MH-05](../dietary/README.md) (phone screen 3).
 
 ## Fields and rules
 
