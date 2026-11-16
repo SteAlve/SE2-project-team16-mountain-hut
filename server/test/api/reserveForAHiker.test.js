@@ -103,9 +103,11 @@ describe('Reserve for a Hiker — staff hiker and password flows', () => {
     }).expect(201);
 
     expect(temporary.body).toMatchObject({ firstName: 'Luca', lastName: 'Temporary', email: null, temporary: true });
-    const results = await employee.get('/api/staff/hikers').query({ q: 'Bianchi' }).expect(200);
-    expect(results.body).toHaveLength(1);
-    expect(results.body[0]).toMatchObject({ email: 'luca.search@example.com', temporary: false });
+    const results = await employee.get('/api/staff/hikers').query({ q: 'Luca' }).expect(200);
+    expect(results.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ email: 'luca.search@example.com', temporary: false }),
+    ]));
+    expect(results.body.every(({ temporary: isTemporary }) => !isTemporary)).toBe(true);
 
     const hiker = await registeredHiker('reserve.hiker.access@example.com');
     await hiker.get('/api/staff/hikers').query({ q: 'Bianchi' }).expect(403);
