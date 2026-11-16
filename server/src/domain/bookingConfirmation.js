@@ -118,7 +118,9 @@ const needsHtml = (groups) => {
 
 const blazeBar = (color) => `<td width="28" height="6" style="background:${color};font-size:0;line-height:0;">&nbsp;</td>`;
 
-const toHtml = ({ title, intro, rows, needs }) => `<!doctype html>
+const SEE_YOU = 'See you at the hut!';
+
+const toHtml = ({ title, intro, rows, needs, end = SEE_YOU }) => `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:${MIST};">
@@ -142,7 +144,7 @@ const toHtml = ({ title, intro, rows, needs }) => `<!doctype html>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 ${rows.map(([label, value]) => row(label, value)).join('')}
               </table>${needsHtml(needs)}
-              <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">See you at the hut!</p>
+              <p style="${FONT}margin:24px 0 0;color:${INK};font-size:15px;">${end}</p>
             </td>
           </tr>
         </table>
@@ -171,7 +173,7 @@ const bookingParts = ({ bookingId, firstName, lastName, date, startsAt, endsAt, 
   };
 };
 
-const toText = ({ hello, lead, rows, needs }) => [
+const toText = ({ hello, lead, rows, needs, end = SEE_YOU }) => [
   hello,
   '',
   lead,
@@ -179,7 +181,7 @@ const toText = ({ hello, lead, rows, needs }) => [
   ...rows.map(([label, value]) => `${label}: ${value}`),
   ...(needs.length ? ['', 'Dietary needs:', ...needsText(needs)] : []),
   '',
-  'See you at the hut!',
+  end,
 ].join('\n');
 
 const htmlRows = (rows) => rows.map(([label, value]) => [label, escapeHtml(String(value))]);
@@ -230,6 +232,37 @@ export const bookingChangedEmail = ({ email, changedAt, ...booking }) => {
       intro: `Hello ${escapeHtml(name)}, here are the new details of your booking. ${replaces}`,
       rows: htmlRows(changedRows),
       needs,
+    }),
+  };
+};
+
+/**
+ * The email after a hiker cancelled a booking (MH-08): the details of the booking that was
+ * cancelled and when. It has no dietary needs: the booking no longer exists. cancelledAt is the local
+ * time of the hut: 'YYYY-MM-DDTHH:MM'.
+ */
+export const bookingCancelledEmail = ({ email, cancelledAt, ...booking }) => {
+  const { name, ref, rows } = bookingParts({ ...booking, requirements: [] });
+  const cancelledRows = [...rows, ['Cancelled on', moment(cancelledAt)]];
+  const lead = `has been cancelled. The seats are free again for other guests.`;
+  const end = 'We hope to see you at the hut another time.';
+
+  return {
+    to: email,
+    subject: `Your booking has been cancelled (${ref})`,
+    text: toText({
+      hello: `Hello ${name},`,
+      lead: `Your booking ${ref} ${lead}`,
+      rows: cancelledRows,
+      needs: [],
+      end,
+    }),
+    html: toHtml({
+      title: 'Your booking has been cancelled',
+      intro: `Hello ${escapeHtml(name)}, your booking ${ref} ${lead}`,
+      rows: htmlRows(cancelledRows),
+      needs: [],
+      end,
     }),
   };
 };
