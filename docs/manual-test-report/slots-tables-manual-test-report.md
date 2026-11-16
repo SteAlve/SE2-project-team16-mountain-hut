@@ -4,7 +4,7 @@
 
 Manual checks of **MH-02 - Define slot capacity**, performed by Antonio on
 03/11/2026 against **dev commit a8e53fd** and the
-[Slots & tables mockup](mockups/slots/README.md).
+[Slots & tables mockup](../mockups/slots/README.md).
 
 **38 checklist cases: 33 Pass, 2 Partial (ST-28, ST-30), 2 Inconclusive
 (ST-06, ST-31), and 1 Not executed manually (ST-38).**
@@ -61,8 +61,8 @@ demo staff already existed and slot seeding was not run. Existing manual data
 was preserved. No automated suite that cleans this database was run as part of
 the manual session.
 
-References: [MH-02 scenarios](MH-2-define-tables-and-slots-e2e-scenarios.md) and the
-[Slots & tables mockup](mockups/slots/README.md). The checklist uses the labels
+References: [MH-02 scenarios](../e2e-definitions/MH-2-define-tables-and-slots-e2e-scenarios.md) and the
+[Slots & tables mockup](../mockups/slots/README.md). The checklist uses the labels
 introduced by PR #56.
 
 Fixture notes:

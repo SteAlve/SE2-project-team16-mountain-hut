@@ -75,7 +75,7 @@ The same website in a phone browser, not a separate app. Below 992 px (react-boo
 
 ## Left out on purpose
 
-These belong to other stories and are added with them: confirmation email (MH-03), dietary needs and allergies (MH-05), seeing, changing and cancelling one's bookings (MH-06, MH-08), menus and meal names (MH-10, MH-11), waiting list (MH-16).
+These belong to other stories and are added with them: confirmation email (MH-03), dietary needs and allergies (MH-05, see the [dietary needs mockup](../dietary/README.md)), seeing, changing and cancelling one's bookings (MH-06, MH-08), menus and meal names (MH-10, MH-11), waiting list (MH-16).
 
 ## Open questions (not decided here)
 

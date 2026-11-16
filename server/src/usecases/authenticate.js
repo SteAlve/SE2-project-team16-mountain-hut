@@ -11,6 +11,8 @@ export const makeAuthenticate = ({ sessions, tokens, clock }) => async (sessionI
   const found = await sessions.findByTokenHash(tokens.hash(sessionId));
   if (!found || !isSessionActive(found.expiresAt, clock.now())) throw new UnauthorizedError();
 
-  const { id, firstName, lastName, email, phone, role } = found;
-  return { id, firstName, lastName, email, phone, role };
+  // mustChangePassword (MH-07): the account was made by the staff and the generated password has
+  // not been changed yet; domain/passwordChange.js decides what that user can do.
+  const { id, firstName, lastName, email, phone, role, mustChangePassword } = found;
+  return { id, firstName, lastName, email, phone, role, mustChangePassword };
 };

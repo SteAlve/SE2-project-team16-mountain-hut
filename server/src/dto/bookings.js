@@ -1,6 +1,8 @@
 /**
- * DTO of slots and bookings: validates the body of POST /api/bookings and the parameters of the
- * seating preview (wrong input throws a ValidationError, 400) and shapes what goes out.
+ * DTO of slots and bookings: validates the body of POST /api/bookings (with the dietary
+ * requirements of the party, MH-05), the body of POST /api/staff/bookings (the same booking, for a
+ * hiker the staff chooses, MH-07) and the parameters of the seating preview (wrong input throws a
+ * ValidationError, 400) and shapes what goes out.
  */
 import { ValidationError } from '../domain/errors.js';
 import {
@@ -29,17 +31,104 @@ const requireTables = (value, partySize) => {
   return value.map(({ tableNumber, seats: tableSeats }) => ({ tableNumber, seats: tableSeats }));
 };
 
-// Body of POST /api/bookings: the tables are the ones the seating preview showed.
-export function parseCreateBooking(body) {
+const MAX_OTHER_LENGTH = 100;
+const MAX_REQUESTS_LENGTH = 300;
+
+// A list of codes (the diets or the allergies of a line): optional, text, each once.
+const requireCodes = (value, field) => {
+  const codes = value ?? [];
+  if (!Array.isArray(codes) || codes.some((code) => typeof code !== 'string')) {
+    throw new ValidationError(`${field} must be an array of text`);
+  }
+  if (new Set(codes).size !== codes.length) {
+    throw new ValidationError(`The same value can appear only once in ${field}`);
+  }
+  return codes;
+};
+
+// An optional text of a line, trimmed: null when it is not sent, never empty when it is.
+const optionalText = (value, field, maxLength) => {
+  if (value === undefined || value === null) return null;
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (text === '') throw new ValidationError(`${field} cannot be empty`);
+  if (text.length > maxLength) throw new ValidationError(`${field} can be at most ${maxLength} characters`);
+  return text;
+};
+
+// One guest line of the dietary needs (MH-05): diets and allergies from the preset lists, an
+// "other" diet and an "other" allergy in words, and other requests for the kitchen. At least one of
+// them. hasAllergies is not sent: the server works it out. Which diets and allergies exist, and
+// which diets go together, are rules of the hut (domain/dietaryNeeds.js).
+const requireRequirement = (item) => {
+  requireObject(item, 'Each requirement must be an object');
+  rejectUnknownFields(item, ['diets', 'otherDiet', 'allergies', 'otherAllergy', 'otherRequests'], ' in requirements');
+
+  const line = {
+    diets: requireCodes(item.diets, 'diets'),
+    otherDiet: optionalText(item.otherDiet, 'otherDiet', MAX_OTHER_LENGTH),
+    allergies: requireCodes(item.allergies, 'allergies'),
+    otherAllergy: optionalText(item.otherAllergy, 'otherAllergy', MAX_OTHER_LENGTH),
+    otherRequests: optionalText(item.otherRequests, 'otherRequests', MAX_REQUESTS_LENGTH),
+  };
+  const empty = line.diets.length === 0 && line.allergies.length === 0
+    && line.otherDiet === null && line.otherAllergy === null && line.otherRequests === null;
+  if (empty) throw new ValidationError('Each requirement needs a diet, an allergy or a request');
+  return line;
+};
+
+// The dietary needs of the party (MH-05): optional, one line per guest who has any, so there are
+// at most as many lines as people.
+const requireRequirements = (value, partySize) => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new ValidationError('requirements must be an array');
+  if (value.length > partySize) {
+    throw new ValidationError('There can be at most one requirement per person of the party');
+  }
+  return value.map(requireRequirement);
+};
+
+// The booking of a body, the same for a hiker and for the staff: the tables are the ones the seating
+// preview showed. `otherFields` are the fields that only one of the two bodies has.
+const parseBooking = (body, otherFields) => {
   requireObject(body);
-  rejectUnknownFields(body, ['slotId', 'partySize', 'tables']);
+  rejectUnknownFields(body, ['slotId', 'partySize', 'tables', 'requirements', ...otherFields]);
 
   const partySize = requirePositiveInteger(body.partySize, 'partySize');
   return {
     slotId: requirePositiveInteger(body.slotId, 'slotId'),
     partySize,
     tables: requireTables(body.tables, partySize),
+    requirements: requireRequirements(body.requirements, partySize),
   };
+};
+
+// Body of POST /api/bookings.
+export const parseCreateBooking = (body) => parseBooking(body, []);
+
+// Body of POST /api/staff/bookings (MH-07): the same, and the hiker the booking is for.
+export function parseCreateStaffBooking(body) {
+  const booking = parseBooking(body, ['hikerId']);
+  return { hikerId: requirePositiveInteger(body.hikerId, 'hikerId'), ...booking };
+}
+
+// Body of PATCH /api/bookings/:bookingId (MH-06): what changes, at least one of slotId, partySize and
+// requirements. requirements replaces all the lines ([] removes them). The tables are chosen by the
+// server. When partySize is not sent the use case compares the lines with the party of the booking.
+export function parseChangeBooking(params, body) {
+  const bookingId = requirePositiveIntegerText(params?.bookingId, 'bookingId');
+  requireObject(body);
+  rejectUnknownFields(body, ['slotId', 'partySize', 'requirements']);
+  if (body.slotId === undefined && body.partySize === undefined && body.requirements === undefined) {
+    throw new ValidationError('Send at least one of slotId, partySize and requirements');
+  }
+
+  const change = { bookingId };
+  if (body.slotId !== undefined) change.slotId = requirePositiveInteger(body.slotId, 'slotId');
+  if (body.partySize !== undefined) change.partySize = requirePositiveInteger(body.partySize, 'partySize');
+  if (body.requirements !== undefined) {
+    change.requirements = requireRequirements(body.requirements, change.partySize ?? Infinity);
+  }
+  return change;
 }
 
 // GET /api/slots/:slotId/seating?partySize=6
@@ -66,10 +155,32 @@ export const toSeatingDto = ({ slotId, partySize, tables }) => ({
   tables: toTablesDto(tables),
 });
 
-export const toBookingDto = ({ id, date, slotId, partySize, tables }) => ({
+const toRequirementsDto = (requirements = []) => requirements.map(
+  ({ diets, otherDiet, allergies, otherAllergy, otherRequests, hasAllergies }) => ({
+    diets, otherDiet, allergies, otherAllergy, otherRequests, hasAllergies,
+  }),
+);
+
+export const toBookingDto = ({ id, date, slotId, partySize, tables, requirements }) => ({
   id,
   date,
   slotId,
   partySize,
   tables: toTablesDto(tables),
+  requirements: toRequirementsDto(requirements),
+});
+
+// A booking of the page "My bookings" (MH-06), and the answer of PATCH /api/bookings/:bookingId.
+export const toMyBookingDto = ({
+  id, slotId, date, startsAt, endsAt, partySize, tables, requirements, canChange, changeableUntil,
+}) => ({
+  id,
+  slotId,
+  date,
+  startsAt: toHourMinute(startsAt),
+  endsAt: toHourMinute(endsAt),
+  partySize,
+  tables: toTablesDto(tables),
+  requirements: toRequirementsDto(requirements),
+  ...(canChange === undefined ? {} : { canChange, changeableUntil }),
 });

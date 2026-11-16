@@ -1,5 +1,5 @@
 // E2E TESTS of story MH-02 (define tables and slots): the staff page "Slots & tables" in a real browser,
-// with the real client, server and database. The scenarios are in docs/MH-2-define-tables-and-slots-e2e-scenarios.md
+// with the real client, server and database. The scenarios are in docs/e2e-definitions/MH-2-define-tables-and-slots-e2e-scenarios.md
 // and the screens in docs/mockups/slots; the names of the controls are the ones of the page.
 //
 // Each test makes its own data (a staff account, table sets named "E2E-<id> ..." and one future day)
@@ -307,7 +307,7 @@ test.describe('MH-2 Define tables and slots', () => {
     )).toBe(1);
   });
 
-  // ST-31 of docs/slots-tables-manual-test-report.md: the first read of the slots answers only after
+  // ST-31 of docs/manual-test-report/slots-tables-manual-test-report.md: the first read of the slots answers only after
   // a slot was saved, with the slots as they were before. The saved slot must stay on the page.
   test('a slot just saved stays on the page when an older read of the slots answers after it', async ({ page }) => {
     // A day of the strip with no slots, found without moving the days of the other tests.

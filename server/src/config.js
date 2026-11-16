@@ -20,6 +20,10 @@
  *   SMTP_USER          the user of the email service, if it asks for one
  *   SMTP_PASSWORD      and the password
  *   MAIL_FROM          the sender of the emails (default QUOTA <no-reply@quota.example>)
+ *   APP_URL            the address of the website, where the links of the emails lead (log in,
+ *                      choose a new password). Default http://localhost:5173, the dev server of the
+ *                      client; in Docker the server serves the client too, so docker-compose sets
+ *                      http://localhost:3001
  *   CLIENT_DIR         the folder of the built client, which the server then serves too (set in
  *                      the Docker image). Without it the server is only the API
  *
@@ -55,6 +59,15 @@ if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
   throw new Error('SMTP_PORT must be a port number, from 1 to 65535.');
 }
 
+const appUrl = process.env.APP_URL ?? 'http://localhost:5173';
+
+try {
+  const { protocol } = new URL(appUrl);
+  if (protocol !== 'http:' && protocol !== 'https:') throw new Error('not http');
+} catch {
+  throw new Error('APP_URL must be a web address, for example http://localhost:5173.');
+}
+
 const databaseUrlVariable = process.env.NODE_ENV === 'test' ? 'TEST_DATABASE_URL' : 'DATABASE_URL';
 
 export const config = {
@@ -72,5 +85,6 @@ export const config = {
     password: process.env.SMTP_PASSWORD,
     from: process.env.MAIL_FROM ?? 'QUOTA <no-reply@quota.example>',
   },
+  appUrl: appUrl.replace(/\/+$/, ''),
   clientDir: process.env.CLIENT_DIR,
 };

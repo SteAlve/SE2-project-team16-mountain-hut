@@ -1,79 +1,90 @@
 /**
- * DTO of the authentication: validates what arrives in the body of sign up and login (a wrong
- * body throws a ValidationError, 400) and shapes the user that goes out. The password hash never
- * leaves: toUserDto copies only the public fields.
+ * DTO of the authentication: validates what arrives in the body of sign up, login, the change of
+ * the password and the password reset (a wrong body throws a ValidationError, 400) and shapes the
+ * user that goes out. The password hash never leaves: toUserDto copies only the public fields.
  */
 import { ValidationError } from '../domain/errors.js';
+import {
+  optionalPhone,
+  rejectUnknownFields,
+  requireEmail,
+  requireObject,
+  requireText,
+} from './fields.js';
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^\+?[0-9 ]*[0-9][0-9 ]*$/; // digits and spaces, a leading + allowed
 const MIN_PASSWORD_LENGTH = 8;
 
-const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const requireObject = (body) => {
-  if (!isObject(body)) throw new ValidationError('Request body must be a JSON object');
-  return body;
-};
-
-const rejectUnknown = (body, allowed) => {
-  const unknown = Object.keys(body).filter((key) => !allowed.includes(key));
-  if (unknown.length > 0) throw new ValidationError(`Unknown field: ${unknown[0]}`);
-};
-
-const requireText = (body, field) => {
-  const value = body[field];
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new ValidationError(`${field} is required`);
+// A password that somebody chooses: at least 8 characters, spaces included.
+const requireNewPassword = (body, field) => {
+  const password = body[field];
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    throw new ValidationError(`${field} must have at least ${MIN_PASSWORD_LENGTH} characters`);
   }
-  return value.trim();
+  return password;
 };
-
-// Emails are compared without regard to letter case, so they are stored in lowercase.
-const normalizeEmail = (email) => email.toLowerCase();
 
 export function parseRegister(body) {
   requireObject(body);
-  rejectUnknown(body, ['firstName', 'lastName', 'email', 'phone', 'password']);
+  rejectUnknownFields(body, ['firstName', 'lastName', 'email', 'phone', 'password']);
 
-  const firstName = requireText(body, 'firstName');
-  const lastName = requireText(body, 'lastName');
-  const email = normalizeEmail(requireText(body, 'email'));
-  if (!EMAIL_PATTERN.test(email)) throw new ValidationError('email must be a valid email');
-
-  let phone = null;
-  if (body.phone !== undefined && body.phone !== null && body.phone !== '') {
-    if (typeof body.phone !== 'string' || !PHONE_PATTERN.test(body.phone.trim())) {
-      throw new ValidationError('phone must contain only digits, spaces and a leading +');
-    }
-    phone = body.phone.trim();
-  }
-
-  const { password } = body;
-  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-    throw new ValidationError(`password must have at least ${MIN_PASSWORD_LENGTH} characters`);
-  }
-
-  return { firstName, lastName, email, phone, password };
+  return {
+    firstName: requireText(body, 'firstName'),
+    lastName: requireText(body, 'lastName'),
+    email: requireEmail(body),
+    phone: optionalPhone(body),
+    password: requireNewPassword(body, 'password'),
+  };
 }
 
 export function parseLogin(body) {
   requireObject(body);
-  rejectUnknown(body, ['email', 'password']);
+  rejectUnknownFields(body, ['email', 'password']);
 
   const { email, password } = body;
   if (typeof email !== 'string' || email.trim() === '' || typeof password !== 'string' || password === '') {
     throw new ValidationError('email and password are required');
   }
 
-  return { email: normalizeEmail(email.trim()), password };
+  return { email: email.trim().toLowerCase(), password };
 }
 
-export const toUserDto = ({ id, firstName, lastName, email, phone, role }) => ({
+// POST /api/auth/change-password. The current password is not checked for its length: it is only
+// compared with the stored one.
+export function parseChangePassword(body) {
+  requireObject(body);
+  rejectUnknownFields(body, ['currentPassword', 'newPassword']);
+
+  const { currentPassword } = body;
+  if (typeof currentPassword !== 'string' || currentPassword === '') {
+    throw new ValidationError('currentPassword is required');
+  }
+  return { currentPassword, newPassword: requireNewPassword(body, 'newPassword') };
+}
+
+// POST /api/auth/password-reset-requests
+export function parseForgotPassword(body) {
+  requireObject(body);
+  rejectUnknownFields(body, ['email']);
+  return { email: requireEmail(body) };
+}
+
+// POST /api/auth/password-resets. The token is the one of the link of the email: it is sent back as
+// it is, whether it is a real one is for the use case to say.
+export function parseResetPassword(body) {
+  requireObject(body);
+  rejectUnknownFields(body, ['token', 'newPassword']);
+
+  const { token } = body;
+  if (typeof token !== 'string' || token === '') throw new ValidationError('token is required');
+  return { token, newPassword: requireNewPassword(body, 'newPassword') };
+}
+
+export const toUserDto = ({ id, firstName, lastName, email, phone, role, mustChangePassword }) => ({
   id,
   firstName,
   lastName,
   email,
   phone: phone ?? null,
   role,
+  mustChangePassword,
 });

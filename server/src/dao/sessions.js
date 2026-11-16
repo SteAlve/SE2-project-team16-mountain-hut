@@ -12,7 +12,8 @@ export const insert = ({ tokenHash, userId, expiresAt }) => run(
 // The session and its user, or null. Whether the session has expired is decided by the domain.
 export const findByTokenHash = (tokenHash) => get(
   `SELECT s.expires_at AS "expiresAt",
-          u.id, u.first_name AS "firstName", u.last_name AS "lastName", u.email, u.phone, u.role
+          u.id, u.first_name AS "firstName", u.last_name AS "lastName", u.email, u.phone, u.role,
+          u.must_change_password AS "mustChangePassword"
    FROM session s
    JOIN app_user u ON u.id = s.user_id
    WHERE s.token_hash = $1`,

@@ -5,6 +5,8 @@
 import { ValidationError } from '../domain/errors.js';
 
 const POSITIVE_INTEGER_TEXT = /^[1-9]\d*$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^\+?[0-9 ]*[0-9][0-9 ]*$/; // digits and spaces, a leading + allowed
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -18,6 +20,33 @@ export const requireObject = (value, message = 'Request body must be a JSON obje
 export const rejectUnknownFields = (object, allowed, where = '') => {
   const unknown = Object.keys(object).find((key) => !allowed.includes(key));
   if (unknown !== undefined) throw new ValidationError(`Unknown field${where}: ${unknown}`);
+};
+
+// A text of the body that cannot be missing or blank, without the spaces around it.
+export const requireText = (body, field) => {
+  const value = body[field];
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new ValidationError(`${field} is required`);
+  }
+  return value.trim();
+};
+
+// An email of the body, required. Emails are compared without regard to letter case, so they are
+// kept in lowercase.
+export const requireEmail = (body, field = 'email') => {
+  const email = requireText(body, field).toLowerCase();
+  if (!EMAIL_PATTERN.test(email)) throw new ValidationError(`${field} must be a valid email`);
+  return email;
+};
+
+// The phone of the body, which can be left out: not sent, null and '' all mean no phone (null).
+export const optionalPhone = (body) => {
+  const { phone } = body;
+  if (phone === undefined || phone === null || phone === '') return null;
+  if (typeof phone !== 'string' || !PHONE_PATTERN.test(phone.trim())) {
+    throw new ValidationError('phone must contain only digits, spaces and a leading +');
+  }
+  return phone.trim();
 };
 
 export const requirePositiveInteger = (value, field) => {

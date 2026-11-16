@@ -19,8 +19,8 @@ export class UnauthorizedError extends DomainError {   // nobody is logged in   
 }
 
 export class ForbiddenError extends DomainError {      // logged in, but not allowed        -> 403
-  constructor(message = 'Not allowed') {
-    super(message);
+  constructor(message = 'Not allowed', options) {
+    super(message, options);
   }
 }
 
