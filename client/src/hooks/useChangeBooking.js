@@ -26,6 +26,7 @@ import { getSlots } from '../api/slots.js';
 import { daysBetween, nextDays } from '../lib/bookingDates.js';
 import {
   buildChanges,
+  canSaveChange,
   changeFailure,
   hutDay,
   isNeedsOnly,
@@ -133,8 +134,10 @@ export function useChangeBooking(booking, { onSaved, onStale, onRefresh }) {
   });
   const hasChanges = Object.keys(changes).length > 0;
   // A change of the dietary needs alone needs no time, so it can be saved also when the times did not load.
-  const needsOnly = isNeedsOnly(changes);
-  const canSave = hasChanges && !isPending && (needsOnly || Boolean(slot));
+  // The day or the time was touched: a time has to be chosen, the saved one is no longer the answer.
+  const timeTouched = chosenDate !== booking.date || chosenSlotId !== booking.slotId;
+  const needsOnly = isNeedsOnly(changes) && !timeTouched;
+  const canSave = canSaveChange({ changes, slot, timeTouched, isPending });
 
   const save = async () => {
     if (!canSave) return 'failed';

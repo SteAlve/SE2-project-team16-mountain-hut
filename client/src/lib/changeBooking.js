@@ -81,6 +81,15 @@ export function changeLine({ canChange, changeableUntil }) {
 export const bookingNow = ({ date, startsAt, endsAt, partySize }) =>
   `${formatDay(date)} · ${formatTimeRange(startsAt, endsAt)} · ${partySize} ${partySize === 1 ? 'person' : 'people'}`;
 
+// Can the change be saved? Something must differ, and either a time is chosen or only the dietary needs changed
+// with the day and time left as they are (so they can be saved even if the times did not load). When the hiker
+// moved to another day (or left the time empty) a time must be chosen first.
+export function canSaveChange({ changes, slot, timeTouched, isPending }) {
+  if (isPending || Object.keys(changes).length === 0) return false;
+  if (slot) return true;
+  return isNeedsOnly(changes) && !timeTouched;
+}
+
 // What to send to PATCH /api/bookings/:id: only what is different from the saved booking, so a change of the
 // dietary needs alone does not ask the server to seat the party again.
 export function buildChanges(booking, { slotId, partySize, requirements }) {

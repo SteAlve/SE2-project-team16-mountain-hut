@@ -4,6 +4,7 @@ import {
   bookingNow,
   bookingReference,
   buildChanges,
+  canSaveChange,
   changeFailure,
   changeLine,
   isNeedsOnly,
@@ -127,4 +128,18 @@ test('the notes of the refused changes', () => {
   );
   assert.equal(changeFailure({ status: 404, message: 'x' }, ctx), 'This booking is no longer in your list, so nothing was saved.');
   assert.equal(changeFailure({ status: 0, message: 'x' }, ctx), 'Something went wrong on our side. Try again in a minute.');
+});
+
+test('save is disabled on another day until a time is chosen, but dietary-only changes stay saveable', () => {
+  const needsChange = { requirements: [] };
+  const slot = { slotId: 20 };
+  // Dietary change, day and time untouched (also when the times did not load): saveable.
+  assert.equal(canSaveChange({ changes: needsChange, slot: null, timeTouched: false, isPending: false }), true);
+  // Dietary change, then another day whose time is full: no time chosen, not saveable.
+  assert.equal(canSaveChange({ changes: needsChange, slot: null, timeTouched: true, isPending: false }), false);
+  // A time chosen on the new day: saveable.
+  assert.equal(canSaveChange({ changes: { ...needsChange, slotId: 20 }, slot, timeTouched: true, isPending: false }), true);
+  // Nothing changed, or saving in progress: not saveable.
+  assert.equal(canSaveChange({ changes: {}, slot, timeTouched: false, isPending: false }), false);
+  assert.equal(canSaveChange({ changes: needsChange, slot: null, timeTouched: false, isPending: true }), false);
 });
