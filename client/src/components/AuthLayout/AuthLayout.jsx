@@ -3,13 +3,15 @@
  * On a phone the panel becomes a dark header and the form a white sheet over it;
  * `compact` shrinks that header to the logo and the hut name (sign-up).
  * `topLink` is the "No account? Sign up" / "Already registered? Log in" line.
+ * `noExits` leaves out "Back to the hut page": the change of the password at the first login
+ * (screen 15) has no way out but Log out.
  */
 import { Link } from 'react-router-dom';
 import { ContourMap } from './ContourMap.jsx';
 import { QuotaLogo } from './QuotaLogo.jsx';
 import styles from './AuthLayout.module.css';
 
-export function AuthLayout({ topLink, compact = false, children }) {
+export function AuthLayout({ topLink, compact = false, noExits = false, children }) {
   return (
     <div className={styles.screen}>
       <aside className={`${styles.brand} ${compact ? styles.compact : ''}`}>
@@ -35,18 +37,22 @@ export function AuthLayout({ topLink, compact = false, children }) {
 
       <main className={styles.main}>
         <nav className={styles.topBar}>
-          <Link to="/" className={styles.back}>
-            ← Back to the hut page
-          </Link>
+          {!noExits && (
+            <Link to="/" className={styles.back}>
+              ← Back to the hut page
+            </Link>
+          )}
           <span>{topLink}</span>
         </nav>
 
         <div className={styles.form}>{children}</div>
 
         <footer className={styles.footer}>
-          <Link to="/" className={`${styles.back} ${styles.phoneBack}`}>
-            ← Back to the hut page
-          </Link>
+          {!noExits && (
+            <Link to="/" className={`${styles.back} ${styles.phoneBack}`}>
+              ← Back to the hut page
+            </Link>
+          )}
           <p className={styles.coords}>
             <span className={styles.footerHut}>Rifugio Alpe Lunga · </span>
             <span>45.92° N 7.71° E</span>

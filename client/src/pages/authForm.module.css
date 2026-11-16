@@ -1,4 +1,4 @@
-/* Shared by LoginPage and SignUpPage. */
+/* Shared by the login, the sign-up and the password pages. */
 
 .title {
   margin: 0;
@@ -74,6 +74,74 @@
   color: var(--stone);
 }
 
+/* "Forgot password?", right under the password of the login. */
+.forgot {
+  align-self: flex-end;
+  margin: -10px 0 -4px;
+  font-size: 14px;
+}
+
+/* A second button, e.g. "Send it again". */
+.secondary {
+  height: 46px;
+  margin-top: 24px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--snow);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+.secondary:disabled {
+  color: var(--stone);
+  cursor: progress;
+}
+
+/* "← Back to log in", under the button. */
+.backToLogin {
+  align-self: center;
+  margin-top: 18px;
+  font-size: 15px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column > [role='alert'] {
+  margin-top: 20px;
+}
+
+.column > .submit {
+  margin-top: 20px;
+}
+
+/* An action that looks like a link, e.g. "Log out" under the form. */
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pine);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  color: var(--stone);
+  cursor: progress;
+}
+
 @media (max-width: 991.98px) {
   .title {
     margin-top: 6px;
@@ -100,5 +168,10 @@
   .after {
     margin-top: 16px;
     font-size: 15px;
+  }
+
+  .secondary {
+    height: 54px;
+    border-radius: 12px;
   }
 }

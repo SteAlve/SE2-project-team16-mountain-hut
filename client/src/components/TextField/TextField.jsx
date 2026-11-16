@@ -1,6 +1,7 @@
 /**
  * A labelled input with a helper text or, when `error` is set, an error message below it.
  * `revealable` adds the eye button that shows or hides a password (login, screens 1-4).
+ * `search` adds the magnifier on the left (Figma "Search icon", Find the hiker of MH-07).
  * Any other prop (name, type, value, onChange, autoComplete...) goes to the <input>.
  */
 import { useId, useState } from 'react';
@@ -8,7 +9,7 @@ import eyeIcon from '../../assets/eye.svg';
 import eyeOffIcon from '../../assets/eye-off.svg';
 import styles from './TextField.module.css';
 
-export function TextField({ label, required, helper, error, placeholder, revealable = false, ...inputProps }) {
+export function TextField({ label, required, helper, error, placeholder, revealable = false, search = false, ...inputProps }) {
   const id = useId();
   const noteId = `${id}-note`;
   const note = error ?? helper;
@@ -16,7 +17,7 @@ export function TextField({ label, required, helper, error, placeholder, reveala
 
   return (
     <div
-      className={`${styles.field} ${error ? styles.invalid : ''} ${revealable ? styles.revealable : ''}`}
+      className={`${styles.field} ${error ? styles.invalid : ''} ${revealable ? styles.revealable : ''} ${search ? styles.search : ''}`}
     >
       <label htmlFor={id} className={styles.label}>
         {label}
@@ -28,6 +29,12 @@ export function TextField({ label, required, helper, error, placeholder, reveala
         )}
       </label>
       <div className={styles.control}>
+        {search && (
+          <svg className={styles.searchIcon} width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.75" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <path d="m13 13 4.25 4.25" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        )}
         <input
           id={id}
           className={styles.input}
