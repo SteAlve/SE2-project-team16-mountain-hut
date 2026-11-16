@@ -11,8 +11,10 @@
  *   needs                   the dietary needs (hooks/useDietaryNeeds), filled with the saved ones
  *   changes                 what would be sent: only what differs from the booking
  *   hasChanges, needsOnly   something changed; only the dietary needs changed (no seat check)
+ *   slotsFailed, retrySlots()  the times did not load: the dietary needs can still be saved, the rest needs them
+ *   today                   the day it is at the hut
  *   canSave, isPending, alert
- *   save()                  sends the change; resolves to 'saved', 'login' (401) or 'failed'
+ *   save()                  sends the change; resolves to 'saved', 'login' (401), 'stale' or 'failed'
  *
  * The seats a time shows are the free seats of the server; in the slot of the booking the seats of the
  * booking itself count as free, as they do when the server seats the party again. A time with seats
@@ -25,6 +27,7 @@ import { daysBetween, nextDays } from '../lib/bookingDates.js';
 import {
   buildChanges,
   changeFailure,
+  hutDay,
   isNeedsOnly,
   startsAfterNotice,
   stripStart,
@@ -38,12 +41,14 @@ const TICK_MS = 30 * 1000;
 const byDate = (slots) =>
   slots.reduce((days, slot) => ({ ...days, [slot.date]: [...(days[slot.date] ?? []), slot] }), {});
 
-// `onSaved(booking)` after a saved change; `onStale()` when the answer says the booking on screen is out of date.
-export function useChangeBooking(booking, { onSaved, onStale }) {
+// `onSaved(booking)` after a saved change; `onStale(message)` when the booking on screen is out of date (changed
+// elsewhere, gone): the page closes the dialog and loads the booking again; `onRefresh()` when the deadline passed.
+export function useChangeBooking(booking, { onSaved, onStale, onRefresh }) {
   const [now, setNow] = useState(() => new Date());
   const [start] = useState(() => stripStart(booking.date, new Date()));
   const [dayCount, setDayCount] = useState(() => Math.max(DAYS_PER_PAGE, daysBetween(start, booking.date) + 7));
   const [slotsByDate, setSlotsByDate] = useState(null); // null while loading
+  const [slotsFailed, setSlotsFailed] = useState(false);
   const [chosenDate, setChosenDate] = useState(booking.date);
   const [chosenSlotId, setChosenSlotId] = useState(booking.slotId);
   // The time of day the hiker had, kept when the day changes.
@@ -53,16 +58,25 @@ export function useChangeBooking(booking, { onSaved, onStale }) {
   const [alert, setAlert] = useState(null);
   const needs = useDietaryNeeds(partySize, booking.requirements);
 
-  const loadSlots = useCallback(async () => setSlotsByDate(byDate(await getSlots())), []);
+  const loadSlots = useCallback(async () => {
+    setSlotsByDate(byDate(await getSlots()));
+    setSlotsFailed(false);
+  }, []);
 
   useEffect(() => {
     let active = true;
     getSlots().then(
       (slots) => { if (active) setSlotsByDate(byDate(slots)); },
-      () => { if (active) setSlotsByDate({}); },
+      () => { if (active) { setSlotsByDate({}); setSlotsFailed(true); } },
     );
     return () => { active = false; };
   }, []);
+
+  // Try again after a failed load of the times (the dietary needs can be saved without them).
+  const retrySlots = () => {
+    setSlotsByDate(null);
+    loadSlots().catch(() => { setSlotsByDate({}); setSlotsFailed(true); });
+  };
 
   // The 48 hours move with the clock: the times are checked again every 30 seconds, but not while saving.
   useEffect(() => {
@@ -99,12 +113,14 @@ export function useChangeBooking(booking, { onSaved, onStale }) {
   const slot = slots.find((s) => s.slotId === chosenSlotId) ?? null;
 
   const chooseDate = (day) => {
+    if (isPending) return;
     setChosenDate(day);
     setAlert(null);
     const same = slotsOf(day).find((s) => s.startsAt === chosenStart && s.bookable);
     setChosenSlotId(same?.slotId ?? null);
   };
   const chooseSlot = (slotId) => {
+    if (isPending) return;
     setAlert(null);
     setChosenSlotId(slotId);
     setChosenStart(slots.find((s) => s.slotId === slotId)?.startsAt ?? chosenStart);
@@ -116,7 +132,9 @@ export function useChangeBooking(booking, { onSaved, onStale }) {
     requirements: needs.requirements,
   });
   const hasChanges = Object.keys(changes).length > 0;
-  const canSave = Boolean(slot) && hasChanges && !isPending;
+  // A change of the dietary needs alone needs no time, so it can be saved also when the times did not load.
+  const needsOnly = isNeedsOnly(changes);
+  const canSave = hasChanges && !isPending && (needsOnly || Boolean(slot));
 
   const save = async () => {
     if (!canSave) return 'failed';
@@ -130,9 +148,16 @@ export function useChangeBooking(booking, { onSaved, onStale }) {
       return 'saved';
     } catch (error) {
       if (error.status === 401) return 'login';
-      setAlert(changeFailure(error, { slot, partySize }));
-      // The booking on screen may be out of date (changed elsewhere, deadline passed, gone): load it again.
-      if (error.status === 404 || error.status === 422 || error.code === 'BOOKING_CHANGED') onStale();
+      const message = changeFailure(error, { slot, partySize });
+      // The choices on screen start from a booking that is no longer the saved one: the dialog is closed, so it
+      // opens again from the new booking.
+      if (error.status === 404 || error.code === 'BOOKING_CHANGED') {
+        onStale(message);
+        return 'stale';
+      }
+      setAlert(message);
+      // The deadline may have passed: the list is loaded again, Edit is closed if so.
+      if (error.status === 422) onRefresh?.();
       return 'failed';
     } finally {
       setIsPending(false);
@@ -145,19 +170,21 @@ export function useChangeBooking(booking, { onSaved, onStale }) {
     date: chosenDate,
     chooseDate,
     partySize,
-    setPartySize: (n) => { setAlert(null); setChosenPartySize(Math.max(1, n)); },
+    setPartySize: (n) => { if (isPending) return; setAlert(null); setChosenPartySize(Math.max(1, n)); },
     isLoading: slotsByDate === null,
+    slotsFailed,
+    retrySlots,
     slots,
     slot,
     chooseSlot,
     needs,
     changes,
     hasChanges,
-    needsOnly: isNeedsOnly(changes),
+    needsOnly,
     canSave,
     isPending,
     alert,
-    now,
+    today: hutDay(now),
     save,
   };
 }

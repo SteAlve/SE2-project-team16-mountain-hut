@@ -13,7 +13,6 @@ import { ChangeBookingDialog } from '../../components/ChangeBookingDialog/Change
 import { useChangeBooking } from '../../hooks/useChangeBooking.js';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { useMyBookings } from '../../hooks/useMyBookings.js';
-import { toDay } from '../../lib/bookingDates.js';
 import styles from './MyBookingsPage.module.css';
 
 // Sample data of the mockup, until the hut page story gives the real name and altitude.
@@ -31,7 +30,7 @@ const LOGIN_STATE = { from: '/bookings', page: 'see your bookings' };
 // The dialog is mounted only while a booking is edited, so every opening starts from the saved booking.
 function ChangeBooking({ booking, list }) {
   const navigate = useNavigate();
-  const change = useChangeBooking(booking, { onSaved: list.saved, onStale: list.reload });
+  const change = useChangeBooking(booking, { onSaved: list.saved, onStale: list.stale, onRefresh: list.reload });
 
   const save = async () => {
     if ((await change.save()) === 'login') navigate('/login', { state: LOGIN_STATE });
@@ -41,7 +40,7 @@ function ChangeBooking({ booking, list }) {
     <ChangeBookingDialog
       booking={booking}
       change={change}
-      today={toDay(change.now)}
+      today={change.today}
       onClose={() => !change.isPending && list.closeEdit()}
       onSave={save}
     />
@@ -68,6 +67,7 @@ export function MyBookingsPage() {
           </header>
 
           {list.notice && <Alert variant="info">{list.notice}</Alert>}
+          {list.staleNote && <Alert>{list.staleNote}</Alert>}
           {list.alert && (
             <Alert>
               {list.alert}{' '}

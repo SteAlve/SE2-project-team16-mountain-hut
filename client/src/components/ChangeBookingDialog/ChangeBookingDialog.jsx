@@ -4,7 +4,8 @@
  * as Book a table (Day, How many people, Time), "After the change" says what would be saved, and the dietary
  * needs are edited as in MH-05. Nothing is saved until Save changes; Close (or Esc) leaves the booking as it is.
  * While a guest's needs are being edited (screen 8) the steps and "After the change" give way to "Your booking",
- * a summary of the booking, so the editor has the room it needs; the choices already made are kept.
+ * a summary of the booking, so the editor has the room it needs; the choices already made are kept, and Done
+ * on the editor folds the line and brings the steps back. While saving, every control is disabled.
  * `booking` is the saved booking; `change` is what hooks/useChangeBooking returns.
  */
 import { formatDay, formatTimeRange } from '../../lib/bookingDates.js';
@@ -79,7 +80,7 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
               </dl>
             </section>
           ) : (
-            <>
+            <fieldset className={styles.group} disabled={isPending}>
           <section className={styles.step}>
             <StepHeading id="change-step-day" number={1} title="Day" done />
             <DayStrip
@@ -113,11 +114,16 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
                   <TimeSlot key={s.slotId} slot={s} selected={slot?.slotId === s.slotId} onSelect={() => change.chooseSlot(s.slotId)} />
                 ))}
               </div>
+            ) : change.slotsFailed ? (
+              <div className={styles.retry}>
+                <p className={styles.hint}>The times could not be loaded. The dietary needs can still be saved.</p>
+                <Button variant="outline" size="small" onClick={change.retrySlots}>Try again</Button>
+              </div>
             ) : (
               <p className={styles.hint}>{change.isLoading ? 'Loading the times…' : 'No times on this day.'}</p>
             )}
           </section>
-            </>
+            </fieldset>
           )}
         </div>
 
@@ -152,7 +158,7 @@ export function ChangeBookingDialog({ booking, change, today, onClose, onSave })
 
           {alert && <Alert>{alert}</Alert>}
 
-          <DietaryNeeds needs={needs} partySize={partySize} disabled={isPending} />
+          <DietaryNeeds needs={needs} partySize={partySize} disabled={isPending} foldable />
         </div>
       </div>
     </Modal>

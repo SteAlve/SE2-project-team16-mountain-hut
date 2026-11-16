@@ -7,6 +7,8 @@ import {
   changeFailure,
   changeLine,
   isNeedsOnly,
+  hutDay,
+  hutInstant,
   startsAfterNotice,
   stripStart,
 } from '../src/lib/changeBooking.js';
@@ -35,20 +37,31 @@ test('the reference is QUOTA- and the id on five digits', () => {
 });
 
 test('a meal exactly 48 hours away can be chosen, one minute less cannot', () => {
-  const now = new Date(2026, 6, 15, 13, 0);
+  // 13:00 in Rome (summer time, UTC+2) is 11:00 UTC.
+  const now = new Date(Date.UTC(2026, 6, 15, 11, 0));
   assert.equal(startsAfterNotice('2026-07-17', '13:00', now), true);
   assert.equal(startsAfterNotice('2026-07-17', '12:59', now), false);
   assert.equal(startsAfterNotice('2026-07-18', '12:00', now), true);
 });
 
+test('the 48 hours are counted at the hut, not in the time zone of the browser', () => {
+  // 23:30 UTC on 14 Jul is already 01:30 of 15 Jul in Rome.
+  assert.equal(hutDay(new Date(Date.UTC(2026, 6, 14, 23, 30))), '2026-07-15');
+  assert.equal(hutDay(new Date(Date.UTC(2026, 0, 14, 23, 30))), '2026-01-15');
+  assert.equal(hutInstant('2026-07-17', '13:00').toISOString(), '2026-07-17T11:00:00.000Z');
+  assert.equal(hutInstant('2026-01-17', '13:00').toISOString(), '2026-01-17T12:00:00.000Z');
+  // The clocks go back on 25 Oct 2026 (03:00 → 02:00): 13:00 that day is UTC+1.
+  assert.equal(hutInstant('2026-10-25', '13:00').toISOString(), '2026-10-25T12:00:00.000Z');
+});
+
 test('the strip starts at the first day 48 hours away, or at the booking when that is earlier', () => {
-  const now = new Date(2026, 6, 10, 9, 0);
+  const now = new Date(Date.UTC(2026, 6, 10, 7, 0));
   assert.equal(stripStart('2026-07-17', now), '2026-07-12');
   assert.equal(stripStart('2026-07-11', now), '2026-07-11');
 });
 
 test('a booking far ahead starts the strip a week before it', () => {
-  const now = new Date(2026, 6, 10, 9, 0);
+  const now = new Date(Date.UTC(2026, 6, 10, 7, 0));
   assert.equal(stripStart('2026-12-20', now), '2026-12-13');
 });
 
@@ -102,7 +115,7 @@ test('the notes of the refused changes', () => {
   );
   assert.equal(
     changeFailure({ status: 409, code: 'BOOKING_CHANGED', message: 'x' }, ctx),
-    'This booking was changed in the meantime. Reload it and try again.',
+    'This booking was changed in the meantime, so nothing was saved. Its new details are below: open it again to change it.',
   );
   assert.equal(
     changeFailure({ status: 422, message: 'Bookings can be changed until 48 hours before the meal' }, ctx),
@@ -112,6 +125,6 @@ test('the notes of the refused changes', () => {
     changeFailure({ status: 422, message: 'You already have a booking for this slot' }, ctx),
     'You already have a booking for this slot. Choose another day or time.',
   );
-  assert.equal(changeFailure({ status: 404, message: 'x' }, ctx), 'Something went wrong on our side. Try again in a minute.');
+  assert.equal(changeFailure({ status: 404, message: 'x' }, ctx), 'This booking is no longer in your list, so nothing was saved.');
   assert.equal(changeFailure({ status: 0, message: 'x' }, ctx), 'Something went wrong on our side. Try again in a minute.');
 });

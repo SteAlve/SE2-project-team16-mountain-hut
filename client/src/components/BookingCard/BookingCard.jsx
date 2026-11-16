@@ -6,7 +6,7 @@
  * `booking` is an item of GET /api/bookings. On a phone only the first 2 needs are listed, on a
  * computer the first 5; a black +N chip says how many are not.
  */
-import { bookingChips } from '../../lib/dietaryNeeds.js';
+import { bookingChips, bookingRequests } from '../../lib/dietaryNeeds.js';
 import { dayParts, formatTimeRange } from '../../lib/bookingDates.js';
 import { bookingReference, changeLine } from '../../lib/changeBooking.js';
 import { Button } from '../Button/Button.jsx';
@@ -21,6 +21,7 @@ export function BookingCard({ booking, isPhone, onEdit }) {
   const reference = bookingReference(booking.id);
   const chips = bookingChips(booking.requirements);
   const max = isPhone ? MAX_CHIPS.phone : MAX_CHIPS.desktop;
+  const requests = bookingRequests(booking.requirements);
   const hidden = chips.length - max;
   const line = changeLine(booking);
 
@@ -46,9 +47,8 @@ export function BookingCard({ booking, isPhone, onEdit }) {
           <TableChips tables={booking.tables.map(({ tableNumber, seats }) => ({ tableNumber, capacity: seats }))} />
         </div>
 
-        {chips.length === 0 ? (
-          <p className={styles.noNeeds}>No dietary needs</p>
-        ) : (
+        {chips.length === 0 && requests.length === 0 && <p className={styles.noNeeds}>No dietary needs</p>}
+        {chips.length > 0 && (
           <ul className={styles.needs} aria-label="Dietary needs">
             {chips.slice(0, max).map((chip) => (
               <li key={`${chip.kind}:${chip.name}`}><NeedChip kind={chip.kind} name={chip.name} /></li>
@@ -59,6 +59,9 @@ export function BookingCard({ booking, isPhone, onEdit }) {
               </li>
             )}
           </ul>
+        )}
+        {requests.length > 0 && (
+          <p className={styles.requests} title={requests.join(' · ')}>Other requests: {requests.join(' · ')}</p>
         )}
 
         {line && (

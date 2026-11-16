@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   bookingChips,
+  bookingRequests,
   countGuests,
   emptyLine,
   groupRequirements,
@@ -169,4 +170,17 @@ test('the chips of a booking list each need once', () => {
   ]);
   assert.deepEqual(chips.map((c) => c.name), ['Peanuts', 'Vegan', 'Gluten']);
   assert.deepEqual(bookingChips([]), []);
+});
+
+test('the text-only requests of a booking are listed once each', () => {
+  assert.deepEqual(bookingRequests([]), []);
+  assert.deepEqual(
+    bookingRequests([
+      { diets: [], allergies: [], otherRequests: 'High chair' },
+      { diets: ['VEGAN'], allergies: [], otherRequests: null },
+      { diets: [], allergies: [], otherRequests: ' High chair ' },
+      { diets: [], allergies: [], otherRequests: 'Small portion' },
+    ]),
+    ['High chair', 'Small portion'],
+  );
 });

@@ -7,6 +7,8 @@
  *   alert           the message of a failed load, or null
  *   loggedOut       true when the server says nobody is logged in (401): the page goes to the login
  *   notice          the green note after a saved change, or null
+ *   staleNote       the red note when an edit found the booking changed in the meantime, or null
+ *   stale(message)  closes the dialog, keeps the note and loads the list again
  *   editing         the booking whose dialog is open, or null (it goes away if the list no longer has it)
  *   edit(booking), closeEdit()
  *   reload()        loads the list again
@@ -24,6 +26,7 @@ export function useMyBookings() {
   const [alert, setAlert] = useState(null);
   const [loggedOut, setLoggedOut] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [staleNote, setStaleNote] = useState(null);
   const [editingId, setEditingId] = useState(null);
 
   // Resolves to true when the list was loaded.
@@ -60,16 +63,26 @@ export function useMyBookings() {
     await reload();
   };
 
+  // The booking changed or went away while it was edited: close the dialog, say it and load the list again.
+  const stale = (message) => {
+    setEditingId(null);
+    setNotice(null);
+    setStaleNote(message);
+    reload();
+  };
+
   return {
     bookings,
     isLoading: bookings === null && alert === null && !loggedOut,
     alert,
     loggedOut,
     notice,
+    staleNote,
     editing: bookings?.find((b) => b.id === editingId) ?? null,
-    edit: (booking) => { setNotice(null); setEditingId(booking.id); },
+    edit: (booking) => { setNotice(null); setStaleNote(null); setEditingId(booking.id); },
     closeEdit: () => setEditingId(null),
     reload,
     saved,
+    stale,
   };
 }

@@ -1,7 +1,8 @@
 /**
  * "Dietary needs and allergies" in Check your booking (story MH-05, mockup screens 1-4 and P1):
  * the folded lines, the line being edited and "+ Add a guest's needs" with the guests counted.
- * `needs` is what hooks/useDietaryNeeds returns; `disabled` while the booking is being sent.
+ * `needs` is what hooks/useDietaryNeeds returns; `disabled` while the booking is being sent;
+ * `foldable` adds Done to the open line (the change of a booking, MH-06).
  */
 import removeIcon from '../../assets/dietary/remove.svg';
 import { guests, lineChips } from '../../lib/dietaryNeeds.js';
@@ -45,7 +46,7 @@ function FoldedLine({ line, number, invalid, disabled, onOpen, onRemove }) {
   );
 }
 
-export function DietaryNeeds({ needs, partySize, disabled }) {
+export function DietaryNeeds({ needs, partySize, disabled, foldable = false }) {
   const { lines, openKey, counted, tooMany, errors } = needs;
   const free = Math.max(partySize - counted, 0);
 
@@ -95,6 +96,7 @@ export function DietaryNeeds({ needs, partySize, disabled }) {
                     onToggleAllergy={(code) => needs.toggleAllergy(line.key, code)}
                     onText={(field, value) => needs.setText(line.key, field, value)}
                     onRemove={() => needs.remove(line.key)}
+                    onDone={foldable ? needs.fold : undefined}
                   />
                 ) : (
                   <FoldedLine

@@ -9,16 +9,44 @@ import { sameRequirements } from './dietaryNeeds.js';
 // A change is admitted until 48 hours before the meal, and the new meal must start at least 48 hours away.
 export const CHANGE_NOTICE_MS = 48 * 60 * 60 * 1000;
 
-const startOf = (day, startsAt) => {
-  const [y, m, d] = day.split('-').map(Number);
-  const [h, min] = startsAt.split(':').map(Number);
-  return new Date(y, m - 1, d, h, min);
+// The hut's time zone: the server counts the 48 hours there (HUT_TIME_ZONE, Europe/Rome by default), whatever the
+// time zone of the browser is. VITE_HUT_TIME_ZONE can set the same value for the client.
+export const HUT_TIME_ZONE = import.meta.env?.VITE_HUT_TIME_ZONE ?? 'Europe/Rome';
+
+const wallClock = new Intl.DateTimeFormat('en-US', {
+  timeZone: HUT_TIME_ZONE,
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+// The wall clock of the hut at an instant, as the number of ms the same figures would be in UTC.
+const hutWallAsUtc = (ms) => {
+  const p = Object.fromEntries(wallClock.formatToParts(new Date(ms)).map(({ type, value }) => [type, Number(value)]));
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
 };
 
-// Does a meal of `day` at `startsAt` start at least 48 hours after `now`? Exactly 48 hours counts.
+// The day ('YYYY-MM-DD') it is at the hut at this instant.
+export const hutDay = (date) => new Date(hutWallAsUtc(date.getTime())).toISOString().slice(0, 10);
+
+// The instant of 'HH:MM' of `day` at the hut.
+export function hutInstant(day, hhmm) {
+  const [y, m, d] = day.split('-').map(Number);
+  const [h, min] = hhmm.split(':').map(Number);
+  const wall = Date.UTC(y, m - 1, d, h, min);
+  // Two passes settle the offset also next to a change of the summer time.
+  const first = wall - (hutWallAsUtc(wall) - wall);
+  return new Date(wall - (hutWallAsUtc(first) - first));
+}
+
+// Does a meal of `day` at `startsAt` (the hut's time) start at least 48 hours after `now`? Exactly 48 hours counts.
 // Used only to hide the times that cannot be chosen: the server answers 422 for them anyway.
 export const startsAfterNotice = (day, startsAt, now) =>
-  startOf(day, startsAt).getTime() - now.getTime() >= CHANGE_NOTICE_MS;
+  hutInstant(day, startsAt).getTime() - now.getTime() >= CHANGE_NOTICE_MS;
 
 // The day `count` days after `day` (negative: before), both 'YYYY-MM-DD'.
 export const shiftDay = (day, count) => {
@@ -26,10 +54,10 @@ export const shiftDay = (day, count) => {
   return toDay(new Date(y, m - 1, d + count));
 };
 
-// The first day the strip of the dialog starts from: the first day with a time 48 hours away, or the day of the
+// The first day (at the hut) the strip of the dialog starts from: the first day with a time 48 hours away, or the day of the
 // booking when that is earlier. A booking far ahead starts the strip a week before it, not at the first day.
 export function stripStart(bookingDay, now) {
-  const first = toDay(new Date(now.getTime() + CHANGE_NOTICE_MS));
+  const first = hutDay(new Date(now.getTime() + CHANGE_NOTICE_MS));
   if (bookingDay < first) return bookingDay;
   const ahead = nextDays(new Date(`${first}T12:00:00`), 31).includes(bookingDay);
   return ahead ? first : shiftDay(bookingDay, -7);
@@ -79,8 +107,9 @@ export function changeFailure(error, { slot, partySize }) {
     return `There are not enough free seats at ${formatTimeRange(slot.startsAt, slot.endsAt)} for ${people}. ${STAYS}`;
   }
   if (error.status === 409 && error.code === 'BOOKING_CHANGED') {
-    return 'This booking was changed in the meantime. Reload it and try again.';
+    return 'This booking was changed in the meantime, so nothing was saved. Its new details are below: open it again to change it.';
   }
+  if (error.status === 404) return 'This booking is no longer in your list, so nothing was saved.';
   if (error.status === 422) {
     // The server says which rule failed; the hiker is told what to do next.
     return /already have a booking/i.test(error.message)

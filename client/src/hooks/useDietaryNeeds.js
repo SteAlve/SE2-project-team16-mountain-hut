@@ -71,6 +71,12 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
     return !wrong && !tooMany;
   };
 
+  // Done with the open line: it folds when it is valid; otherwise the problem is marked and the line stays open.
+  const fold = () => {
+    if (lines.some((line) => !isValidLine(line))) check();
+    else setOpenKey(null);
+  };
+
   const reset = () => {
     setLines([]);
     setOpenKey(null);
@@ -97,6 +103,7 @@ export function useDietaryNeeds(partySize, initialRequirements = []) {
     toggleAllergy: (key, code) => update(key, (line) => toggleAllergy(line, code)),
     setText: (key, field, value) => update(key, (line) => ({ ...line, [field]: value })),
     check,
+    fold,
     requirements: toRequirements(lines),
     reset,
   };

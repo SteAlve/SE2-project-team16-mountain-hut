@@ -180,3 +180,12 @@
     flex: 1;
   }
 }
+
+.requests {
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--stone);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

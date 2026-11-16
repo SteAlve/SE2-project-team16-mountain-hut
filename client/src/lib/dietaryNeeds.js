@@ -178,6 +178,12 @@ export function requirementsToLines(requirements = []) {
   return [...groups.values()].map((line, i) => ({ key: i + 1, ...line }));
 }
 
+// The free-text requests of a booking ('High chair'), one for each different text, in the order of the guests.
+export function bookingRequests(requirements = []) {
+  const texts = requirements.map((r) => (typeof r.otherRequests === 'string' ? r.otherRequests.trim() : '')).filter(Boolean);
+  return [...new Set(texts)];
+}
+
 // The chips of a whole booking, one for each different need (a diet or an allergy named by
 // several guests appears once), in the order of the guests. [{ kind: 'allergy' | 'diet', name }]
 export function bookingChips(requirements = []) {

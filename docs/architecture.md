@@ -196,10 +196,15 @@ The server's `bookingOpen` and `bookingClosesAt` decide availability and the dea
 
 Edit opens `ChangeBookingDialog` (a dialog on a computer, a sheet on a phone), mounted only while a booking is edited, so each opening starts from the saved booking. `useChangeBooking` keeps the new choices (day, people, time, dietary needs) and sends nothing until Save changes. It reuses the steps of Book a table (`DayStrip`, `PeopleStepper`, `TimeSlot`) and the editor of MH-05 (`DietaryNeeds`, filled with the saved needs through `requirementsToLines`). `PATCH /api/bookings/:id` carries **only what differs** from the saved booking (`lib/changeBooking.js`, `buildChanges`): a change of the dietary needs alone sends neither `slotId` nor `partySize`, so the server does not check the seats and the tables stay. There is no preview for a change: the answer decides, and every refusal leaves the booking as it was (`409 NO_SEATS`, `409 BOOKING_CHANGED`, `422`), with the note of the mockup. After a saved change the list is loaded again, so the day, tables and deadline are the server's. Details that are only display:
 
-- **The 48 hours.** The server decides and checks them again (`422`). The client only hides the times that start less than 48 hours from now, so the hiker does not choose what cannot be saved; the exact 48 hours is still listed. This uses the clock of the browser, because the slot list has no field for the change window. The time of the booking itself is always listed.
+- **The 48 hours.** The server decides and checks them again (`422`). The client only hides the times that start less than 48 hours from now, so the hiker does not choose what cannot be saved; the exact 48 hours is still listed. The hours are counted at the hut, in the time zone the server uses (`HUT_TIME_ZONE`, `Europe/Rome`; the client reads `VITE_HUT_TIME_ZONE` if set), not in the one of the browser; the clock itself is the one of the browser, because the slot list has no field for the change window. The time of the booking itself is always listed.
 - **Seats of the booking.** In the slot of the booking, its own seats count as free, as they do when the server seats the party again. A time with some free seats stays pickable even if the party does not fit: Save changes answers. A full time is disabled.
 - **Day change.** Changing the day keeps the time of day when the new day has it; otherwise no time is chosen and Save changes stays disabled.
 - **Nothing changed.** Save changes is disabled.
+- **Dietary needs only.** They are saved even if the times did not load; a change of day, time or people needs the times (the dialog says so and offers Try again).
+- **Editing a guest's needs.** The steps give way to a summary ("Your booking"); Done on the editor folds the line (or marks what is wrong) and brings the steps back, with every choice kept.
+- **Saving.** All the steps are disabled while the change is sent.
+- **The booking changed meanwhile** (`409 BOOKING_CHANGED`, or `404`): the dialog closes, the list is loaded again and a note says nothing was saved; the hiker opens the booking again from its new details.
+- **Text-only requests** (`otherRequests`) are shown on the card as "Other requests: …", so a booking with only a request does not read "No dietary needs".
 
 ### Why it is built this way
 
