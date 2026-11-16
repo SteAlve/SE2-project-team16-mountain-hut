@@ -201,7 +201,7 @@ Edit opens `ChangeBookingDialog` (a dialog on a computer, a sheet on a phone), m
 - **Day change.** Changing the day keeps the time of day when the new day has it; otherwise no time is chosen and Save changes stays disabled.
 - **Nothing changed.** Save changes is disabled.
 - **Dietary needs only.** They are saved even if the times did not load; a change of day, time or people needs the times (the dialog says so and offers Try again).
-- **Editing a guest's needs.** The steps give way to a summary ("Your booking"); Done on the editor folds the line (or marks what is wrong) and brings the steps back, with every choice kept.
+- **Editing a guest's needs.** As in Check your booking (MH-05), "+ Add a guest's needs" and Edit on a line open a popup over the dialog with only that line (`GuestNeedsDialog`). Done keeps the change (or marks what is wrong and stays open); Cancel or Esc leaves the line as it was, and a line just added goes away. The steps and every choice already made stay as they are behind the popup.
 - **Saving.** All the steps are disabled while the change is sent.
 - **The booking changed meanwhile** (`409 BOOKING_CHANGED`, or `404`): the dialog closes, the list is loaded again and a note says nothing was saved; the hiker opens the booking again from its new details.
 - **Text-only requests** (`otherRequests`) are shown on the card as "Other requests: …", so a booking with only a request does not read "No dietary needs".
