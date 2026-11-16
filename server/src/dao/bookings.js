@@ -82,6 +82,10 @@ const validateBooking = ({ hikerId, slotId, partySize, tableAssignments, require
 
   validateTableAssignments(partySize, tableAssignments);
   validateRequirements(requirements);
+
+  if (requirements.length > partySize) {
+    throw new RangeError('There can be at most one requirement per person of the party.');
+  }
 };
 
 // Does the hiker already have an active (not cancelled) booking for the slot?

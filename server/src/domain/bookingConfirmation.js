@@ -67,7 +67,9 @@ const NEED_LABELS = {
 const groupNeeds = (requirements) => {
   const groups = new Map();
   for (const line of requirements) {
-    const key = JSON.stringify([line.diets, line.otherDiet, line.allergies, line.otherAllergy, line.otherRequests]);
+    const key = JSON.stringify([
+      [...line.diets].sort(), line.otherDiet, [...line.allergies].sort(), line.otherAllergy, line.otherRequests,
+    ]);
     const group = groups.get(key) ?? { ...line, guests: 0 };
     group.guests += 1;
     groups.set(key, group);

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { parseLogin, parseRegister, toUserDto } from '../../src/dto/auth.js';
+import {
+  parseChangePassword,
+  parseForgotPassword,
+  parseLogin,
+  parseRegister,
+  parseResetPassword,
+  toUserDto,
+} from '../../src/dto/auth.js';
 import { ValidationError } from '../../src/domain/errors.js';
 
 const valid = {
@@ -53,10 +60,50 @@ describe('parseLogin', () => {
   });
 });
 
+describe('parseChangePassword', () => {
+  it('keeps the current password and validates the new one', () => {
+    expect(parseChangePassword({ currentPassword: 'generated', newPassword: 'new-password' }))
+      .toEqual({ currentPassword: 'generated', newPassword: 'new-password' });
+  });
+
+  it.each([
+    ['a missing current password', { newPassword: 'new-password' }, 'currentPassword is required'],
+    ['a short new password', { currentPassword: 'current', newPassword: 'short' }, 'newPassword must have at least 8 characters'],
+    ['an unknown field', { currentPassword: 'current', newPassword: 'new-password', token: 'x' }, 'Unknown field: token'],
+  ])('rejects %s', (_name, body, message) => {
+    expect(() => parseChangePassword(body)).toThrow(new ValidationError(message));
+  });
+});
+
+describe('password reset DTOs', () => {
+  it('normalizes the email used to request a reset link', () => {
+    expect(parseForgotPassword({ email: ' Ada@Example.COM ' })).toEqual({ email: 'ada@example.com' });
+  });
+
+  it('accepts the token and new password used to complete a reset', () => {
+    expect(parseResetPassword({ token: 'token-id', newPassword: 'new-password' }))
+      .toEqual({ token: 'token-id', newPassword: 'new-password' });
+  });
+
+  it.each([
+    ['a missing email', {}, 'email is required'],
+    ['an invalid email', { email: 'not-an-email' }, 'email must be a valid email'],
+  ])('rejects %s', (_name, body, message) => {
+    expect(() => parseForgotPassword(body)).toThrow(new ValidationError(message));
+  });
+
+  it.each([
+    ['a missing token', { newPassword: 'new-password' }, 'token is required'],
+    ['a short reset password', { token: 'token-id', newPassword: 'short' }, 'newPassword must have at least 8 characters'],
+  ])('rejects %s', (_name, body, message) => {
+    expect(() => parseResetPassword(body)).toThrow(new ValidationError(message));
+  });
+});
+
 describe('toUserDto', () => {
   it('exposes only the public fields and null for a missing phone', () => {
     expect(toUserDto({
-      id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', role: 'HIKER', passwordHash: 'secret',
-    })).toEqual({ id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', phone: null, role: 'HIKER' });
+      id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', role: 'HIKER', passwordHash: 'secret', mustChangePassword: true,
+    })).toEqual({ id: 1, firstName: 'A', lastName: 'B', email: 'a@b.it', phone: null, role: 'HIKER', mustChangePassword: true });
   });
 });
