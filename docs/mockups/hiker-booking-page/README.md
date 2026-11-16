@@ -32,7 +32,7 @@ Everything shown comes from the story or from the product owner's clarifications
 | Team decision | Until a change is confirmed the old booking stays as it is. If the change fails, nothing changes. |
 | Team decision | The page lists only the bookings of the hiker, from today on, that are not cancelled. Past and cancelled bookings are not listed. |
 | Team decision | There is **no availability check before saving**: the server has no preview for a change. *Save changes* works, or it is refused and nothing changes. The server chooses the tables for the new day, time or party size, and the hiker does not see them before saving. A change of the dietary needs only does not check the seats and keeps the tables. |
-| Backend ([PR #94](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/94)) | `GET /api/bookings` lists the bookings of the hiker, and `PATCH /api/bookings/:bookingId` changes one (`slotId`, `partySize` and `requirements`, one or more of them). The API for the cancellation comes with MH-08. |
+| Backend ([PR #94](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/94)) | `GET /api/bookings` lists the bookings of the hiker, and `PATCH /api/bookings/:bookingId` changes one (`slotId`, `partySize` and `requirements`, one or more of them). `DELETE /api/bookings/:bookingId` cancels one (MH-08) and answers `204`; a booking already cancelled answers `422`. |
 | Team decision (confirmed by the product owner) | A saved change and a confirmed cancellation are emailed to the hiker ([emails mockup](../emails/README.md), emails 3 and 4). A failed change sends no email. |
 
 ## The flow

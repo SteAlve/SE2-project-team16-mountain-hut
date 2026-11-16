@@ -16,6 +16,9 @@
  *                          true when the needs can be sent
  *   requirements           the lines as the API wants them, one requirement per guest
  *   reset()                no lines, for the next booking
+ *
+ * `initialRequirements` (the saved requirements of a booking, one per guest) fills the lines when
+ * a booking is edited (MH-06); without them the party starts with no needs (MH-05).
  */
 import { useRef, useState } from 'react';
 import {
@@ -23,17 +26,18 @@ import {
   emptyLine,
   isValidLine,
   lineErrors,
+  requirementsToLines,
   toggleAllergy,
   toggleDiet,
   toRequirements,
 } from '../lib/dietaryNeeds.js';
 
-export function useDietaryNeeds(partySize) {
-  const [lines, setLines] = useState([]);
+export function useDietaryNeeds(partySize, initialRequirements = []) {
+  const [lines, setLines] = useState(() => requirementsToLines(initialRequirements));
   const [openKey, setOpenKey] = useState(null);
   // Lines checked by a Confirm show their errors while they are fixed; a new line starts clean.
   const [checkedKeys, setCheckedKeys] = useState(() => new Set());
-  const nextKey = useRef(1);
+  const nextKey = useRef(lines.length + 1);
 
   const counted = countGuests(lines);
   const free = partySize - counted;
@@ -67,6 +71,12 @@ export function useDietaryNeeds(partySize) {
     return !wrong && !tooMany;
   };
 
+  // Done with the open line: it folds when it is valid; otherwise the problem is marked and the line stays open.
+  const fold = () => {
+    if (lines.some((line) => !isValidLine(line))) check();
+    else setOpenKey(null);
+  };
+
   const reset = () => {
     setLines([]);
     setOpenKey(null);
@@ -93,6 +103,7 @@ export function useDietaryNeeds(partySize) {
     toggleAllergy: (key, code) => update(key, (line) => toggleAllergy(line, code)),
     setText: (key, field, value) => update(key, (line) => ({ ...line, [field]: value })),
     check,
+    fold,
     requirements: toRequirements(lines),
     reset,
   };

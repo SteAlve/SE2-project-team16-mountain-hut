@@ -2,7 +2,7 @@
  * Controller of the bookings. requireAuth has already put the logged-in user in req.user.
  */
 import {
-  parseChangeBooking, parseCreateBooking, toBookingDto, toMyBookingDto,
+  parseCancelBooking, parseChangeBooking, parseCreateBooking, toBookingDto, toMyBookingDto,
 } from '../dto/bookings.js';
 
 export const makeCreateBookingController = ({ bookTable }) => async (req, res) => {
@@ -22,4 +22,11 @@ export const makeChangeBookingController = ({ changeBookingAndNotify }) => async
   const input = parseChangeBooking(req.params, req.body);
   const booking = await changeBookingAndNotify({ user: req.user, ...input });
   res.status(200).json(toMyBookingDto(booking));
+};
+
+// DELETE /api/bookings/:bookingId: cancel a booking (MH-08). Nothing to send back.
+export const makeCancelBookingController = ({ cancelBookingAndNotify }) => async (req, res) => {
+  const input = parseCancelBooking(req.params);
+  await cancelBookingAndNotify({ user: req.user, ...input });
+  res.status(204).end();
 };

@@ -11,6 +11,13 @@
  *                    13:00 answers 409 TABLES_CHANGED the first time (someone took a table)
  *   other days       plenty of seats, a party is split over tables when no table is big enough
  *
+ * My bookings (MH-06): the hiker starts with three bookings, and GET /bookings lists them with canChange and
+ * changeableUntil (48 hours before the meal). PATCH /bookings/:id changes one like the server: only what is sent
+ * changes, the party is seated again with its own seats counted as free, the 48 hours count for the booking and
+ * for the new time (422), and
+ *   today + 1        the first booking: past the 48 hours, so Edit is faded
+ *   today + 8, 20:00 the first change to this time answers 409 BOOKING_CHANGED (changed at the same moment)
+ *
  * Logged in as a hiker at start. "Log out" makes you a guest (booking then answers 401) until
  * POST /auth/login or a reload. Bookings take the seats until the page is reloaded.
  */
@@ -67,6 +74,10 @@ let user = HIKER;
 let nextBookingId = 1;
 let tablesChangedOnce = false;
 const booked = new Set(); // 'userId#slotId'
+let bookingChangedOnce = false;
+
+// The bookings of the hiker: { id, userId, slotId, partySize, tables, requirements }.
+const bookings = [];
 
 const freeSeats = (slot) => slot.tables.reduce((sum, t) => sum + t.free, 0);
 const isSlot = (slot, offset, meal) => slot.offset === offset && slot.meal === meal;
@@ -103,6 +114,17 @@ function seat(slot, partySize) {
 
 const sameTables = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// MH-06: a change is admitted until 48 hours before the meal, and the new meal must start 48 hours from now.
+const NOTICE_MS = 48 * 60 * 60 * 1000;
+const startOf = (date, startsAt) => {
+  const [y, m, d] = date.split('-').map(Number);
+  const [h, min] = startsAt.split(':').map(Number);
+  return new Date(y, m - 1, d, h, min);
+};
+const changeDeadline = (slot) => new Date(startOf(slot.date, slot.startsAt).getTime() - NOTICE_MS);
+const toMoment = (date) => `${toDay(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const closedChanges = () => fail(422, 'UnprocessableError', 'Bookings can be changed until 48 hours before the meal');
+
 // The dietary needs of a booking (MH-05), saved as the server does: one per guest, at most one per
 // person, texts trimmed (null when not sent), hasAllergies worked out. null when they are wrong.
 const text = (value) => (typeof value === 'string' && value.trim() ? value.trim() : null);
@@ -118,6 +140,101 @@ function toRequirements(requirements = [], partySize) {
   const empty = (r) => !r.diets.length && !r.allergies.length && !r.otherDiet && !r.otherAllergy && !r.otherRequests;
   if (saved.some(empty)) return null;
   return saved.map((r) => ({ ...r, hasAllergies: r.allergies.length > 0 || r.otherAllergy !== null }));
+}
+
+// The three bookings the hiker starts with (MH-06): one past the 48 hours, two that can be changed.
+function seedBookings() {
+  const need = (diets, allergies) => ({ diets, otherDiet: null, allergies, otherAllergy: null, otherRequests: null, hasAllergies: allergies.length > 0 });
+  [
+    { offset: 1, meal: 0, partySize: 2, requirements: [] },
+    { offset: 5, meal: 1, partySize: 4, requirements: [need(['VEGAN'], ['PEANUTS']), need([], ['SHELLFISH'])] },
+    { offset: 9, meal: 2, partySize: 6, requirements: [need(['VEGETARIAN'], ['SHELLFISH', 'PEANUTS', 'GLUTEN']), need(['LACTOSE_FREE'], []), need(['VEGAN'], [])] },
+  ].forEach(({ offset, meal, partySize, requirements }) => {
+    const slot = SLOTS.find((s) => isSlot(s, offset, meal));
+    const tables = seat(slot, partySize);
+    tables.forEach(({ tableNumber, seats }) => { slot.tables.find((t) => t.tableNumber === tableNumber).free -= seats; });
+    bookings.push({ id: nextBookingId++, userId: HIKER.id, slotId: slot.slotId, partySize, tables, requirements });
+    booked.add(`${HIKER.id}#${slot.slotId}`);
+  });
+}
+seedBookings();
+
+const toMyBooking = (b) => {
+  const slot = SLOTS.find((s) => s.slotId === b.slotId);
+  return {
+    id: b.id,
+    slotId: b.slotId,
+    date: slot.date,
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    partySize: b.partySize,
+    tables: b.tables,
+    requirements: b.requirements,
+  };
+};
+
+const slotOf = (b) => SLOTS.find((s) => s.slotId === b.slotId);
+const giveSeats = (b, sign) =>
+  b.tables.forEach(({ tableNumber, seats }) => { slotOf(b).tables.find((t) => t.tableNumber === tableNumber).free += sign * seats; });
+
+// PATCH /bookings/:id, like the server (docs/openapi.json, changeBooking).
+function changeMyBooking(id, body) {
+  if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
+  if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers can change bookings');
+  const booking = bookings.find((b) => b.id === id && b.userId === user.id);
+  if (!booking) return fail(404, 'NotFoundError', `Booking ${id} not found`);
+  const keys = Object.keys(body ?? {});
+  if (keys.length === 0) return fail(400, 'ValidationError', 'Send at least one of slotId, partySize and requirements');
+  if (keys.some((k) => !['slotId', 'partySize', 'requirements'].includes(k))) {
+    return fail(400, 'ValidationError', `Unknown field: ${keys.find((k) => !['slotId', 'partySize', 'requirements'].includes(k))}`);
+  }
+  if (body.partySize !== undefined && !(Number.isInteger(body.partySize) && body.partySize >= 1)) {
+    return fail(400, 'ValidationError', 'partySize must be a positive integer');
+  }
+
+  const current = slotOf(booking);
+  if (Date.now() > changeDeadline(current).getTime()) return closedChanges();
+  const target = body.slotId === undefined ? current : SLOTS.find((s) => s.slotId === body.slotId);
+  if (!target) return fail(404, 'NotFoundError', `Slot ${body.slotId} not found`);
+  if (target !== current && startOf(target.date, target.startsAt).getTime() - Date.now() < NOTICE_MS) return closedChanges();
+  if (target !== current && booked.has(`${user.id}#${target.slotId}`)) {
+    return fail(422, 'UnprocessableError', 'You already have a booking for this slot');
+  }
+
+  const partySize = body.partySize ?? booking.partySize;
+  let requirements = booking.requirements;
+  if (body.requirements !== undefined) {
+    if (!Array.isArray(body.requirements)) return fail(400, 'ValidationError', 'requirements must be a list');
+    if (body.requirements.length > partySize) {
+      return fail(422, 'UnprocessableError', 'There can be at most one requirement per person of the party');
+    }
+    requirements = toRequirements(body.requirements, partySize);
+    if (!requirements) return fail(400, 'ValidationError', 'Invalid requirements');
+  } else if (requirements.length > partySize) {
+    return fail(422, 'UnprocessableError', 'There can be at most one requirement per person of the party');
+  }
+
+  let tables = booking.tables;
+  if (target !== current || partySize !== booking.partySize) {
+    if (isSlot(target, 8, 3) && !bookingChangedOnce) {
+      bookingChangedOnce = true;
+      return fail(409, 'ConflictError', 'The booking was changed in the meantime: reload it and try again', 'BOOKING_CHANGED');
+    }
+    // The seats of the booking count as free, so it can keep them.
+    giveSeats(booking, +1);
+    const proposed = seat(target, partySize);
+    if (!proposed) {
+      giveSeats(booking, -1);
+      return noSeats();
+    }
+    proposed.forEach(({ tableNumber, seats }) => { target.tables.find((t) => t.tableNumber === tableNumber).free -= seats; });
+    booked.delete(`${user.id}#${current.slotId}`);
+    booked.add(`${user.id}#${target.slotId}`);
+    tables = proposed;
+  }
+
+  Object.assign(booking, { slotId: target.slotId, partySize, tables, requirements });
+  return json(200, toMyBooking(booking));
 }
 
 const json = (status, body) =>
@@ -204,8 +321,26 @@ function route(method, url, body) {
       slot.tables.find((t) => t.tableNumber === tableNumber).free -= seats;
     });
     booked.add(`${user.id}#${slotId}`);
-    return json(201, { id: nextBookingId++, date: slot.date, slotId, partySize, tables: requested, requirements });
+    const id = nextBookingId++;
+    bookings.push({ id, userId: user.id, slotId, partySize, tables: requested, requirements });
+    return json(201, { id, date: slot.date, slotId, partySize, tables: requested, requirements });
   }
+
+  if (method === 'GET' && path === '/bookings') {
+    if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
+    if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers have bookings');
+    const list = bookings
+      .filter((b) => b.userId === user.id && slotOf(b).date >= toDay(new Date()))
+      .sort((a, b) => `${slotOf(a).date}${slotOf(a).startsAt}`.localeCompare(`${slotOf(b).date}${slotOf(b).startsAt}`))
+      .map((b) => {
+        const deadline = changeDeadline(slotOf(b));
+        return { ...toMyBooking(b), canChange: Date.now() <= deadline.getTime(), changeableUntil: toMoment(deadline) };
+      });
+    return json(200, list);
+  }
+
+  const change = path.match(/^\/bookings\/(\d+)$/);
+  if (method === 'PATCH' && change) return changeMyBooking(Number(change[1]), body);
 
   return fail(404, 'NotFoundError', `No mock for ${method} ${path}`);
 }
