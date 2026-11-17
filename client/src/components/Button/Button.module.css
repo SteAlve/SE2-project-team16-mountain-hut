@@ -56,6 +56,21 @@
   cursor: not-allowed;
 }
 
+.danger {
+  border-color: var(--error);
+  background: var(--snow);
+  color: var(--error);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--error-soft);
+}
+
+.danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .ghost {
   background: transparent;
   color: var(--ink);

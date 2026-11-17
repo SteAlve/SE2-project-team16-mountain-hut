@@ -1,8 +1,9 @@
 /**
  * One booking of "My bookings" (Figma "Booking card", mockup docs/mockups/hiker-booking-page, screens 1-2):
- * the day, the time, the reference, the people, the tables, the dietary needs and Edit.
+ * the day, the time, the reference, the people, the tables, the dietary needs, Edit and Cancel booking.
  * Edit is faded and cannot be pressed once the 48 hours have passed (`booking.canChange` false), and
- * the line under it says when the changes closed. Cancelling a booking comes with story MH-08.
+ * the line under it says when the changes closed. Cancel booking (story MH-08, screen 11) is always open: it calls
+ * `onCancel`, and the page asks to confirm.
  * `booking` is an item of GET /api/bookings. On a phone only the first 2 needs are listed, on a
  * computer the first 5; a black +N chip says how many are not.
  */
@@ -16,7 +17,7 @@ import styles from './BookingCard.module.css';
 
 const MAX_CHIPS = { desktop: 5, phone: 2 };
 
-export function BookingCard({ booking, isPhone, onEdit }) {
+export function BookingCard({ booking, isPhone, onEdit, onCancel }) {
   const { weekday, day, month } = dayParts(booking.date);
   const reference = bookingReference(booking.id);
   const chips = bookingChips(booking.requirements);
@@ -75,6 +76,9 @@ export function BookingCard({ booking, isPhone, onEdit }) {
       <div className={styles.actions}>
         <Button variant="outline" size="small" disabled={!booking.canChange} onClick={() => onEdit(booking)}>
           Edit
+        </Button>
+        <Button variant="danger" size="small" onClick={() => onCancel(booking)}>
+          Cancel booking
         </Button>
       </div>
     </li>

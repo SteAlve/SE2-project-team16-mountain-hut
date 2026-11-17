@@ -11,12 +11,17 @@
  *   stale(message)  closes the dialog, keeps the note and loads the list again
  *   editing         the booking whose dialog is open, or null (it goes away if the list no longer has it)
  *   edit(booking), closeEdit()
+ *   cancelling      the booking whose "Cancel this booking?" dialog is open (MH-08), or null
+ *   cancel(booking), closeCancel()
+ *   cancelled(booking)  the booking was cancelled: closes the dialog, takes it off the list at once, shows the note
+ *                   and loads the list again
  *   reload()        loads the list again
  *   saved(booking)  a change was saved: closes the dialog, shows the note and loads the list again, so
  *                   the day, the tables and the deadline are the ones of the server
  */
 import { useCallback, useEffect, useState } from 'react';
 import { listMyBookings } from '../api/bookings.js';
+import { cancelNotice } from '../lib/cancelBooking.js';
 import { bookingReference } from '../lib/changeBooking.js';
 
 const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
@@ -28,6 +33,7 @@ export function useMyBookings() {
   const [notice, setNotice] = useState(null);
   const [staleNote, setStaleNote] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
 
   // Resolves to true when the list was loaded.
   const reload = useCallback(async () => {
@@ -63,9 +69,19 @@ export function useMyBookings() {
     await reload();
   };
 
-  // The booking changed or went away while it was edited: close the dialog, say it and load the list again.
+  // The booking is cancelled (MH-08): it leaves the list at once, then the list is loaded again.
+  const cancelled = async (booking) => {
+    setCancellingId(null);
+    setStaleNote(null);
+    setNotice(cancelNotice(booking.id));
+    setBookings((current) => current?.filter((b) => b.id !== booking.id) ?? current);
+    await reload();
+  };
+
+  // The booking changed or went away while it was edited or cancelled: close the dialog, say it and load the list again.
   const stale = (message) => {
     setEditingId(null);
+    setCancellingId(null);
     setNotice(null);
     setStaleNote(message);
     reload();
@@ -79,8 +95,12 @@ export function useMyBookings() {
     notice,
     staleNote,
     editing: bookings?.find((b) => b.id === editingId) ?? null,
+    cancelling: bookings?.find((b) => b.id === cancellingId) ?? null,
     edit: (booking) => { setNotice(null); setStaleNote(null); setEditingId(booking.id); },
     closeEdit: () => setEditingId(null),
+    cancel: (booking) => { setNotice(null); setStaleNote(null); setCancellingId(booking.id); },
+    closeCancel: () => setCancellingId(null),
+    cancelled,
     reload,
     saved,
     stale,
