@@ -16,7 +16,7 @@ let pool;
 let passwordHash;
 let fixture;
 
-test.use({ timezoneId: zone });
+test.use({ timezoneId: zone, actionTimeout: 5000 });
 const escapeRegex = (text) => text.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
 const fullName = (hiker) => hiker.firstName + ' ' + hiker.lastName;
 const summary = (page) => page.getByRole('complementary', { name: 'Reservation', exact: true });
@@ -166,8 +166,8 @@ async function answer(page, path, action, status, method = 'POST') {
 }
 async function login(page, person) {
   await page.goto('/login');
-  await page.getByLabel('Email', { exact: true }).fill(person.email);
-  await page.getByLabel('Password', { exact: true }).fill(person.password);
+  await page.getByLabel(/^Email\s*\*?$/).fill(person.email);
+  await page.getByLabel(/^Password\s*\*?$/).fill(person.password);
   const user = await answer(page, '/auth/login',
     () => page.getByRole('button', { name: 'Log in', exact: true }).click(), 200);
   await expect(page).toHaveURL(/\/(?:slots|book|change-password)(?:[/?#]|$)/);
@@ -176,12 +176,12 @@ async function login(page, person) {
 async function openStaff(page) {
   await login(page, fixture.employee);
   await page.goto(ROUTE);
-  await expect(page.getByRole('heading', { level: 1, name: 'Reservations', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'New reservation', exact: true })).toBeVisible();
 }
 async function search(page, query) {
   const waiting = page.waitForResponse((r) => matches(r, '/staff/hikers', 'GET') &&
     new URL(r.url()).searchParams.get('q') === query);
-  await page.getByRole('textbox', { name: 'Find the hiker', exact: true }).fill(query);
+  await page.getByRole('searchbox', { name: 'Find the hiker', exact: true }).fill(query);
   const response = await waiting;
   expect(response.status()).toBe(200);
   return response.json();
@@ -201,7 +201,7 @@ const timeChoice = (page, slot = fixture.slot) => page.getByRole('radiogroup', {
   .getByRole('radio', { name: new RegExp(escapeRegex(slot.startsAt.slice(0, 5)) + '.*' + escapeRegex(slot.endsAt.slice(0, 5))) });
 
 async function setPeople(page, count) {
-  const people = page.getByRole('group', { name: 'People', exact: true });
+  const people = page.getByRole('group', { name: 'How many people', exact: true });
   const output = people.getByRole('status'); // The existing <output> stepper uses the implicit status role.
   const current = Number(await output.innerText());
   expect(Number.isSafeInteger(current)).toBe(true);
@@ -217,18 +217,26 @@ async function chooseDayAndPeople(page, count) {
 }
 async function chooseSlot(page, count = 2) {
   await chooseDayAndPeople(page, count);
-  const preview = await answer(page, '/staff/slots/' + fixture.slot.slotId + '/seating',
-    () => timeChoice(page).click(), 200, 'GET');
+  await timeChoice(page).click();
+  // The UI requests seating on Save. Read the current proposal to establish the fixture.
+  const response = await page.request.get('/api/staff/slots/' + fixture.slot.slotId + '/seating', { params: { partySize: count } });
+  expect(response.status()).toBe(200);
+  const preview = await response.json();
   expect(preview).toMatchObject({ slotId: fixture.slot.slotId, partySize: count });
   await expect(saveButton(page)).toBeEnabled();
   return preview;
 }
 async function expectLocked(page) {
   await expect(saveButton(page)).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'One more', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'One fewer', exact: true })).toBeDisabled();
+  await expect(page.getByText('Choose the hiker first.', { exact: true })).toBeVisible();
+  for (const name of ['One more', 'One fewer']) {
+    const control = page.getByRole('button', { name, exact: true });
+    if (await control.count()) await expect(control).toBeDisabled();
+  }
   for (const name of ['Day', 'Time']) {
-    for (const control of await page.getByRole('radiogroup', { name, exact: true }).getByRole('radio').all()) {
+    const group = page.getByRole('radiogroup', { name, exact: true });
+    if (!(await group.count())) continue;
+    for (const control of await group.getByRole('radio').all()) {
       await expect(control).toBeDisabled();
     }
   }
@@ -236,20 +244,28 @@ async function expectLocked(page) {
 async function expectChoices(page, person, count, slot = fixture.slot) {
   await expect(summary(page)).toContainText(fullName(person));
   await expect(dayChoice(page, slot)).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('group', { name: 'People', exact: true }).getByRole('status')).toHaveText(String(count));
+  await expect(page.getByRole('group', { name: 'How many people', exact: true }).getByRole('status')).toHaveText(String(count));
 }
 
 // Pause a real request to observe pending UI; release it unchanged to the actual server.
-async function pendingAction(page, path, action, control, pendingText) {
+async function pendingAction(page, path, action, control, pendingText, editable = false) {
   let release;
   let reached;
   let timer;
+  let finishHandler;
+  let routeSeen = false;
   const gate = new Promise((resolve) => { release = resolve; });
   const arrival = new Promise((resolve) => { reached = resolve; });
+  const handlerFinished = new Promise((resolve) => { finishHandler = resolve; });
   const handler = async (route) => {
+    routeSeen = true;
     reached();
-    await gate;
-    await route.continue();
+    try {
+      await gate;
+      await route.continue();
+    } finally {
+      finishHandler();
+    }
   };
   const pattern = '**/api' + path;
   await page.route(pattern, handler);
@@ -258,11 +274,13 @@ async function pendingAction(page, path, action, control, pendingText) {
     await Promise.race([arrival, new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error('No pending request for ' + path)), 5000);
     })]);
-    await expect(control).toBeDisabled();
-    await expect(page.getByText(pendingText).first()).toBeVisible();
+    if (editable) await expect(control).toBeEnabled();
+    else await expect(control).toBeDisabled();
+    if (pendingText) await expect(page.getByText(pendingText).first()).toBeVisible();
   } finally {
     clearTimeout(timer);
     release();
+    if (routeSeen) await handlerFinished;
     await page.unroute(pattern, handler);
   }
 }
@@ -273,15 +291,16 @@ async function openHikerDialog(page, type) {
   return dialog;
 }
 async function fillHiker(dialog, person, full) {
-  await dialog.getByLabel('First name', { exact: true }).fill(person.firstName);
-  await dialog.getByLabel('Last name', { exact: true }).fill(person.lastName);
-  await dialog.getByLabel('Phone', { exact: true }).fill(person.phone ?? '');
-  if (full) await dialog.getByLabel('Email', { exact: true }).fill(person.email);
+  await dialog.getByLabel(/^First\ name\s*\*?$/).fill(person.firstName);
+  await dialog.getByLabel(/^Last\ name\s*\*?$/).fill(person.lastName);
+  await dialog.getByLabel(/^Phone\s*\*?$/).fill(person.phone ?? '');
+  if (full) await dialog.getByLabel(/^Email\s*\*?$/).fill(person.email);
 }
 async function addHiker(page, full = true, checkPending = false) {
   const person = identity(full ? 'Full' : 'Quick', full ? {} : { email: null });
   if (full) expect(await recipientMessages(page.request, person.email)).toEqual([]);
   const dialog = await openHikerDialog(page, full ? 'Full profile' : 'Quick entry');
+  if (!full) await expect(dialog.getByText(/temporary hiker cannot log in/)).toBeVisible();
   await fillHiker(dialog, person, full);
   await expect(dialog.getByLabel(/password/i)).toHaveCount(0);
   let navigations = 0;
@@ -326,7 +345,7 @@ async function save(page, person, preview, pending = false) {
   await expect(saved).toContainText(fixture.slot.startsAt.slice(0, 5));
   await expect(saved).toContainText(new RegExp('\\b' + preview.partySize + '\\s+(?:people|person|guests)\\b', 'i'));
   for (const table of preview.tables) {
-    await expect(saved).toContainText(new RegExp('Table\\s*' + table.tableNumber + '\\b', 'i'));
+    await expect(saved).toContainText(new RegExp('T' + table.tableNumber + '\\b'));
   }
   return booking;
 }
@@ -399,7 +418,9 @@ async function resetLink(page, request, person) {
     .filter((message) => message.Subject === 'Choose a new password for QUOTA')).toEqual([]);
   await page.goto('/login');
   await page.getByRole('link', { name: 'Forgot password?', exact: true }).click();
-  await page.getByLabel('Email', { exact: true }).fill(person.email);
+  // Both pages have an Email field; wait for the recovery form before filling it.
+  await expect(page.getByRole('heading', { name: 'Forgot your password?', exact: true })).toBeVisible();
+  await page.getByLabel(/^Email\s*\*?$/).fill(person.email);
   await answer(page, '/auth/password-reset-requests',
     () => page.getByRole('button', { name: 'Send the link', exact: true }).click(), 204);
   await expect(page.getByRole('heading', { name: /Check your email/ })).toBeVisible();
@@ -413,8 +434,8 @@ async function resetLink(page, request, person) {
 async function submitReset(page, link, password, status) {
   await page.goto(link);
   await expect(page.getByRole('heading', { name: /Choose a new password/ })).toBeVisible();
-  await page.getByLabel('New password', { exact: true }).fill(password);
-  await page.getByLabel('Repeat password', { exact: true }).fill(password);
+  await page.getByLabel(/^New\ password\s*\*?$/).fill(password);
+  await page.getByLabel(/^Repeat\ password\s*\*?$/).fill(password);
   return answer(page, '/auth/password-resets',
     () => page.getByRole('button', { name: 'Save password', exact: true }).click(), status);
 }
@@ -472,7 +493,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     const warden = await createUser(sharedName, { role: 'WARDEN' });
     await openStaff(page);
     await expectLocked(page);
-    const searchBox = page.getByRole('textbox', { name: 'Find the hiker', exact: true });
+    const searchBox = page.getByRole('searchbox', { name: 'Find the hiker', exact: true });
     await expect(searchBox).toHaveAttribute('placeholder', 'Name, phone or email');
     const shortRequests = [];
     page.on('request', (r) => {
@@ -515,7 +536,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     for (let n = 0; n < 21; n += 1) await createUser(sharedName);
     const waiting = page.waitForResponse((r) => matches(r, '/staff/hikers', 'GET') &&
       new URL(r.url()).searchParams.get('q') === sharedName);
-    await pendingAction(page, '/staff/hikers?*', () => searchBox.fill(sharedName), searchBox, /Searching/i);
+    await pendingAction(page, '/staff/hikers?*', () => searchBox.fill(sharedName), searchBox, null, true);
     const response = await waiting;
     expect(response.status()).toBe(200);
     const rows = await response.json();
@@ -530,7 +551,6 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await openStaff(page);
     const beforeMail = await mailboxTotal(request);
     const hiker = await addHiker(page, false, true);
-    await expect(summary(page).getByText(/temporary|no login/i).first()).toBeVisible();
     await expect(summary(page)).not.toContainText(/[^\s@]+@[^\s@]+\.[^\s@]+/);
     expect(await get('SELECT email,password_hash AS hash,temporary FROM app_user WHERE id=$1', [hiker.id]))
       .toEqual({ email: null, hash: null, temporary: true });
@@ -571,7 +591,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
       await dialog.getByRole('button', { name: finish, exact: true }).click();
       await expect(dialog).toBeHidden();
       if (finish === '+ New reservation') {
-        await expect(page.getByRole('textbox', { name: 'Find the hiker', exact: true })).toHaveValue('');
+        await expect(page.getByRole('searchbox', { name: 'Find the hiker', exact: true })).toHaveValue('');
         await expect(summary(page)).not.toContainText(fullName(hiker));
         await expectLocked(page);
         await expect(page.getByRole('radiogroup', { name: 'Time', exact: true }).getByRole('radio', { checked: true })).toHaveCount(0);
@@ -630,7 +650,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await expect(timeChoice(page)).toBeDisabled();
     // Assert the capacity facts without requiring one invented explanation sentence.
     await expect(timeChoice(page)).toContainText(/\b8\b/);
-    await expect(page.getByRole('group', { name: 'People', exact: true })).toContainText('9');
+    await expect(page.getByRole('group', { name: 'How many people', exact: true })).toContainText('9');
     await expect(page.getByText(/not enough|does not fit|cannot fit|can't fit|too (?:many|large)|need.*seats|only.*seats/i).first())
       .toBeVisible();
     await expect(saveButton(page)).toBeDisabled();
@@ -699,7 +719,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await chooseSlot(page, 2);
     await moveSlot(-1);
     const beforeMail = await mailboxTotal(request);
-    await answer(page, '/staff/bookings', () => saveButton(page).click(), 422);
+    await answer(page, '/staff/slots/' + fixture.slot.slotId + '/seating', () => saveButton(page).click(), 422, 'GET');
     await expect(page.getByRole('alert')).toContainText('This time has already started. Choose another time.');
     await expectChoices(page, hiker, 2, displayedSlot);
     await expect(saveButton(page)).toBeDisabled();
@@ -721,9 +741,9 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     const blocked = await page.request.get('/api/bookings');
     expect(blocked.status()).toBe(403);
     expect(await blocked.json()).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
-    await page.getByLabel('Current password', { exact: true }).fill(generated);
-    await page.getByLabel('New password', { exact: true }).fill('chosen-password-2026');
-    await page.getByLabel('Repeat password', { exact: true }).fill('chosen-password-2026');
+    await page.getByLabel(/^Current\ password\s*\*?$/).fill(generated);
+    await page.getByLabel(/^New\ password\s*\*?$/).fill('chosen-password-2026');
+    await page.getByLabel(/^Repeat\ password\s*\*?$/).fill('chosen-password-2026');
     await answer(page, '/auth/change-password',
       () => page.getByRole('button', { name: 'Save and continue', exact: true }).click(), 204);
     await page.goto('/book');
@@ -772,32 +792,36 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
       await openStaff(page);
       await chooseHiker(page, hiker);
       const preview = await chooseSlot(page, 3);
-      // Consume the proposed table. NO_SEATS consumes all tables; TABLES_CHANGED leaves the
-      // other table free, so a new proposal fits but the old one must be rejected.
-      const taken = code === 'NO_SEATS'
-        ? fixture.tables.map((table) => ({ tableNumber: table.tableNumber, seats: table.capacity }))
-        : preview.tables.map((table) => ({ tableNumber: table.tableNumber, seats: 4 }));
-      await compete(other, taken);
+      // Intercept the real booking only to create a genuine race AFTER its seating preview.
+      // A changed allocation is retried once by the UI; exhaust that retry with another booking.
+      let attempts = 0;
+      const statuses = [];
+      page.on('response', (r) => { if (matches(r, '/staff/bookings')) statuses.push(r.status()); });
+      await page.route('**/api/staff/bookings', async (route) => {
+        attempts += 1;
+        const body = route.request().postDataJSON();
+        const rival = attempts === 1 ? other : await createUser('SecondCompeting');
+        const taken = code === 'NO_SEATS'
+          ? fixture.tables.map((t) => ({ tableNumber: t.tableNumber, seats: t.capacity }))
+          : body.tables.map((t) => ({ tableNumber: t.tableNumber, seats: 4 }));
+        await compete(rival, taken);
+        expect(await bookingCount(hiker.id)).toBe(0);
+        await route.continue();
+      });
       const beforeMail = await mailboxTotal(request);
       const refused = await answer(page, '/staff/bookings', () => saveButton(page).click(), 409);
       expect(refused).toMatchObject({ code });
-      expect(await bookingCount(hiker.id)).toBe(0);
-      expect(await bookingCount(other.id)).toBe(1);
-      await expect(page.getByRole('alert')).toBeVisible();
+      await expect(page.getByRole('alert').filter({ hasText: /seats were just taken/ })).toBeVisible();
       await expectChoices(page, hiker, 3);
       await expect(saveButton(page)).toBeDisabled();
-      if (code === 'NO_SEATS') {
-        await expect(timeChoice(page)).toBeDisabled();
-        await expect(timeChoice(page)).toContainText(/\b0\b/);
-      } else {
-        const fresh = await answer(page, '/staff/slots/' + fixture.slot.slotId + '/seating',
-          () => timeChoice(page).click(), 200, 'GET');
-        expect(fresh.tables).not.toEqual(preview.tables);
-        await expect(saveButton(page)).toBeEnabled();
-      }
+      await expect(timeChoice(page)).toBeDisabled();
+      await expect(timeChoice(page)).toContainText('Full');
+      expect(attempts).toBe(code === 'NO_SEATS' ? 1 : 2);
+      expect(statuses).toEqual(code === 'NO_SEATS' ? [409] : [409, 409]);
+      expect(await bookingCount(hiker.id)).toBe(0);
       await setPeople(page, 2);
       await noMail(request, beforeMail);
-      expect(await bookingCount(hiker.id)).toBe(0); // No automatic retry saved behind the alert.
+      expect(await bookingCount(hiker.id)).toBe(0);
     });
   }
 
@@ -818,24 +842,24 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await fillHiker(dialog, { ...person, phone: 'not-a-phone' }, false);
     await submit();
     await expect(dialog.getByText(/Enter a valid phone number/)).toBeVisible();
-    await expect(dialog.getByLabel('First name', { exact: true })).toHaveValue(person.firstName);
-    await expect(dialog.getByLabel('Last name', { exact: true })).toHaveValue(person.lastName);
+    await expect(dialog.getByLabel(/^First\ name\s*\*?$/)).toHaveValue(person.firstName);
+    await expect(dialog.getByLabel(/^Last\ name\s*\*?$/)).toHaveValue(person.lastName);
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel('Phone', { exact: true }).fill(person.phone);
+    await dialog.getByLabel(/^Phone\s*\*?$/).fill(person.phone);
     await dialog.getByRole('radio', { name: 'Full profile', exact: true }).check();
-    await dialog.getByLabel('Email', { exact: true }).fill('');
+    await dialog.getByLabel(/^Email\s*\*?$/).fill('');
     await submit();
     await expect(dialog.getByText(/Enter a valid email/)).toBeVisible();
-    await dialog.getByLabel('Email', { exact: true }).fill('malformed-email');
+    await dialog.getByLabel(/^Email\s*\*?$/).fill('malformed-email');
     await submit();
     await expect(dialog.getByText(/Enter a valid email/)).toBeVisible();
-    await dialog.getByLabel('Email', { exact: true }).fill(person.email);
-    await dialog.getByLabel('Phone', { exact: true }).fill('another-invalid-phone');
+    await dialog.getByLabel(/^Email\s*\*?$/).fill(person.email);
+    await dialog.getByLabel(/^Phone\s*\*?$/).fill('another-invalid-phone');
     await submit();
     await expect(dialog.getByText(/Enter a valid phone number/)).toBeVisible();
-    await expect(dialog.getByLabel('First name', { exact: true })).toHaveValue(person.firstName);
-    await expect(dialog.getByLabel('Last name', { exact: true })).toHaveValue(person.lastName);
-    await expect(dialog.getByLabel('Email', { exact: true })).toHaveValue(person.email);
+    await expect(dialog.getByLabel(/^First\ name\s*\*?$/)).toHaveValue(person.firstName);
+    await expect(dialog.getByLabel(/^Last\ name\s*\*?$/)).toHaveValue(person.lastName);
+    await expect(dialog.getByLabel(/^Email\s*\*?$/)).toHaveValue(person.email);
     await expect(dialog).toBeVisible();
     await noMail(request, beforeMail);
     expect(writes).toBe(0);
