@@ -323,6 +323,7 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
 | `docker.yml` | called by `qa.yml` and `deploy.yml`, after their checks | Builds the Docker image from the verified commit and publishes it, tagged `qa` or `latest` |
+| `sonarqube.yml` | every Pull Request into `qa` and every push to `qa` | Runs the server tests with coverage and sends the analysis to SonarQube Cloud. No ruleset requires it. What it analyses, and why only `qa`, is in [SonarQube](sonarqube.md) |
 
 **Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
