@@ -24,10 +24,9 @@ on:
       - qa
     types: [opened, synchronize, reopened]
 
-# The job reads the repository; pull-requests: read lets SonarQube decorate the Pull Request.
+# The job only reads the repository. SonarQube Cloud decorates the Pull Request through its own GitHub App.
 permissions:
   contents: read
-  pull-requests: read
 
 # A new push to a Pull Request cancels the analysis that is still going for the same Pull Request.
 concurrency:
@@ -58,13 +57,13 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # A shallow clone gives SonarQube a worse analysis of what changed
 
       # Use the Node.js version pinned in .nvmrc.
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -91,7 +90,7 @@ jobs:
         run: sed -i 's#^SF:#SF:server/#' server/coverage/lcov.info
 
       - name: Cache SonarQube packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
