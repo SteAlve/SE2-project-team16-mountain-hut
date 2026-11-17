@@ -14,13 +14,16 @@ import { requireStaff } from './requireStaff.js';
 const hourMinute = (time) => time.slice(0, 5);
 
 // Says which slot is in the way. A slot with the same start keeps the message it always had.
+// An overlap has the code SLOT_OVERLAP, so the client can tell it from a slot with the same start.
+const overlaps = (message) => new ConflictError(message, { code: 'SLOT_OVERLAP' });
+
 const overlapError = async (slots, { date, startsAt, endsAt }) => {
   const other = await slots.findOverlapping({ serviceDate: date, startsAt, endsAt });
-  if (other === null) return new ConflictError(`The slot overlaps another slot on ${date}`);
+  if (other === null) return overlaps(`The slot overlaps another slot on ${date}`);
   if (hourMinute(other.startsAt) === startsAt) {
     return new ConflictError(`A slot starting at ${startsAt} already exists on ${date}`);
   }
-  return new ConflictError(
+  return overlaps(
     `The slot overlaps the slot from ${hourMinute(other.startsAt)} to ${hourMinute(other.endsAt)} on ${date}`,
   );
 };

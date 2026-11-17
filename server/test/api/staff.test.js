@@ -213,7 +213,9 @@ describe('POST /api/staff/slots', () => {
     const res = await employee.post('/api/staff/slots').send(slotBody('12:30', '13:30'));
 
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: 'ConflictError', message: `The slot overlaps the slot from 12:00 to 13:00 on ${DAY}` });
+    expect(res.body).toEqual({
+      error: 'ConflictError', message: `The slot overlaps the slot from 12:00 to 13:00 on ${DAY}`, code: 'SLOT_OVERLAP',
+    });
     expect(await listStaffSlots(employee)).toHaveLength(1);
   });
 

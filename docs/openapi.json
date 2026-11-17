@@ -1906,7 +1906,7 @@
             }
           },
           "409": {
-            "description": "Another slot of that date overlaps it, one starting at the same time included.",
+            "description": "Another slot of that date overlaps it. A slot starting at the same time has no `code`; any other overlap has the `code` `SLOT_OVERLAP`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1924,7 +1924,8 @@
                     "summary": "A slot that starts before another one ends",
                     "value": {
                       "error": "ConflictError",
-                      "message": "The slot overlaps the slot from 12:00 to 13:00 on 2026-10-28"
+                      "message": "The slot overlaps the slot from 12:00 to 13:00 on 2026-10-28",
+                      "code": "SLOT_OVERLAP"
                     }
                   }
                 }

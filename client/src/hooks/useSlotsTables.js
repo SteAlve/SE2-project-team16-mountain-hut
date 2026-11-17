@@ -140,6 +140,13 @@ export function useSlotsTables() {
           // The mockup reloads the day and keeps the other choices.
           reloadSlots();
           if (daysBetween(from, form.date) >= 0) showDay(form.date);
+          if (error.code === 'SLOT_OVERLAP') {
+            return {
+              ok: false,
+              alert: `This slot overlaps another slot on ${formatDay(form.date)}. The day was reloaded: choose times that do not overlap.`,
+              errors: { startsAt: 'Overlaps another slot.', endsAt: 'Overlaps another slot.' },
+            };
+          }
           return {
             ok: false,
             alert: `A slot starting at ${form.startsAt} already exists on ${formatDay(form.date)}. The day was reloaded: choose another start time.`,
