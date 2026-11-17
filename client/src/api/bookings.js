@@ -25,3 +25,10 @@ export const listMyBookings = () => request('/bookings');
 // fit) or BOOKING_CHANGED (changed at the same moment), 422 (changes closed, already booked, no tables, too many needs).
 export const changeBooking = (bookingId, changes) =>
   request(`/bookings/${encodeURIComponent(bookingId)}`, { method: 'PATCH', body: JSON.stringify(changes) });
+
+// Cancels a booking of the logged-in hiker (MH-08), at any time: the seats are free again at once and the
+// hiker is emailed. Resolves to null (204, no content).
+// Rejects with ApiError 400 (wrong id), 401 (not logged in), 403 (not a hiker), 404 (no such booking, or it is
+// not of this hiker) or 422 (the booking was already cancelled).
+export const cancelBooking = (bookingId) =>
+  request(`/bookings/${encodeURIComponent(bookingId)}`, { method: 'DELETE' });

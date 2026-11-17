@@ -11,15 +11,19 @@
  *   stale(message)  closes the dialog, keeps the note and loads the list again
  *   editing         the booking whose dialog is open, or null (it goes away if the list no longer has it)
  *   edit(booking), closeEdit()
- *   reload()        loads the list again
+ *   cancelling      the booking whose "Cancel this booking?" dialog is open (MH-08), or null
+ *   cancel(booking), closeCancel()
+ *   cancelled(booking)  the booking was cancelled: closes the dialog, takes it off the list at once, shows the note
+ *                   and loads the list again
+ *   reload()        loads the list again; only the last load counts, so an older answer that arrives late (a list asked
+ *                   for before a cancellation, for example) does not bring back what has just changed
  *   saved(booking)  a change was saved: closes the dialog, shows the note and loads the list again, so
  *                   the day, the tables and the deadline are the ones of the server
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listMyBookings } from '../api/bookings.js';
-import { bookingReference } from '../lib/changeBooking.js';
-
-const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
+import { cancelNotice } from '../lib/cancelBooking.js';
+import { bookingReference, GENERIC } from '../lib/changeBooking.js';
 
 export function useMyBookings() {
   const [bookings, setBookings] = useState(null);
@@ -28,31 +32,40 @@ export function useMyBookings() {
   const [notice, setNotice] = useState(null);
   const [staleNote, setStaleNote] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  // The number of the last load asked for: an answer of an older one is ignored.
+  const lastLoad = useRef(0);
 
-  // Resolves to true when the list was loaded.
+  // Resolves to true when this call loaded the list, false when it failed or a newer load replaced it.
   const reload = useCallback(async () => {
+    const mine = ++lastLoad.current;
     try {
-      setBookings(await listMyBookings());
+      const list = await listMyBookings();
+      if (mine !== lastLoad.current) return false;
+      setBookings(list);
       setAlert(null);
       return true;
     } catch (error) {
+      if (mine !== lastLoad.current) return false;
       if (error.status === 401) setLoggedOut(true);
-      else setAlert(error.status === 403 ? error.message : GENERIC_ERROR);
+      else setAlert(error.status === 403 ? error.message : GENERIC);
       return false;
     }
   }, []);
 
   useEffect(() => {
-    let active = true;
+    const load = lastLoad;
+    const mine = ++load.current;
     listMyBookings().then(
-      (list) => { if (active) setBookings(list); },
+      (list) => { if (mine === load.current) setBookings(list); },
       (error) => {
-        if (!active) return;
+        if (mine !== load.current) return;
         if (error.status === 401) setLoggedOut(true);
-        else setAlert(error.status === 403 ? error.message : GENERIC_ERROR);
+        else setAlert(error.status === 403 ? error.message : GENERIC);
       },
     );
-    return () => { active = false; };
+    // After the page is left no answer is wanted any more.
+    return () => { load.current += 1; };
   }, []);
 
   const saved = async (booking) => {
@@ -63,9 +76,19 @@ export function useMyBookings() {
     await reload();
   };
 
-  // The booking changed or went away while it was edited: close the dialog, say it and load the list again.
+  // The booking is cancelled (MH-08): it leaves the list at once, then the list is loaded again.
+  const cancelled = async (booking) => {
+    setCancellingId(null);
+    setStaleNote(null);
+    setNotice(cancelNotice(booking.id));
+    setBookings((current) => current?.filter((b) => b.id !== booking.id) ?? current);
+    await reload();
+  };
+
+  // The booking changed or went away while it was edited or cancelled: close the dialog, say it and load the list again.
   const stale = (message) => {
     setEditingId(null);
+    setCancellingId(null);
     setNotice(null);
     setStaleNote(message);
     reload();
@@ -79,8 +102,12 @@ export function useMyBookings() {
     notice,
     staleNote,
     editing: bookings?.find((b) => b.id === editingId) ?? null,
+    cancelling: bookings?.find((b) => b.id === cancellingId) ?? null,
     edit: (booking) => { setNotice(null); setStaleNote(null); setEditingId(booking.id); },
     closeEdit: () => setEditingId(null),
+    cancel: (booking) => { setNotice(null); setStaleNote(null); setCancellingId(booking.id); },
+    closeCancel: () => setCancellingId(null),
+    cancelled,
     reload,
     saved,
     stale,

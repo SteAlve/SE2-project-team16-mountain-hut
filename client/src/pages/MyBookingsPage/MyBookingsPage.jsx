@@ -2,14 +2,17 @@
  * MY BOOKINGS (story MH-06, mockup docs/mockups/hiker-booking-page): the upcoming bookings of the hiker who is logged in,
  * from today on, not cancelled. Each one can be changed in a dialog (day, time, people, dietary needs) until 48 hours
  * before its time; after that Edit is faded and the line says when the changes closed. The server does the checks.
- * Cancelling a booking (*Cancel booking*) comes with story MH-08. The navbar and Log out come from AppLayout.
+ * Cancel booking (story MH-08) is open at any time, also when Edit is faded: it asks to confirm, and the booking then leaves
+ * the list. The navbar and Log out come from AppLayout.
  * Only hikers have bookings: the route is wrapped in RequireRole. If the session ends meanwhile (401), the login follows.
  */
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { BookingCard } from '../../components/BookingCard/BookingCard.jsx';
 import { Button } from '../../components/Button/Button.jsx';
+import { CancelBookingDialog } from '../../components/CancelBookingDialog/CancelBookingDialog.jsx';
 import { ChangeBookingDialog } from '../../components/ChangeBookingDialog/ChangeBookingDialog.jsx';
+import { useCancelBooking } from '../../hooks/useCancelBooking.js';
 import { useChangeBooking } from '../../hooks/useChangeBooking.js';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { useMyBookings } from '../../hooks/useMyBookings.js';
@@ -43,6 +46,26 @@ function ChangeBooking({ booking, list }) {
       today={change.today}
       onClose={() => !change.isPending && list.closeEdit()}
       onSave={save}
+    />
+  );
+}
+
+// The same, for the confirmation of Cancel booking (MH-08).
+function CancelBooking({ booking, list }) {
+  const navigate = useNavigate();
+  const cancel = useCancelBooking(booking, { onCancelled: list.cancelled, onStale: list.stale });
+
+  const confirm = async () => {
+    if ((await cancel.cancel()) === 'login') navigate('/login', { state: LOGIN_STATE });
+  };
+
+  return (
+    <CancelBookingDialog
+      booking={booking}
+      pending={cancel.isPending}
+      error={cancel.error}
+      onKeep={list.closeCancel}
+      onConfirm={confirm}
     />
   );
 }
@@ -92,7 +115,7 @@ export function MyBookingsPage() {
           {list.bookings?.length > 0 && (
             <ul className={styles.list} aria-label="Your bookings">
               {list.bookings.map((booking) => (
-                <BookingCard key={booking.id} booking={booking} isPhone={isPhone} onEdit={list.edit} />
+                <BookingCard key={booking.id} booking={booking} isPhone={isPhone} onEdit={list.edit} onCancel={list.cancel} />
               ))}
             </ul>
           )}
@@ -112,6 +135,7 @@ export function MyBookingsPage() {
       </main>
 
       {list.editing && <ChangeBooking key={list.editing.id} booking={list.editing} list={list} />}
+      {list.cancelling && <CancelBooking key={list.cancelling.id} booking={list.cancelling} list={list} />}
     </div>
   );
 }

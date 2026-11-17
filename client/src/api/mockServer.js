@@ -17,6 +17,8 @@
  * for the new time (422), and
  *   today + 1        the first booking: past the 48 hours, so Edit is faded
  *   today + 8, 20:00 the first change to this time answers 409 BOOKING_CHANGED (changed at the same moment)
+ * DELETE /bookings/:id cancels one (MH-08) at any time: its seats are free again and it leaves the list; a booking
+ * already cancelled answers 422.
  *
  * Logged in as a hiker at start. "Log out" makes you a guest (booking then answers 401) until
  * POST /auth/login or a reload. Bookings take the seats until the page is reloaded.
@@ -76,7 +78,7 @@ let tablesChangedOnce = false;
 const booked = new Set(); // 'userId#slotId'
 let bookingChangedOnce = false;
 
-// The bookings of the hiker: { id, userId, slotId, partySize, tables, requirements }.
+// The bookings of the hiker: { id, userId, slotId, partySize, tables, requirements, cancelled }.
 const bookings = [];
 
 const freeSeats = (slot) => slot.tables.reduce((sum, t) => sum + t.free, 0);
@@ -177,12 +179,26 @@ const slotOf = (b) => SLOTS.find((s) => s.slotId === b.slotId);
 const giveSeats = (b, sign) =>
   b.tables.forEach(({ tableNumber, seats }) => { slotOf(b).tables.find((t) => t.tableNumber === tableNumber).free += sign * seats; });
 
+// DELETE /bookings/:id, like the server (docs/openapi.json, cancelBooking): no time limit.
+function cancelMyBooking(id) {
+  if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
+  if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers can cancel bookings');
+  const booking = bookings.find((b) => b.id === id && b.userId === user.id);
+  if (!booking) return fail(404, 'NotFoundError', `Booking ${id} not found`);
+  if (booking.cancelled) return fail(422, 'UnprocessableError', 'This booking was already cancelled');
+  booking.cancelled = true;
+  giveSeats(booking, +1);
+  booked.delete(`${user.id}#${booking.slotId}`);
+  return json(204, null);
+}
+
 // PATCH /bookings/:id, like the server (docs/openapi.json, changeBooking).
 function changeMyBooking(id, body) {
   if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
   if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers can change bookings');
   const booking = bookings.find((b) => b.id === id && b.userId === user.id);
   if (!booking) return fail(404, 'NotFoundError', `Booking ${id} not found`);
+  if (booking.cancelled) return fail(422, 'UnprocessableError', 'This booking was cancelled');
   const keys = Object.keys(body ?? {});
   if (keys.length === 0) return fail(400, 'ValidationError', 'Send at least one of slotId, partySize and requirements');
   if (keys.some((k) => !['slotId', 'partySize', 'requirements'].includes(k))) {
@@ -330,7 +346,7 @@ function route(method, url, body) {
     if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
     if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers have bookings');
     const list = bookings
-      .filter((b) => b.userId === user.id && slotOf(b).date >= toDay(new Date()))
+      .filter((b) => b.userId === user.id && !b.cancelled && slotOf(b).date >= toDay(new Date()))
       .sort((a, b) => `${slotOf(a).date}${slotOf(a).startsAt}`.localeCompare(`${slotOf(b).date}${slotOf(b).startsAt}`))
       .map((b) => {
         const deadline = changeDeadline(slotOf(b));
@@ -341,6 +357,7 @@ function route(method, url, body) {
 
   const change = path.match(/^\/bookings\/(\d+)$/);
   if (method === 'PATCH' && change) return changeMyBooking(Number(change[1]), body);
+  if (method === 'DELETE' && change) return cancelMyBooking(Number(change[1]));
 
   return fail(404, 'NotFoundError', `No mock for ${method} ${path}`);
 }
