@@ -1,0 +1,106 @@
+# SonarQube
+#
+# Analyses the code with SonarQube Cloud (quality, bugs, security, duplication and the coverage of
+# the server tests). It runs on every Pull Request into qa and when qa is updated.
+# The free plan of SonarQube Cloud analyses one long-lived branch, the main branch of the Sonar
+# project, and only the Pull Requests that target it. Here that branch is qa: the batch from dev
+# enters it as a whole, and the tests of the batch are written on it, so the coverage is complete.
+# dev and main are not analysed: main gets what was analysed on qa.
+# It does not replace the checks of ci.yml and no ruleset requires it.
+#
+# Needs the secret SONAR_TOKEN (Settings > Secrets and variables > Actions). The settings of the
+# analysis are in sonar-project.properties; the organization and the project key are below.
+# In SonarQube Cloud the main branch of the project must be named qa (Branches > Rename), and the
+# automatic analysis must be off, or the two analyses clash.
+
+name: SonarQube
+
+on:
+  push:
+    branches:
+      - qa
+  pull_request:
+    branches:
+      - qa
+    types: [opened, synchronize, reopened]
+
+# The job only reads the repository. SonarQube Cloud decorates the Pull Request through its own GitHub App.
+permissions:
+  contents: read
+
+# A new push to a Pull Request cancels the analysis that is still going for the same Pull Request.
+concurrency:
+  group: sonarqube-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and analyze
+    runs-on: ubuntu-latest
+    # The server tests need the database, as in ci.yml.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mountain_hut_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # A shallow clone gives SonarQube a worse analysis of what changed
+
+      # Use the Node.js version pinned in .nvmrc.
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Apply database migrations
+        working-directory: server
+        run: npm run db:migrate
+        env:
+          NODE_ENV: test
+
+      # The server tests, with the coverage in the lcov format that SonarQube reads.
+      - name: Test the server with coverage
+        working-directory: server
+        run: npm run test:coverage -- --coverage.reporter=text --coverage.reporter=lcov
+
+      # The lcov file has paths relative to server/ (src/app.js); SonarQube needs them from the root
+      # of the repository (server/src/app.js).
+      - name: Make the paths of the coverage relative to the repository
+        run: sed -i 's#^SF:#SF:server/#' server/coverage/lcov.info
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=stealve
+            -Dsonar.projectKey=SteAlve_SE2-project-team16-mountain-hut

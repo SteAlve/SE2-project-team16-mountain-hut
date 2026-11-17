@@ -5,12 +5,13 @@
  * Esc calls `onCancel`, unless `isPending`. The content stays mounted while closed, so a dialog
  * hidden under another one (e.g. Add a slot under New table set) keeps what was typed.
  * `extra` is the secondary action on the left of the buttons (e.g. "+ New table set").
- * `wide` is for New table set.
+ * `wide` is for New table set; `wider` for Change your booking (MH-06), which has two columns of choices.
+ * mark` is drawn above the title (e.g. the trail blaze of a saved reservation).
  */
 import { useEffect, useRef } from 'react';
 import styles from './Modal.module.css';
 
-export function Modal({ open, title, subtitle, titleId, wide = false, isPending, onCancel, onSubmit, actions, extra, children }) {
+export function Modal({ open, title, subtitle, titleId, wide = false, mark, wider = false, isPending, onCancel, onSubmit, actions, extra, children }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export function Modal({ open, title, subtitle, titleId, wide = false, isPending,
   return (
     <dialog
       ref={ref}
-      className={`${styles.dialog} ${wide ? styles.wide : ''}`}
+      className={`${styles.dialog} ${wide ? styles.wide : ''} ${wider ? styles.wider : ''}`}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -40,6 +41,7 @@ export function Modal({ open, title, subtitle, titleId, wide = false, isPending,
         <div className={styles.content}>
           <span className={styles.handle} aria-hidden="true" />
           <header className={styles.header}>
+            {mark}
             <h2 id={titleId} className={styles.title}>{title}</h2>
             {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           </header>

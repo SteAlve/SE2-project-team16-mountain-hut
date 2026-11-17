@@ -131,6 +131,11 @@ export function parseChangeBooking(params, body) {
   return change;
 }
 
+// DELETE /api/bookings/:bookingId (MH-08): only the booking id, no body.
+export const parseCancelBooking = (params) => ({
+  bookingId: requirePositiveIntegerText(params?.bookingId, 'bookingId'),
+});
+
 // GET /api/slots/:slotId/seating?partySize=6
 export const parseSeatingRequest = (params, query) => ({
   slotId: requirePositiveIntegerText(params?.slotId, 'slotId'),

@@ -1,0 +1,51 @@
+/* The Quick entry / Full profile switch (Figma "Hiker mode"). */
+.modes {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--snow);
+}
+
+.mode {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--stone);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mode:hover:not(.on):not(:disabled) {
+  background: var(--mist);
+}
+
+.mode:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.on {
+  background: var(--pine);
+  color: var(--snow);
+  font-weight: 600;
+  cursor: default;
+}
+
+.names {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 991.98px) {
+  .names {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
