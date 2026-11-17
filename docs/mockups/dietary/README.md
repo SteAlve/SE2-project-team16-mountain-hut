@@ -36,10 +36,10 @@ The first three steps of [Book a table](../booking/README.md#the-flow) (day, peo
 
 1. **Review booking** opens *Check your booking*. On a computer the dialog has two columns: on the left the summary of MH-01 (day, time, people, the tables chosen), on the right **Dietary needs and allergies**, marked *Optional*. On a phone the sheet scrolls and the needs come after the summary, right above *Confirm booking*.
 2. With no lines yet, the right column says "No dietary needs or allergies for this booking." and offers **+ Add a guest's needs**. Next to the button a counter shows the guests counted in the lines out of the people in the party ("0 of 6 guests").
-3. **+ Add a guest's needs** opens the editor of a new line: its title ("1 guest", "2 guests"…), **Guests** (a − / + stepper, from 1, how many guests have exactly these needs), the *Diet* cards, the *Allergies* cards and the *Other requests* field. Tapping a card selects it (border, tinted background, check mark); tapping it again unselects it. More than one diet can be chosen (e.g. *Vegan* and *Lactose-free*), but Vegetarian, Vegan and Pescatarian exclude each other: choosing one of them unselects the other two.
-4. When another line is added, the line being edited folds into a row: how many guests ("2 guests"), a chip per choice (green diet, red allergy), **Edit** to open it again and **×** to remove it. Only one line is open at a time.
+3. **+ Add a guest's needs** opens a popup over *Check your booking*, titled **Add a guest's needs**, with the editor of a new line and nothing else: its title ("1 guest", "2 guests"…), **Guests** (a − / + stepper, from 1, how many guests have exactly these needs), the *Diet* cards, the *Allergies* cards and the *Other requests* field. Tapping a card selects it (border, tinted background, check mark); tapping it again unselects it. More than one diet can be chosen (e.g. *Vegan* and *Lactose-free*), but Vegetarian, Vegan and Pescatarian exclude each other: choosing one of them unselects the other two.
+4. **Done** closes the popup and keeps the line, folded into a row of the list: how many guests ("2 guests"), a chip per choice (green diet, red allergy), **Edit** to open it again in the popup (titled **Edit a guest's needs**) and **×** to remove it. In the list every line is always folded, so the summary and *Confirm booking* stay in view. **Cancel** (or Esc) closes the popup and leaves the line as it was when the popup opened; a line just added goes away. Done checks only the line of the popup: when it has a problem, the problem is marked and the popup stays open (screen 3).
 5. When every person of the party is counted in a line, **+ Add a guest's needs** and the **+** of *Guests* are disabled, and the counter says "every guest is counted". Removing a line, or lowering its *Guests*, frees them again. If the hiker goes **Back** and makes the party smaller than the guests counted, lines must be removed or lowered before confirming.
-6. **Confirm booking** sends the booking and its requirements in the same request (`POST /api/bookings`): each line becomes as many requirements as its guests. The dialog stays open, with the problem marked, when a line has no card chosen and no request, or *Other* (diet or allergy) is chosen with an empty field, or a text is longer than its limit (100 characters for *Other*, 300 for *Other requests*). **Back** keeps every choice, the lines too.
+6. **Confirm booking** sends the booking and its requirements in the same request (`POST /api/bookings`): each line becomes as many requirements as its guests. Nothing is sent, and the popup opens on the first line with a problem, marked there and in the list, when a line has no card chosen and no request, or *Other* (diet or allergy) is chosen with an empty field, or a text is longer than its limit (100 characters for *Other*, 300 for *Other requests*). **Back** keeps every choice, the lines too.
 7. **Table booked** lists the needs as saved, in a grid of cards (3 per row, 2 on a phone). Guests with exactly the same needs (diet, allergies and request) share one card: a people icon with **×N**, the chips, and the request in quotes under them. With no needs the card is the same as in MH-01.
 
    Every card starts from the top, so the ×N of the cards of a row are on one line and the chips on the next one, also when one card has a request and the others do not. The cards of a row have the same height. The chips show the **allergies first** (red), then the diets (green), and wrap when they do not fit. The request goes under them, on as many lines as needed. A single card of a party takes the whole width (screen 7).
@@ -49,23 +49,24 @@ The first three steps of [Book a table](../booking/README.md#the-flow) (day, peo
 | # | Screen | Image |
 |---|---|---|
 | 1 | Check your booking, no dietary needs yet | ![Check your booking, no needs](01-check-no-needs.png) |
-| 2 | Choosing the needs of a line of 2 guests (the PO example), with an other request | ![Choosing the needs of a guest](02-choosing-a-guest.png) |
-| 3 | *Other* allergy without a name | ![Other allergy without a name](03-other-allergy-without-name.png) |
+| 2 | Adding a line of 2 guests (the PO example), with an other request, in the popup | ![Choosing the needs of a guest](02-choosing-a-guest.png) |
+| 3 | *Other* allergy without a name: the line is marked in the popup and in the list | ![Other allergy without a name](03-other-allergy-without-name.png) |
 | 4 | Party of 2: every guest is counted | ![Every guest is counted](04-every-guest-counted.png) |
 | 5 | Table booked with dietary needs, grouped with ×N | ![Table booked with needs](05-table-booked-with-needs.png) |
 | 6 | Big party with shared needs: 22 people, 20 with needs, in 4 cards | ![Big party with shared needs](06-big-party-shared-needs.png) |
 | 7 | One guest with many needs: five allergies, a diet and a long request | ![One guest with many needs](07-one-guest-many-needs.png) |
 
-Screens 2 and 3 are taller than 800 px to show the dialog in full (with *Other* in the Diet group the cards take two lines, and the editor has the *Guests* stepper). On a smaller window the dialog scrolls.
+Screens 2 and 3 are taller than 800 px to show the popup in full (with *Other* in the Diet group the cards take two lines, and the editor has the *Guests* stepper). On a smaller window the popup scrolls.
 
 ### On a phone
 
-The same website in a phone browser, as in MH-01. The dialog becomes a sheet from the bottom. The sheet scrolls, and the image shows it in full. The cards are 3 per line.
+The same website in a phone browser, as in MH-01. The dialog becomes a sheet from the bottom, and the popup a second sheet over it, with **Done** on top of **Cancel**. The sheets scroll, and the images show them in full. The cards are 3 per line.
 
 | # | Screen | Image |
 |---|---|---|
 | 1 | Check and confirm with dietary needs | ![Check and confirm with needs on a phone](phone/01-check-and-confirm-with-needs.png) |
 | 2 | Table booked with dietary needs | ![Table booked with needs on a phone](phone/02-table-booked-with-needs.png) |
+| 3 | Adding a guest's needs: the second sheet | ![Adding a guest's needs on a phone](phone/03-adding-a-guests-needs.png) |
 
 ## New components
 
@@ -74,7 +75,7 @@ The same website in a phone browser, as in MH-01. The dialog becomes a sheet fro
 | *Icon / Food / …* | one per option | 24 px line icons: Vegetarian, Vegan, Pescatarian, Lactose-free, Gluten, Milk, Eggs, Peanuts, Tree nuts, Fish, Shellfish, Other. |
 | *Need card* | Kind = Diet / Allergy × State = Default / Selected | One option: icon in the middle, name centred below. Properties *Name* (text) and *Icon* (swap). Selected diet is green, selected allergy is red. |
 | *Need chip* | Kind = Diet / Allergy | Read-only chip of a chosen option, in the folded lines and in the confirmation. Property *Name*. |
-| *Guest needs editor* | Size = Desktop / Phone | The open editor of one line: title (how many guests), ×, *Guests* (a *People stepper*), the Diet cards, the Allergies cards, the *Other* field and the *Other requests* field. Properties *Guest* (text), *Show other field* (boolean, the *Other* allergy field) and *Show other diet field* (boolean, the *Other* diet field). |
+| *Guest needs editor* | Size = Desktop / Phone | The editor of one line, in the popup: title (how many guests), ×, *Guests* (a *People stepper*), the Diet cards, the Allergies cards, the *Other* field and the *Other requests* field. Properties *Guest* (text), *Show other field* (boolean, the *Other* allergy field) and *Show other diet field* (boolean, the *Other* diet field). |
 
 ## Texts and server answers
 
@@ -85,15 +86,16 @@ The same website in a phone browser, as in MH-01. The dialog becomes a sheet fro
 | No lines | No dietary needs or allergies for this booking. · **+ Add a guest's needs** · 0 of *N* guests |
 | Group labels | DIET · choose all that apply · at most one of Vegetarian, Vegan, Pescatarian / ALLERGIES · choose all that apply / OTHER REQUESTS · optional · not a diet or an allergy |
 | Other requests field | "Anything else the kitchen should know?", placeholder "e.g. no spicy food, a small portion", helper "Up to 300 characters." |
+| Popup | **Add a guest's needs** (from *+ Add a guest's needs*) or **Edit a guest's needs** (from *Edit*). "Guests with exactly the same needs share one line: set how many they are." Buttons: *Cancel*, *Done*. |
 | Line title | "1 guest" / "*K* guests", the same in the folded row |
 | Guests stepper | GUESTS · how many guests have exactly these needs, − *K* + |
 | Counter | *K* of *N* guests (the guests of all the lines) |
 | Every guest is counted | Button and *Guests* + disabled, "*N* of *N* guests · every guest is counted" |
 | *Other* allergy chosen | Field "Which allergy?", placeholder "e.g. sesame, celery, mustard", helper "Up to 100 characters." |
 | *Other* diet chosen | Field "Which diet?", placeholder "e.g. halal, kosher", helper "Up to 100 characters." |
-| A text longer than its limit, on Confirm | The field is marked in red: "Too long: at most 100 characters." (*Other*) or "Too long: at most 300 characters." (*Other requests*). Nothing is sent. |
-| *Other* left empty, on Confirm | Under the field, in red: "Write which allergy, or unselect Other." (or "Write which diet, or unselect Other.") Nothing is sent. |
-| A line with no card and no request, on Confirm | The line is marked the same way. Nothing is sent. |
+| A text longer than its limit, on Done or Confirm | The field is marked in red: "Too long: at most 100 characters." (*Other*) or "Too long: at most 300 characters." (*Other requests*). Nothing is sent. |
+| *Other* left empty, on Done or Confirm | Under the field, in red: "Write which allergy, or unselect Other." (or "Write which diet, or unselect Other.") Nothing is sent. |
+| A line with no card and no request, on Done or Confirm | The line is marked the same way. Nothing is sent. |
 | Server saved the booking (`201`) | Table booked, with *Dietary needs · K of N guests* and one card per group of guests with the same needs: ×*count*, the chips, the request in quotes. |
 | Invalid request (`400`, e.g. more requirements than people) | Checked in the browser first, so it should not happen. If it does, the general message "Something went wrong on our side. Try again in a minute." |
 | Seats gone meanwhile (`409`) | As in MH-01 (screen 5). The lines are kept with the other choices. |

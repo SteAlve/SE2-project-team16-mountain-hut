@@ -12,11 +12,12 @@
  *   isReviewing            true while the check dialog is open; back() closes it
  *   tables                 [{ tableNumber, seats }] of the seating preview, while reviewing
  *   reviewNotice           a message for the check dialog (the tables changed just now), or null
- *   confirm()              books the tables of the preview; resolves to 'booked', 'login' (401: log
- *                          in first) or 'failed'
+ *   confirm(requirements)  books the tables of the preview, with the dietary needs of the party
+ *                          (MH-05, one requirement per guest, optional); resolves to 'booked',
+ *                          'login' (401: log in first) or 'failed'
  *   isPending              true while waiting for the server
  *   alert                  the message of the last failure, or null
- *   booking                the saved booking { id, date, partySize, tables, slot }, or null
+ *   booking                the saved booking { id, date, partySize, tables, requirements, slot }, or null
  *   startOver()            forgets the booking to book another table
  *
  * `initial` ({ date, partySize, slotId }, all optional) restores the choices, e.g. after the login.
@@ -182,13 +183,13 @@ export function useBookTable(initial = {}) {
     }
   };
 
-  const confirm = async () => {
+  const confirm = async (requirements = []) => {
     if (!slot || !tables || isPending) return 'failed';
     setIsPending(true);
     setAlert(null);
     setReviewNotice(null);
     try {
-      const saved = await createBooking({ slotId: slot.slotId, partySize, tables });
+      const saved = await createBooking({ slotId: slot.slotId, partySize, tables, requirements });
       setBooking({ ...saved, slot });
       setIsReviewing(false);
       return 'booked';

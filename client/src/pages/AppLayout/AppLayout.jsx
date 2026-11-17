@@ -2,9 +2,11 @@
  * APP LAYOUT: the frame of every page but login and sign-up: the navbar on top, the page below.
  * Log out asks first in a dialog, then ends the session and goes back to the public hut page.
  * If it fails the user stays logged in where they are, and the dialog says so.
+ * A hiker who still has to change the password the staff generated (MH-07) sees no page until it is
+ * changed: they are sent to Choose your password, and come back here after it.
  */
 import { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogoutDialog } from '../../components/LogoutDialog/LogoutDialog.jsx';
 import { Navbar } from '../../components/Navbar/Navbar.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -13,7 +15,7 @@ import styles from './AppLayout.module.css';
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { user, isLoading } = useAuth();
   const { logout, isPending } = useLogout();
   // null (closed), 'confirm' or 'failed'
@@ -22,6 +24,10 @@ export function AppLayout() {
   // gone: drawn in between, a protected page would send the visitor to the login.
   const [leaving, setLeaving] = useState(null);
   if (leaving !== null && pathname !== leaving) setLeaving(null);
+
+  if (user?.mustChangePassword) {
+    return <Navigate to="/change-password" replace state={{ from: `${pathname}${search}` }} />;
+  }
 
   const handleConfirm = async () => {
     if (!(await logout())) {

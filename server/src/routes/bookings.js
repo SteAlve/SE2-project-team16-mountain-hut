@@ -5,11 +5,13 @@
 import { Router } from 'express';
 
 export const makeBookingsRouter = ({
-  createBookingController, listMyBookingsController, changeBookingController, requireAuth,
+  createBookingController, listMyBookingsController, changeBookingController, cancelBookingController,
+  requireAuth,
 }) => {
   const router = Router();
   router.post('/bookings', requireAuth, createBookingController);
   router.get('/bookings', requireAuth, listMyBookingsController);
   router.patch('/bookings/:bookingId', requireAuth, changeBookingController);
+  router.delete('/bookings/:bookingId', requireAuth, cancelBookingController);
   return router;
 };

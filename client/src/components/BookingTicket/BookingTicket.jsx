@@ -1,10 +1,11 @@
 /**
  * "Table booked" (mockup screens 6 and P5): what was booked and, when the server says it, where
- * the party sits. `booking` is { date, partySize, slot: { startsAt, endsAt }, tables? }, tables
- * as [{ tableNumber, seats }].
+ * the party sits. `booking` is { date, partySize, slot: { startsAt, endsAt }, tables?, requirements? },
+ * tables as [{ tableNumber, seats }]; the dietary needs (MH-05) are listed when there are any.
  */
 import bookedIcon from '../../assets/booking/booked.svg';
 import { formatDay, formatTime, yearOf } from '../../lib/bookingDates.js';
+import { BookedNeeds } from '../BookedNeeds/BookedNeeds.jsx';
 import { Button } from '../Button/Button.jsx';
 import styles from './BookingTicket.module.css';
 
@@ -14,7 +15,8 @@ const tableNames = (tables) =>
     : `tables ${tables.slice(0, -1).map((t) => t.tableNumber).join(', ')} and ${tables.at(-1).tableNumber}`;
 
 export function BookingTicket({ booking, firstName, onHome, onBookAnother }) {
-  const { date, partySize, slot, tables } = booking;
+  const { date, partySize, slot, tables, requirements } = booking;
+  const hasNeeds = requirements?.length > 0;
   return (
     <section className={styles.ticket} aria-labelledby="ticket-title">
       <div className={styles.head}>
@@ -23,7 +25,7 @@ export function BookingTicket({ booking, firstName, onHome, onBookAnother }) {
         <p className={styles.greeting}>See you at the hut{firstName ? `, ${firstName}` : ''}.</p>
       </div>
 
-      <dl className={styles.details}>
+      <dl className={`${styles.details} ${hasNeeds ? styles.withNeeds : ''}`}>
         <div>
           <dt>Day</dt>
           <dd>{formatDay(date)}</dd>
@@ -47,6 +49,8 @@ export function BookingTicket({ booking, firstName, onHome, onBookAnother }) {
           </div>
         )}
       </dl>
+
+      {hasNeeds && <BookedNeeds requirements={requirements} partySize={partySize} />}
 
       <div className={styles.perforation} aria-hidden="true" />
 

@@ -21,13 +21,15 @@ export const PAGES = Object.freeze({
   hut: { path: '/', label: 'The hut' },
   book: { path: '/book', label: 'Book a table' },
   slots: { path: '/slots', label: 'Slots & tables' },
+  reservations: { path: '/reservations/new', label: 'Reservations' },
+  bookings: { path: '/bookings', label: 'My bookings' },
 });
 
-// Only the pages that exist in sprint 1: later stories add theirs.
+// Only the pages that exist so far: later stories add theirs.
 export const NAV_PAGES = Object.freeze({
-  [ROLES.HIKER]: [PAGES.hut, PAGES.book],
-  [ROLES.EMPLOYEE]: [PAGES.hut, PAGES.slots],
-  [ROLES.WARDEN]: [PAGES.hut, PAGES.slots],
+  [ROLES.HIKER]: [PAGES.hut, PAGES.book, PAGES.bookings],
+  [ROLES.EMPLOYEE]: [PAGES.hut, PAGES.slots, PAGES.reservations],
+  [ROLES.WARDEN]: [PAGES.hut, PAGES.slots, PAGES.reservations],
 });
 
 export const START_PAGE = Object.freeze({

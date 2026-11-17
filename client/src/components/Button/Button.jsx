@@ -1,5 +1,6 @@
 /**
- * A button of the QUOTA kit: `primary` (the one main action), `outline` or `ghost` (navbar).
+ * A button of the QUOTA kit: `primary` (the one main action), `outline`, `danger` (an outline in red, for an action that
+ * cancels something: Cancel booking) or `ghost` (navbar).
  * `size` is 'large' (forms) or 'small' (navbar, secondary actions). Other props go to <button>.
  */
 import styles from './Button.module.css';
