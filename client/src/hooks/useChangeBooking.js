@@ -29,6 +29,7 @@ import {
   canSaveChange,
   changeFailure,
   hutDay,
+  isCancelledFailure,
   isNeedsOnly,
   startsAfterNotice,
   stripStart,
@@ -154,7 +155,7 @@ export function useChangeBooking(booking, { onSaved, onStale, onRefresh }) {
       const message = changeFailure(error, { slot, partySize });
       // The choices on screen start from a booking that is no longer the saved one: the dialog is closed, so it
       // opens again from the new booking.
-      if (error.status === 404 || error.code === 'BOOKING_CHANGED') {
+      if (error.status === 404 || error.code === 'BOOKING_CHANGED' || isCancelledFailure(error)) {
         onStale(message);
         return 'stale';
       }

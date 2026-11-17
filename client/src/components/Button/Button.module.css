@@ -66,11 +66,6 @@
   background: var(--error-soft);
 }
 
-.danger:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .ghost {
   background: transparent;
   color: var(--ink);

@@ -33,6 +33,10 @@ export function CancelBookingDialog({ booking, pending = false, error = null, on
       }}
       // A click on the dialog element itself, not on its content, is a click on the backdrop.
       onClick={(event) => event.target === ref.current && keep()}
+      // preventDefault stops the first Esc, not a second one: the browser then closes the dialog by itself. While the
+      // request runs the dialog is shown again; otherwise the page is told, so it does not keep a booking "being
+      // cancelled" that nobody can see (its Cancel booking button would do nothing).
+      onClose={() => (pending ? ref.current.showModal() : onKeep())}
     >
       <div className={styles.body}>
         <div>

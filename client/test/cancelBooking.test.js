@@ -18,9 +18,12 @@ test('a booking already cancelled shows the server message as a sentence', () =>
   assert.equal(cancelFailure({ status: 422, message: 'Already done.' }), 'Already done.');
 });
 
-test('a booking not found, the network and the server give the generic note; a 403 its own message', () => {
+test('a booking not found says it is no longer in the list', () => {
+  assert.equal(cancelFailure({ status: 404, message: 'Booking 45 not found' }), 'This booking is no longer in your list.');
+});
+
+test('the network and the server give the generic note; a 403 its own message', () => {
   const generic = 'Something went wrong on our side. Try again in a minute.';
-  assert.equal(cancelFailure({ status: 404, message: 'Booking 45 not found' }), generic);
   assert.equal(cancelFailure({ status: 0, message: 'Unable to reach the server' }), generic);
   assert.equal(cancelFailure({ status: 500, message: 'Unexpected error' }), generic);
   assert.equal(cancelFailure({ status: 403, message: 'Only hikers can cancel bookings' }), 'Only hikers can cancel bookings');

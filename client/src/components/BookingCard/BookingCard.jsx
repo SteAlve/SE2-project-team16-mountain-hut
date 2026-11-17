@@ -77,7 +77,7 @@ export function BookingCard({ booking, isPhone, onEdit, onCancel }) {
         <Button variant="outline" size="small" disabled={!booking.canChange} onClick={() => onEdit(booking)}>
           Edit
         </Button>
-        <Button variant="danger" size="small" onClick={() => onCancel(booking)}>
+        <Button variant="danger" size="small" aria-label={`Cancel booking ${reference}`} onClick={() => onCancel(booking)}>
           Cancel booking
         </Button>
       </div>

@@ -106,9 +106,13 @@ export const isNeedsOnly = (changes) =>
 
 // The note of the server's answer to a refused change (mockup "Texts and server answers").
 // `error` is { status, code, message }; `slot` is the slot chosen and `partySize` the party.
-const GENERIC = 'Something went wrong on our side. Try again in a minute.';
+export const GENERIC = 'Something went wrong on our side. Try again in a minute.';
 const STAYS = 'Your booking stays as it is.';
-const sentence = (text) => (/[.!?]$/.test(text) ? text : `${text}.`);
+export const sentence = (text) => (/[.!?]$/.test(text) ? text : `${text}.`);
+
+// A change refused (422) because the booking was cancelled in the meantime, for example in another tab: it is no
+// longer there, like a booking that is not found.
+export const isCancelledFailure = (error) => error.status === 422 && /was cancelled/i.test(error.message);
 
 export function changeFailure(error, { slot, partySize }) {
   if (error.status === 409 && error.code === 'NO_SEATS') {
@@ -119,6 +123,7 @@ export function changeFailure(error, { slot, partySize }) {
     return 'This booking was changed in the meantime, so nothing was saved. Its new details are below: open it again to change it.';
   }
   if (error.status === 404) return 'This booking is no longer in your list, so nothing was saved.';
+  if (isCancelledFailure(error)) return 'This booking was cancelled, so nothing was saved.';
   if (error.status === 422) {
     // The server says which rule failed; the hiker is told what to do next.
     return /already have a booking/i.test(error.message)

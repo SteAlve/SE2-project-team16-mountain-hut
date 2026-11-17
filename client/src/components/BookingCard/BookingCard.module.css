@@ -130,7 +130,8 @@
   flex: none;
   flex-direction: column;
   gap: 8px;
-  width: 132px;
+  width: max-content;
+  min-width: 132px;
 }
 
 .actions > button {

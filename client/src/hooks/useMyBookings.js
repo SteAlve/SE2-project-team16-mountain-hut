@@ -15,16 +15,15 @@
  *   cancel(booking), closeCancel()
  *   cancelled(booking)  the booking was cancelled: closes the dialog, takes it off the list at once, shows the note
  *                   and loads the list again
- *   reload()        loads the list again
+ *   reload()        loads the list again; only the last load counts, so an older answer that arrives late (a list asked
+ *                   for before a cancellation, for example) does not bring back what has just changed
  *   saved(booking)  a change was saved: closes the dialog, shows the note and loads the list again, so
  *                   the day, the tables and the deadline are the ones of the server
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listMyBookings } from '../api/bookings.js';
 import { cancelNotice } from '../lib/cancelBooking.js';
-import { bookingReference } from '../lib/changeBooking.js';
-
-const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
+import { bookingReference, GENERIC } from '../lib/changeBooking.js';
 
 export function useMyBookings() {
   const [bookings, setBookings] = useState(null);
@@ -34,31 +33,39 @@ export function useMyBookings() {
   const [staleNote, setStaleNote] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  // The number of the last load asked for: an answer of an older one is ignored.
+  const lastLoad = useRef(0);
 
-  // Resolves to true when the list was loaded.
+  // Resolves to true when this call loaded the list, false when it failed or a newer load replaced it.
   const reload = useCallback(async () => {
+    const mine = ++lastLoad.current;
     try {
-      setBookings(await listMyBookings());
+      const list = await listMyBookings();
+      if (mine !== lastLoad.current) return false;
+      setBookings(list);
       setAlert(null);
       return true;
     } catch (error) {
+      if (mine !== lastLoad.current) return false;
       if (error.status === 401) setLoggedOut(true);
-      else setAlert(error.status === 403 ? error.message : GENERIC_ERROR);
+      else setAlert(error.status === 403 ? error.message : GENERIC);
       return false;
     }
   }, []);
 
   useEffect(() => {
-    let active = true;
+    const load = lastLoad;
+    const mine = ++load.current;
     listMyBookings().then(
-      (list) => { if (active) setBookings(list); },
+      (list) => { if (mine === load.current) setBookings(list); },
       (error) => {
-        if (!active) return;
+        if (mine !== load.current) return;
         if (error.status === 401) setLoggedOut(true);
-        else setAlert(error.status === 403 ? error.message : GENERIC_ERROR);
+        else setAlert(error.status === 403 ? error.message : GENERIC);
       },
     );
-    return () => { active = false; };
+    // After the page is left no answer is wanted any more.
+    return () => { load.current += 1; };
   }, []);
 
   const saved = async (booking) => {
