@@ -9,9 +9,10 @@
  * The navbar and Log out come from AppLayout.
  */
 import { useEffect, useRef } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { BookingBar, BookingSummary } from '../../components/BookingSummary/BookingSummary.jsx';
+import { Button } from '../../components/Button/Button.jsx';
 import { BookingTicket } from '../../components/BookingTicket/BookingTicket.jsx';
 import { DayStrip } from '../../components/DayStrip/DayStrip.jsx';
 import { PeopleStepper } from '../../components/PeopleStepper/PeopleStepper.jsx';
@@ -69,6 +70,11 @@ export function BookTablePage() {
     navigate('/login', { state: { from: `/book?${choices}`, page: 'book a table' } });
   };
 
+  // Back to the home search with the choices filled in, so the hiker changes only what they need.
+  const changeSearch = isSearch
+    ? () => navigate(`/?${new URLSearchParams({ date: date ?? '', people: String(partySize), from, to })}`)
+    : undefined;
+
   const handleReview = () => {
     if (!canReview) return;
     if (!isLoading && !isAuthenticated) goToLogin();
@@ -117,7 +123,11 @@ export function BookTablePage() {
             <p className={styles.eyebrow}>{HUT_LABEL}</p>
             <div className={styles.headingRow}>
               <h1 className={styles.title}>Book a table</h1>
-              {isSearch && <Link to={`/?${new URLSearchParams({ date: date ?? '', people: String(partySize), from, to })}`}>Change search</Link>}
+              {changeSearch && (
+                <Button variant="outline" size="small" onClick={changeSearch}>
+                  Change day or time
+                </Button>
+              )}
             </div>
             <p className={styles.subtitle}>
               Choose the day, how many you are, and a time. You can book up to 2 hours before.

@@ -81,7 +81,7 @@ The answer comes from `GET /api/slots/:slotId/seating?partySize=N`, which is pub
 - The desktop card and the mobile bottom bar show the public seating answer and its split detail. Checking does not reserve seats. Review booking is enabled only after a successful check and only for hikers or visitors who can log in.
 - Login and sign-up preserve the choices in the return URL. `review=1` reopens *Check your booking* after authentication and is then removed with history replacement. Removing only this flag keeps the booking component mounted, so the dialog stays open, while reloading no longer asks to reopen it. Confirmation still requires the hiker's explicit action and obtains a fresh seating proposal.
 - The check needs no new endpoint.
-- **Change search** returns to the home form with the currently selected day and party size and the original From/To range filled in, ready to edit.
+- **Change day or time** (an outline button next to the *Book a table* title) returns to the home form with the currently selected day and party size and the original From/To range filled in, ready to edit.
 
 ### PR #63 review corrections
 
