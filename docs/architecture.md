@@ -116,7 +116,7 @@ The employees and the warden define what can be booked (`/api/staff/...`, every 
 
 An id that does not exist gives `404` everywhere, in the path or in the body. The staff endpoints use `capacity` for the seats of a table; `seats` is only used in a booking and in the seating preview, where it is the seats of the party at that table.
 
-The slots of a day cannot overlap in time: the database refuses an overlap (migration `004_slot_no_overlap.sql`) and the API answers `409`; one slot after the other (12:00-13:00 and 13:00-14:00) is fine. Without this rule the same tables could be booked twice in two overlapping slots. The product owner has not confirmed the rule yet.
+The slots of a day cannot overlap in time: the database refuses an overlap (migration `004_slot_no_overlap.sql`) and the API answers `409`; one slot after the other (12:00-13:00 and 13:00-14:00) is fine. Without this rule the same tables could be booked twice in two overlapping slots. The product owner confirmed this rule (SE2-Polito/AY26-27-Mountain-Hut#31).
 
 Not decided yet (question for the product owners): whether a slot can be created, or given tables, in the past.
 
