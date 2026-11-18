@@ -19,12 +19,18 @@ describe('createStaffSlot, a slot that overlaps another one', () => {
 
     expect(error).toBeInstanceOf(ConflictError);
     expect(error.message).toBe('The slot overlaps the slot from 12:00 to 13:00 on 2090-01-01');
+    expect(error.code).toBe('SLOT_OVERLAP');
+    expect(error.details).toEqual({ slot: { startsAt: '12:00', endsAt: '13:00' } });
   });
 
   it('keeps the message of a slot that starts at the same time', async () => {
     const create = refusedBecauseOf({ slotId: 7, startsAt: '12:30:00', endsAt: '14:00:00' });
 
-    await expect(create(input)).rejects.toThrow('A slot starting at 12:30 already exists on 2090-01-01');
+    const error = await create(input).catch((caught) => caught);
+
+    expect(error.message).toBe('A slot starting at 12:30 already exists on 2090-01-01');
+    expect(error.code).toBeUndefined();
+    expect(error.details).toBeUndefined();
   });
 
   it('still answers 409 when the slot in the way is not found any more', async () => {
@@ -34,5 +40,7 @@ describe('createStaffSlot, a slot that overlaps another one', () => {
 
     expect(error).toBeInstanceOf(ConflictError);
     expect(error.message).toBe('The slot overlaps another slot on 2090-01-01');
+    expect(error.code).toBe('SLOT_OVERLAP');
+    expect(error.details).toBeUndefined();
   });
 });

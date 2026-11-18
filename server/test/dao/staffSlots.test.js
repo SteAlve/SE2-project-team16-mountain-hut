@@ -56,6 +56,17 @@ describe('slots dao, creating a slot', () => {
   it('refuses a table set that does not exist', async () => {
     await expect(newSlot('2090-05-06', '12:00', '13:00', 999999999)).rejects.toMatchObject({ code: '23503' });
   });
+
+  it('throws a primary key conflict instead of answering null, on an empty day', async () => {
+    // As after a restore that leaves the id sequence behind: the next id is one already used.
+    const used = await newSlot('2090-05-07', '12:00', '13:00');
+    await run("SELECT setval(pg_get_serial_sequence('slot', 'id'), $1)", [used.slotId - 1]);
+    try {
+      await expect(newSlot('2090-05-08', '12:00', '13:00')).rejects.toMatchObject({ code: '23505', constraint: 'slot_pkey' });
+    } finally {
+      await run("SELECT setval(pg_get_serial_sequence('slot', 'id'), (SELECT MAX(id) FROM slot))");
+    }
+  });
 });
 
 describe('slots dao, slots that overlap', () => {

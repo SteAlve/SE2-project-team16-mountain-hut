@@ -4,11 +4,12 @@
  */
 
 export class ApiError extends Error {
-  constructor(status, error, message, code) {
+  constructor(status, error, message, code, details) {
     super(message);
     this.status = status; // 0 when the server cannot be reached
     this.error = error; // error name sent by the server, e.g. 'ConflictError'
     this.code = code; // set on some answers only, e.g. 'NO_SEATS' or 'TABLES_CHANGED' on a 409
+    this.details = details; // set on some answers only, e.g. the slot in the way of a SLOT_OVERLAP
   }
 }
 
@@ -32,6 +33,7 @@ export async function request(path, options) {
       body?.error ?? 'RequestFailed',
       body?.message ?? 'Request failed',
       body?.code,
+      body?.details,
     );
   }
   return body;

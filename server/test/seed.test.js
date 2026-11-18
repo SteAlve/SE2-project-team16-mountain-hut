@@ -108,4 +108,23 @@ describe('seedSlots', () => {
 
     expect(await get('SELECT ends_at::TEXT AS "endsAt" FROM slot WHERE id = $1', [slot.id])).toEqual({ endsAt: '12:30:00' });
   });
+
+  it('skips the demo slots that a slot of the staff overlaps, and seeds the others', async () => {
+    const day = demoSlots(TODAY)[0].serviceDate;
+    const staffSlot = await get(
+      "INSERT INTO slot (service_date, starts_at, ends_at) VALUES ($1, '12:30', '13:30') RETURNING id",
+      [day],
+    );
+    try {
+      await seedSlots(TODAY);
+      const times = await all(
+        'SELECT starts_at::TEXT AS "startsAt" FROM slot WHERE service_date = $1 ORDER BY starts_at',
+        [day],
+      );
+      expect(times).toEqual([{ startsAt: '12:30:00' }, { startsAt: '19:00:00' }]);
+      expect((await countDemo()).slots).toBe(demoSlots(TODAY).length - 2);
+    } finally {
+      await run('DELETE FROM slot WHERE id = $1', [staffSlot.id]);
+    }
+  });
 });

@@ -1906,7 +1906,7 @@
             }
           },
           "409": {
-            "description": "Another slot of that date overlaps it. A slot starting at the same time has no `code`; any other overlap has the `code` `SLOT_OVERLAP`.",
+            "description": "Another slot of that date overlaps it. A slot starting at the same time has no `code`; any other overlap has the `code` `SLOT_OVERLAP` and, in `details.slot`, the times of the slot in the way.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1925,7 +1925,13 @@
                     "value": {
                       "error": "ConflictError",
                       "message": "The slot overlaps the slot from 12:00 to 13:00 on 2026-10-28",
-                      "code": "SLOT_OVERLAP"
+                      "code": "SLOT_OVERLAP",
+                      "details": {
+                        "slot": {
+                          "startsAt": "12:00",
+                          "endsAt": "13:00"
+                        }
+                      }
                     }
                   }
                 }
@@ -3057,10 +3063,36 @@
               "NO_SEATS",
               "TABLES_CHANGED",
               "BOOKING_CHANGED",
+              "SLOT_OVERLAP",
               "PASSWORD_CHANGE_REQUIRED",
               "RESET_LINK_NOT_VALID"
             ],
-            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
+            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
+          },
+          "details": {
+            "type": "object",
+            "description": "Present on some answers only, with data the client can show. 409 `SLOT_OVERLAP`: `slot`, the times of the slot in the way.",
+            "properties": {
+              "slot": {
+                "type": "object",
+                "required": [
+                  "startsAt",
+                  "endsAt"
+                ],
+                "properties": {
+                  "startsAt": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$",
+                    "example": "12:00"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$",
+                    "example": "13:00"
+                  }
+                }
+              }
+            }
           }
         }
       },

@@ -1,4 +1,4 @@
-import { all, get, run } from './db.js';
+import { all, get, inTransaction, run } from './db.js';
 
 // Every slot from that date on (the day included), full or without tables too, with the free seats
 // of its tables (0 when it has no tables). Ordered by day and time.
@@ -101,18 +101,29 @@ export const findBetween = (from, to) => all(
   [from, to],
 );
 
+// The constraints that refuse a slot because of another slot of the day.
+const SLOT_RULES = new Set(['slot_unique_start', 'slot_no_overlap']);
+
 // Creates a slot. Returns its id, or null when another slot of that day overlaps it, one starting at
 // the same time included (the constraints slot_unique_start and slot_no_overlap decide, so two requests
 // at the same time cannot both succeed). A slot that starts when another ends does not overlap it.
-export const insert = ({ serviceDate, startsAt, endsAt, tableSetId }) => get(
-  `
-    INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
-    VALUES ($1, $2, $3, $4)
-    ON CONFLICT DO NOTHING
-    RETURNING id AS "slotId"
-  `,
-  [serviceDate, startsAt, endsAt, tableSetId],
-);
+// Any other error (a primary key conflict, for example) is thrown. The savepoint of inTransaction
+// keeps a transaction around it usable after a refused slot.
+export const insert = async ({ serviceDate, startsAt, endsAt, tableSetId }) => {
+  try {
+    return await inTransaction(() => get(
+      `
+        INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id AS "slotId"
+      `,
+      [serviceDate, startsAt, endsAt, tableSetId],
+    ));
+  } catch (error) {
+    if (SLOT_RULES.has(error.constraint)) return null;
+    throw error;
+  }
+};
 
 // The first slot of that day that overlaps the times, or null. One that starts when the other ends
 // does not overlap it.

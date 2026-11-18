@@ -183,10 +183,10 @@ test.describe('MH-4 Check availability', () => {
     if (testInfo.title.includes('no table set')) fixture = await createUnassignedFixture();
     else if (testInfo.title.includes('every seat')) fixture = await createFixture([2], [2]);
     else if (testInfo.title.includes('only one overlapping')) {
-      fixture = await createFixture([2], [], [3], { startsAt: '12:30', endsAt: '13:30' });
+      fixture = await createFixture([2], [], [3], { startsAt: '13:00', endsAt: '14:00' });
     }
     else if (testInfo.title.includes('several times')) {
-      fixture = await createFixture([4, 6], [], [3], { startsAt: '12:30', endsAt: '13:30' });
+      fixture = await createFixture([4, 6], [], [3], { startsAt: '13:00', endsAt: '14:00' });
     }
     else if (testInfo.title.includes('does not book')) fixture = await createFixture([6]);
     else if (testInfo.title.includes('employee gets')) fixture = await createFixture([4]);
@@ -396,7 +396,7 @@ test.describe('MH-4 Check availability', () => {
     await expect(page.getByRole('complementary', { name: 'Your booking' })
       .getByRole('button', { name: 'Review booking' })).toBeDisabled();
 
-    const chosen = timeGroup.getByRole('radio', { name: /12:30/ });
+    const chosen = timeGroup.getByRole('radio', { name: /^13:00/ });
     await chosen.click();
     await expect(chosen).toHaveAttribute('aria-checked', 'true');
     await expect(answer.getByText('Available', { exact: true })).toBeVisible();
@@ -410,7 +410,7 @@ test.describe('MH-4 Check availability', () => {
 
     await expect(page).toHaveURL(/\/book\?/);
     const insufficient = page.getByRole('radio', { name: /12:00/ });
-    const fitting = page.getByRole('radio', { name: /12:30/ });
+    const fitting = page.getByRole('radio', { name: /^13:00/ });
     await expect(insufficient).toBeVisible();
     await expect(insufficient).toContainText('Only 2 seats free');
     await expect(insufficient).toHaveAttribute('aria-checked', 'false');

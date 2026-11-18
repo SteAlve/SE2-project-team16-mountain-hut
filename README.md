@@ -97,6 +97,16 @@ Run these commands in `server`. They use the database of `DATABASE_URL`:
 | `npm run db:drop` | Deletes every table and all the data, and leaves the database empty. It refuses to run when `NODE_ENV` is `production`. |
 | `npm run db:reset` | `db:drop` and then `db:migrate`: the tables are created again from the migrations. Run `db:seed` after it. |
 
+#### Slots that overlap
+
+The slots of a day cannot overlap (migration `004_slot_no_overlap.sql`). Before it, they could, so on an older database the migration can stop with `Some slots of the same day overlap`, followed by the pairs of slots; with Docker the app then does not start. The migration does not change slots by itself, because they can have bookings. Change or delete one slot of each pair, then run `npm run db:migrate` again (with Docker, start the app again). For example, with Docker, for the slot `42`:
+
+```bash
+docker compose exec db psql -U postgres -d mountain_hut -c "UPDATE slot SET ends_at = '13:00' WHERE id = 42"
+```
+
+To delete a slot that has bookings, delete its bookings first. On a database for development only, `npm run db:reset` and `npm run db:seed` start again from scratch.
+
 #### Demo accounts
 
 `db:seed` creates one warden, two employees and one hiker. Other hikers can sign up from the application.

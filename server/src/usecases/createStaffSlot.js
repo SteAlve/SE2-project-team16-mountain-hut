@@ -9,22 +9,24 @@
  */
 import { ConflictError, NotFoundError } from '../domain/errors.js';
 import { describeStaffSlot, describeTableSet } from '../domain/tableSets.js';
+import { toHourMinute } from '../domain/time.js';
 import { requireStaff } from './requireStaff.js';
 
-const hourMinute = (time) => time.slice(0, 5);
-
 // Says which slot is in the way. A slot with the same start keeps the message it always had.
-// An overlap has the code SLOT_OVERLAP, so the client can tell it from a slot with the same start.
-const overlaps = (message) => new ConflictError(message, { code: 'SLOT_OVERLAP' });
-
+// An overlap has the code SLOT_OVERLAP, so the client can tell it from a slot with the same start,
+// and the times of the slot in the way as details, so the client can name it.
 const overlapError = async (slots, { date, startsAt, endsAt }) => {
   const other = await slots.findOverlapping({ serviceDate: date, startsAt, endsAt });
-  if (other === null) return overlaps(`The slot overlaps another slot on ${date}`);
-  if (hourMinute(other.startsAt) === startsAt) {
+  if (other === null) {
+    return new ConflictError(`The slot overlaps another slot on ${date}`, { code: 'SLOT_OVERLAP' });
+  }
+  const inTheWay = { startsAt: toHourMinute(other.startsAt), endsAt: toHourMinute(other.endsAt) };
+  if (inTheWay.startsAt === startsAt) {
     return new ConflictError(`A slot starting at ${startsAt} already exists on ${date}`);
   }
-  return overlaps(
-    `The slot overlaps the slot from ${hourMinute(other.startsAt)} to ${hourMinute(other.endsAt)} on ${date}`,
+  return new ConflictError(
+    `The slot overlaps the slot from ${inTheWay.startsAt} to ${inTheWay.endsAt} on ${date}`,
+    { code: 'SLOT_OVERLAP', details: { slot: inTheWay } },
   );
 };
 

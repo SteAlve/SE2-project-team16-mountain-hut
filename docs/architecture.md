@@ -153,7 +153,7 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`).
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `409` of a slot that overlaps another slot of the day (`SLOT_OVERLAP`, MH-02), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`). It can also carry `details`, data the client can show, added to the answer too: the times of the slot in the way of a `SLOT_OVERLAP`.
 
 | Error | Status | Meaning |
 |---|---|---|
