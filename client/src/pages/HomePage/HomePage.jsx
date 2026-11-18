@@ -19,6 +19,8 @@ export function HomePage() {
   const { days, isLoading, error } = useAvailabilityDays();
   const today = toDay(new Date());
   const [date, setDay] = useState(initial.date >= today ? initial.date : today);
+  // The default day (today) is not a choice: its availability is told only once the user picks a day (#87).
+  const [dayChosen, setDayChosen] = useState(Boolean(initial.date));
   const [people, setPeople] = useState(String(initial.partySize ?? 1));
   const [from, setFrom] = useState(initial.from ?? '');
   const [to, setTo] = useState(initial.to ?? '');
@@ -62,8 +64,11 @@ export function HomePage() {
                 min={today}
                 required
                 value={date}
-                onChange={(event) => setDay(event.target.value)}
-                aria-invalid={Boolean(date && !isLoading && !error && !validDay)}
+                onChange={(event) => {
+                  setDay(event.target.value);
+                  setDayChosen(true);
+                }}
+                aria-invalid={Boolean(dayChosen && date && !isLoading && !error && !validDay)}
               />
             </span>
           </label>
@@ -93,7 +98,7 @@ export function HomePage() {
         <div className={styles.messages}>
           {error && <Alert>{error}</Alert>}
           {!isLoading && !error && !days.length && <Alert>No meal slots are available yet.</Alert>}
-          {!isLoading && !error && days.length > 0 && date >= today && !validDay && (
+          {!isLoading && !error && days.length > 0 && dayChosen && date >= today && !validDay && (
             <Alert>No meal slots are available on this day. Choose another day.</Alert>
           )}
           {date && date < today && <Alert>Choose today or a future day.</Alert>}
