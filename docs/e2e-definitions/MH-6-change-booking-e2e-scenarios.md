@@ -6,9 +6,13 @@ checks where the UI prevents the action or an exact server-clock boundary is nee
 Booking cancellation belongs to MH-08 and is not covered here.
 Cancellation in another tab is used only as a stale-editor precondition below.
 
-This Phase 1 definition was reviewed against `origin/qa` at `d03e63b`, including
-the dietary popup from PR #115 promoted through PR #118. No Playwright tests are
-implemented in this phase.
+Phase 2 implements these scenarios with 24 Playwright tests in
+[mh-6-change-booking.spec.js](../../e2e/tests/mh-6-change-booking.spec.js), against
+the real frontend, API, PostgreSQL and Mailpit. The original definition used
+`origin/qa` at `d03e63b`, including the dietary popup from PR #115 promoted through
+PR #118; the E2E branch is now synchronized with QA at `9889824`.
+Scenario 9's exact server-clock boundary remains in the existing backend tests,
+not the browser suite.
 
 The scenarios derive from each supported change, the product owner's
 clarifications, and the agreed MH-6 booking-management mockup. Each verifies
@@ -69,7 +73,10 @@ to the relevant booking and dialog; these are accessible names, not CSS selector
 9. Saving renames the submit button to **Saving…** and disables it until the
    server responds; do not expect its accessible name to remain Save changes.
    On success, the saved booking is displayed with its updated values without a
-   full page reload.
+   full page reload. After the real PATCH and list GET, assert the exact **status**
+   `Booking QUOTA-xxxxx changed. We emailed you the new details.` and the card's
+   reference, date, full time range and party size before any reload. Repeat the
+   card checks after a separate reload, including singular **person** where needed.
 10. On rejection, the UI shows a visible error and does not present unsaved
     values as saved. Stale-booking errors close the editor, clear any success
     notice, show an **alert**, and reload the list, as specified under Scenario 6.
@@ -122,8 +129,9 @@ to the relevant booking and dialog; these are accessible names, not CSS selector
    unchanged.
 4. Capture outgoing email in the E2E email service, such as Mailpit. A message
    from an earlier test must not satisfy an assertion.
-5. For persistence checks, reload or reopen **My bookings** and verify the
-   saved booking rather than relying only on the editor's displayed values.
+5. Verify the updated live booking card before any reload. For separate persistence
+   checks, reload or reopen **My bookings** and verify the saved booking rather
+   than relying only on the editor's displayed values. Retain API/database checks.
 6. The current E2E setup starts a separate server process and provides no shared
    browser/server clock control; their clocks may differ. Do not use browser clock
    mocking to claim that the server is at an exact deadline. Scenario 9 uses the
@@ -140,6 +148,15 @@ to the relevant booking and dialog; these are accessible names, not CSS selector
    interactions. Reuse existing unit/integration coverage for deterministic rules
    where possible. Race coverage below needs controlled overlapping server requests;
    a browser response stub can check UI error handling but cannot prove a backend race.
+9. The suite requires a dedicated migrated `E2E_DATABASE_URL`, `MAILPIT_URL`,
+   `SMTP_HOST` and `SMTP_PORT`, as described in the [README](../../README.md#tests).
+   It does not skip when Mailpit is absent. Cleanup targets only each scenario's
+   own fixtures and captured message IDs.
+10. Fixture dates add calendar days to today's Europe/Rome civil date, independent
+    of machine timezone and elapsed 24-hour periods. Focused setup assertions
+    cover both DST transitions (including October 2027), distinct offsets,
+    month/year rollover and leap day. UI labels use fixed abbreviations such as
+    **Sep**; email long dates use their separate formatting contract.
 
 ## Scenario 1: The edit dialog shows saved values and closing discards edits
 
@@ -461,6 +478,8 @@ seats also count as available for backend reassignment.
 1. PATCH returns `422` with `You already have a booking for this slot`.
 2. The editor stays open, retains the draft choices, and shows
    `You already have a booking for this slot. Choose another day or time.`
+   Verify the destination day's `aria-checked="true"`, selected time, party-size
+   counter and dietary draft after the real `422` and list refresh.
 3. Both saved bookings and allocations remain unchanged after reload/API
    verification, and no successful-change email is sent.
 
@@ -469,17 +488,18 @@ seats also count as available for backend reassignment.
 **Given**
 
 1. Tab A has an editable booking open in Change your booking with a valid
-   unsaved draft; both browser contexts belong to the same hiker.
+   unsaved draft. Request B uses the same hiker's authenticated API context;
+   no unused browser tab is needed for that server-side action.
 2. The booking and email baseline are recorded. Run independently with another
    modification and with an external cancellation of this booking.
 
 **When**
 
-1. For the modification race, coordinate overlapping saves in tabs A and B so
+1. For the modification race, coordinate overlapping saves from A and request B so
    both server operations read the original booking and B's slot/party-size
    change commits first. A successful earlier save completed before A's server
    read does not by itself guarantee `409 BOOKING_CHANGED`; the API has no version field.
-2. For the cancellation variant, cancel through tab B's setup/API action while
+2. For the cancellation variant, cancel through B's setup/API action while
    A's editor is open, then submit A's draft. This is an MH-06 stale-change check;
    it does not test the MH-08 cancellation dialog, seats, or cancellation email.
 3. Observe A's rejected PATCH and the following `GET /api/bookings` refresh.
@@ -503,11 +523,21 @@ seats also count as available for backend reassignment.
    attempt. Exclude B's successful-change or cancellation email from that negative
    assertion by comparing against the captured reference/type/baseline.
 
-Deterministic overlapping backend operations are not provided by the current E2E
-harness. Keep the race guarantee in existing server integration coverage or add
-explicit coordination in Phase 2; do not rely on tab-click timing or sleeps.
-A controlled 409/422/404 response may verify the browser's close/refresh/message
-behavior separately, but is not evidence of a real server conflict.
+The implementation coordinates real overlapping PATCH operations with a PostgreSQL
+transaction holding the booking's row lock. It starts B's authenticated request,
+polls `pg_locks` / `pg_blocking_pids` until B waits, then submits A's browser draft
+and verifies both writes are blocked. Releasing the coordinator's lock lets B
+commit first and A return a genuine `409 BOOKING_CHANGED`. The transaction and
+started requests are drained even on assertion failure; no timing sleeps or
+mocked responses establish the conflict.
+
+The browser separately verifies pending controls, the losing editor's closure,
+exact rejection alert, absence of a false success, the live winning card and its
+saved values after reload/reopening. Exactly one real change email belongs to B.
+Existing `server/test/dao/bookings.test.js` covers the DAO conflict separately.
+The cancellation `422` and missing-booking `404` also use real backend responses.
+Controlled response stubs would only prove UI behavior; none substitute for this
+race. Broader sequential stale-edit and dietary-only conflicts are not claimed.
 
 ## Scenario 7: Edit is disabled when the original meal is less than 48 hours away
 
@@ -530,8 +560,10 @@ behavior separately, but is not evidence of a real server conflict.
 
 **Then**
 
-1. **Edit** is disabled and the booking displays **Changes closed on…** with
-   its deadline; the UI does not open the edit dialog or submit a change.
+1. **Edit** is disabled and the booking displays the exact
+   `Changes closed on <weekday> <day> <month> · <HH:MM>` text, derived from this
+   booking's `changeableUntil` in `GET /api/bookings` using the frontend's civil
+   date/time format. The UI does not open the edit dialog or submit a change.
 2. The API-level attempt returns `422 Unprocessable Entity`, verifying that
    the server independently enforces the deadline.
 3. The booking retains its original values and allocation after reload.

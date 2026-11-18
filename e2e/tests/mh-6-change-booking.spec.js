@@ -14,6 +14,8 @@ const bookings = await import('../../server/src/dao/bookings.js');
 const slots = await import('../../server/src/dao/slots.js');
 
 const PASSWORD = 'quota-e2e-mh06';
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MAILPIT = process.env.MAILPIT_URL;
 const ZONE = 'Europe/Rome';
 const reference = (id) => `QUOTA-${String(id).padStart(5, '0')}`;
@@ -23,17 +25,19 @@ const need = (values = {}) => ({
 const VEGAN = need({ diets: ['VEGAN'] });
 const dayParts = (date, options) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', options)
   .formatToParts(date).map(({ type, value }) => [type, value]));
-const romeDay = (offset = 0) => {
-  const p = dayParts(new Date(Date.now() + offset * 86400000), {
+const romeDay = (offset = 0, now = new Date()) => {
+  const p = dayParts(now, {
     timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
   });
-  return `${p.year}-${p.month}-${p.day}`;
+  // Add civil days in UTC after finding today's Rome date, independent of DST
+  // and the machine's timezone. Adding elapsed 24-hour periods can repeat a day.
+  const day = new Date(`${p.year}-${p.month}-${p.day}T12:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + offset);
+  return day.toISOString().slice(0, 10);
 };
 const dayName = (date) => {
-  const p = dayParts(new Date(`${date}T12:00:00Z`), {
-    timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short',
-  });
-  return `${p.weekday} ${p.day} ${p.month}`;
+  const d = new Date(`${date}T12:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 };
 const emailDay = (date) => new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric',
@@ -89,6 +93,26 @@ const test = base.extend({
 });
 
 test.beforeAll(async ({ request }) => {
+  // Focused fixture-helper regressions use explicit inputs, never mocked clocks.
+  for (const [instant, offset, expected] of [
+    ['2027-10-26T22:30:00Z', 4, '2027-10-31'],
+    ['2027-10-26T22:30:00Z', 5, '2027-11-01'],
+    ['2027-10-31T22:30:00Z', 1, '2027-11-01'],
+    ['2027-03-27T23:30:00Z', 1, '2027-03-29'],
+    ['2027-03-28T21:30:00Z', 1, '2027-03-29'],
+    ['2027-09-29T22:30:00Z', 1, '2027-10-01'],
+    ['2027-12-30T23:30:00Z', 1, '2028-01-01'],
+    ['2028-02-29T23:30:00Z', -1, '2028-02-29'],
+  ]) expect(romeDay(offset, new Date(instant))).toBe(expected);
+  for (const instant of ['2027-03-26T23:30:00Z', '2027-10-26T22:30:00Z']) {
+    const days = Array.from({ length: 10 }, (_, offset) => romeDay(offset, new Date(instant)));
+    expect(new Set(days).size, `Distinct civil dates across DST from ${instant}`).toBe(days.length);
+  }
+  for (const [date, expected] of [
+    ['2027-08-31', 'Tue 31 Aug'], ['2027-09-01', 'Wed 1 Sep'],
+    ['2027-09-30', 'Thu 30 Sep'], ['2027-10-01', 'Fri 1 Oct'],
+    ['2027-12-31', 'Fri 31 Dec'], ['2028-01-01', 'Sat 1 Jan'],
+  ]) expect(dayName(date)).toBe(expected);
   expect(process.env.E2E_DATABASE_URL, 'Set E2E_DATABASE_URL to a dedicated E2E database').toBeTruthy();
   expect(config.databaseUrl).toBe(process.env.E2E_DATABASE_URL);
   expect(new URL(config.databaseUrl).pathname, 'Do not use the development database').not.toBe('/mountain_hut');
@@ -222,6 +246,16 @@ async function noChange(f, t) {
   expect(await stored(t.booking.id)).toEqual(t.before);
   expect(await changeEmails(f.api, t.owner, t.booking)).toEqual([]);
 }
+async function cardDetails(page, booking) {
+  const item = card(page, booking);
+  await expect(item).toBeVisible();
+  await expect(item).toHaveAccessibleName(`Booking ${reference(booking.id)}`);
+  await expect(item.getByRole('heading', { level: 3 })).toHaveText(
+    `${dayName(booking.date)}, ${booking.startsAt.slice(0, 5)} – ${booking.endsAt.slice(0, 5)}`,
+  );
+  await expect(item.getByText(reference(booking.id), { exact: true })).toBeVisible();
+  await expect(item.getByText(`${booking.partySize} ${booking.partySize === 1 ? 'person' : 'people'}`, { exact: true })).toBeVisible();
+}
 async function save(page, t, payload, status = 200, stale = false) {
   const answer = responseFor(page, `/api/bookings/${t.booking.id}`, 'PATCH');
   const reload = status === 200 || status === 422 || stale ? responseFor(page, '/api/bookings') : null;
@@ -234,7 +268,19 @@ async function save(page, t, payload, status = 200, stale = false) {
   expect(t.observed.previews).toEqual([]);
   if (status === 200 || stale) await expect(editor(page)).toHaveCount(0);
   else await expect(editor(page)).toBeVisible();
-  return { body: await response.json(), started, finished: Date.now() };
+  const body = await response.json();
+  const finished = Date.now();
+  if (status === 200) {
+    const notice = page.getByRole('status').filter({ hasText: 'We emailed you the new details.' });
+    await expect(notice).toHaveText(`Booking ${reference(t.booking.id)} changed. We emailed you the new details.`);
+    await expect(notice).toBeVisible();
+    // Check the refreshed live list before any navigation or reload can hide a regression.
+    expect(body.id).toBe(t.booking.id);
+    await cardDetails(page, body);
+  } else {
+    await expect(page.getByRole('status').filter({ hasText: 'We emailed you the new details.' })).toHaveCount(0);
+  }
+  return { body, started, finished };
 }
 async function persisted(page, t, expected) {
   const apiExpected = Object.fromEntries(['id', 'date', 'slotId', 'partySize', 'tables', 'requirements']
@@ -245,9 +291,7 @@ async function persisted(page, t, expected) {
   const loaded = responseFor(page, '/api/bookings');
   await page.reload();
   expect((await loaded).status()).toBe(200);
-  await expect(card(page, t.booking)).toContainText(`${expected.partySize} people`);
-  await expect(card(page, t.booking)).toContainText(dayName(expected.date));
-  await expect(card(page, t.booking)).toContainText(expected.startsAt.slice(0, 5));
+  await cardDetails(page, { ...t.booking, ...expected });
   expect((await list(t.owner)).find(({ id }) => id === t.booking.id)).toMatchObject(apiExpected);
 }
 async function changedEmail(f, t, booking, interval) {
@@ -560,6 +604,12 @@ test.describe('MH-06 — refusals and stale editors (Scenario 6)', () => {
     const result = await save(page, t, { slotId: destination.slotId }, 422);
     expect(result.body).toEqual({ error: 'UnprocessableError', message: 'You already have a booking for this slot' });
     await expect(editor(page).getByRole('alert')).toHaveText('You already have a booking for this slot. Choose another day or time.');
+    await expect(editor(page).getByRole('radiogroup', { name: 'Day', exact: true })
+      .getByRole('radio', { name: dayName(destination.date), exact: true })).toHaveAttribute('aria-checked', 'true');
+    await expect(timeRadio(page, destination.startsAt)).toHaveAttribute('aria-checked', 'true');
+    await expect(editor(page).getByRole('group', { name: 'How many people', exact: true })
+      .getByRole('status')).toHaveText(String(t.booking.partySize));
+    await expect(needsSection(page)).toContainText('Vegan');
     expect(await stored(t.booking.id)).toEqual(t.before);
     expect(await stored(otherBooking.id)).toEqual(beforeOther);
     expect(await changeEmails(f.api, t.owner, t.booking)).toEqual([]);
@@ -567,7 +617,6 @@ test.describe('MH-06 — refusals and stale editors (Scenario 6)', () => {
 
   test('real overlapping saves return BOOKING_CHANGED, close the losing editor and refresh the winner', async ({ page, scenario: f }) => {
     const t = await setup(f, page);
-    const tabB = await page.context().newPage();
     await openBookings(page, t.booking);
     await openEditor(page, t.booking);
     await party(page, 4, 6);
@@ -584,7 +633,7 @@ test.describe('MH-06 — refusals and stale editors (Scenario 6)', () => {
     try {
       await inTransaction(async () => {
         await get('SELECT id FROM booking WHERE id = $1 FOR UPDATE', [t.booking.id]);
-        winner = tabB.request.patch(`/api/bookings/${t.booking.id}`, { data: { partySize: 3 } });
+        winner = t.owner.api.patch(`/api/bookings/${t.booking.id}`, { data: { partySize: 3 } });
         await expect.poll(waitingUpdates, { message: 'B has read the original and is waiting to update' }).toBe(1);
         loser = responseFor(page, `/api/bookings/${t.booking.id}`, 'PATCH');
         refreshed = responseFor(page, '/api/bookings');
@@ -608,6 +657,7 @@ test.describe('MH-06 — refusals and stale editors (Scenario 6)', () => {
     await expect(page.getByRole('alert')).toHaveText('This booking was changed in the meantime, so nothing was saved. Its new details are below: open it again to change it.');
     await expect(page.getByRole('status').filter({ hasText: 'We emailed you the new details.' })).toHaveCount(0);
     expect(t.observed.patches).toEqual([{ partySize: 6 }]);
+    await cardDetails(page, { ...t.booking, partySize: 3 });
     await persisted(page, t, { date: t.meal.date, startsAt: t.meal.startsAt, partySize: 3, requirements: t.booking.requirements });
     await openEditor(page, t.booking);
     await expect(editor(page).getByRole('group', { name: 'How many people', exact: true }).getByRole('status')).toHaveText('3');
@@ -623,8 +673,7 @@ test.describe('MH-06 — refusals and stale editors (Scenario 6)', () => {
       await openEditor(page, t.booking);
       await party(page, 4, 5);
       if (situation === 'cancelled in another tab') {
-        const tabB = await page.context().newPage();
-        expect((await tabB.request.delete(`/api/bookings/${t.booking.id}`)).status()).toBe(204);
+        expect((await t.owner.api.delete(`/api/bookings/${t.booking.id}`)).status()).toBe(204);
       } else {
         await run('DELETE FROM booking WHERE id = $1', [t.booking.id]);
       }
@@ -668,7 +717,11 @@ test.describe('MH-06 — deadlines and ownership (Scenarios 7, 8, 10)', () => {
     const observed = observe(page, booking.id);
     await openBookings(page, booking);
     await expect(button(card(page, booking), 'Edit')).toBeDisabled();
-    await expect(card(page, booking)).toContainText('Changes closed on');
+    const listed = (await list(owner)).find(({ id }) => id === booking.id);
+    expect(listed.canChange).toBe(false);
+    expect(listed.changeableUntil).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    const deadline = `Changes closed on ${dayName(listed.changeableUntil.slice(0, 10))} · ${listed.changeableUntil.slice(11, 16)}`;
+    await expect(card(page, booking).getByText(deadline, { exact: true })).toBeVisible();
     await expect(editor(page)).toHaveCount(0);
     expect(observed.patches).toEqual([]);
     const response = await owner.api.patch(`/api/bookings/${booking.id}`, { data: { slotId: destination.slotId } });
