@@ -324,7 +324,7 @@ set.
 **Then**
 
 1. After the first **Done** the popup stays open, the message of the data set is
-   shown, and the line is not folded: there is no row for it in the dialog.
+   shown, and the popup stays open: the line is not closed.
 2. No booking request is sent while the line is wrong.
 3. After the correction, **Done** folds the line and the message goes away.
 4. The longest texts allowed (100 characters for an *Other* diet or allergy, 300
