@@ -5,7 +5,7 @@
  * It is safe to run again: an account whose email already exists is left untouched, and a slot
  * that already has bookings is not changed.
  *
- * The password below is a DEMO password, published in the README. Do not seed a real hut with it.
+ * The password below is a DEMO password, published in docs/docker-demo.md. Do not seed a real hut with it.
  */
 import { fileURLToPath } from 'node:url';
 import { clock } from '../src/clock.js';
