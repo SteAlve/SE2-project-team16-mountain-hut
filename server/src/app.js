@@ -258,5 +258,6 @@ app.use((err, _req, res, _next) => {
   }
   const body = { error: err.name, message: err.message };
   if (err.code !== undefined) body.code = err.code;
+  if (err.details !== undefined) body.details = err.details;
   res.status(status).json(body);
 });

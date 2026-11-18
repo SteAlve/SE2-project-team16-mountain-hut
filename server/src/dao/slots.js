@@ -1,4 +1,4 @@
-import { all, get, run } from './db.js';
+import { all, get, inTransaction, run } from './db.js';
 
 // Every slot from that date on (the day included), full or without tables too, with the free seats
 // of its tables (0 when it has no tables). Ordered by day and time.
@@ -101,16 +101,41 @@ export const findBetween = (from, to) => all(
   [from, to],
 );
 
-// Creates a slot. Returns its id, or null when a slot starting at that time already exists that day
-// (the unique constraint decides).
-export const insert = ({ serviceDate, startsAt, endsAt, tableSetId }) => get(
+// The constraints that refuse a slot because of another slot of the day.
+const SLOT_RULES = new Set(['slot_unique_start', 'slot_no_overlap']);
+
+// Creates a slot. Returns its id, or null when another slot of that day overlaps it, one starting at
+// the same time included (the constraints slot_unique_start and slot_no_overlap decide, so two requests
+// at the same time cannot both succeed). A slot that starts when another ends does not overlap it.
+// Any other error (a primary key conflict, for example) is thrown. The savepoint of inTransaction
+// keeps a transaction around it usable after a refused slot.
+export const insert = async ({ serviceDate, startsAt, endsAt, tableSetId }) => {
+  try {
+    return await inTransaction(() => get(
+      `
+        INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id AS "slotId"
+      `,
+      [serviceDate, startsAt, endsAt, tableSetId],
+    ));
+  } catch (error) {
+    if (SLOT_RULES.has(error.constraint)) return null;
+    throw error;
+  }
+};
+
+// The first slot of that day that overlaps the times, or null. One that starts when the other ends
+// does not overlap it.
+export const findOverlapping = ({ serviceDate, startsAt, endsAt }) => get(
   `
-    INSERT INTO slot (service_date, starts_at, ends_at, table_set_id)
-    VALUES ($1, $2, $3, $4)
-    ON CONFLICT ON CONSTRAINT slot_unique_start DO NOTHING
-    RETURNING id AS "slotId"
+    SELECT id AS "slotId", starts_at::TEXT AS "startsAt", ends_at::TEXT AS "endsAt"
+    FROM slot
+    WHERE service_date = $1 AND starts_at < $3::TIME AND ends_at > $2::TIME
+    ORDER BY starts_at
+    LIMIT 1
   `,
-  [serviceDate, startsAt, endsAt, tableSetId],
+  [serviceDate, startsAt, endsAt],
 );
 
 // Gives the table set to a slot that has none. Returns true when it did, false when the slot has a

@@ -116,7 +116,9 @@ The employees and the warden define what can be booked (`/api/staff/...`, every 
 
 An id that does not exist gives `404` everywhere, in the path or in the body. The staff endpoints use `capacity` for the seats of a table; `seats` is only used in a booking and in the seating preview, where it is the seats of the party at that table.
 
-Not decided yet (questions for the product owners): whether two slots can overlap in time (today only the same start is refused, so overlapping slots with the same tables could be booked twice), and whether a slot can be created, or given tables, in the past.
+The slots of a day cannot overlap in time: the database refuses an overlap (migration `004_slot_no_overlap.sql`) and the API answers `409`; one slot after the other (12:00-13:00 and 13:00-14:00) is fine. Without this rule the same tables could be booked twice in two overlapping slots. The product owner confirmed this rule (SE2-Polito/AY26-27-Mountain-Hut#31).
+
+Not decided yet (question for the product owners): whether a slot can be created, or given tables, in the past.
 
 ### Reservations for a hiker and passwords (MH-07)
 
@@ -151,7 +153,7 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`).
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `409` of a slot that overlaps another slot of the day (`SLOT_OVERLAP`, MH-02), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`). It can also carry `details`, data the client can show, added to the answer too: the times of the slot in the way of a `SLOT_OVERLAP`.
 
 | Error | Status | Meaning |
 |---|---|---|
