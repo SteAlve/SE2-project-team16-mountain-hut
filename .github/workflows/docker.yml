@@ -3,6 +3,17 @@
 # Called by qa.yml and deploy.yml after the checks of the commit passed, so what is published is what
 # was tested. Builds the image from the Dockerfile and publishes it to GitHub's container registry,
 # tagged with the commit and with the tag of the branch: qa on qa, latest on main.
+# The image is built for every architecture its base image (node:22-alpine) has: amd64 (PCs and
+# servers), arm64 (Macs with Apple chips, Raspberry Pi 4 and 5), arm/v7 and arm/v6 (32-bit
+# Raspberry Pi) and s390x. One tag for all: Docker takes the right one for the machine. An image
+# for amd64 only cannot be pulled on a Mac with an Apple chip.
+#
+# At the end of a sprint release.yml calls it with dockerhub: true, and then the demo image
+# (demo/Dockerfile) is built too: the image above with PostgreSQL and Mailpit inside, so that someone
+# with only Docker, and no code, runs the whole app with one docker run. It goes to Docker Hub, for
+# amd64 and arm64 (the platforms of Mailpit), tagged with the release and latest. qa and main never
+# publish to Docker Hub. It needs the variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN (a
+# Docker Hub access token that can write) in the repository.
 
 name: Docker image
 
@@ -10,9 +21,18 @@ on:
   workflow_call:
     inputs:
       tag:
-        description: The tag of the branch
+        description: The tag of the branch, or of the release
         type: string
         required: true
+      dockerhub:
+        description: Also publish the demo image to Docker Hub
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      DOCKERHUB_TOKEN:
+        description: A Docker Hub access token that can write, to publish the demo image
+        required: false
 
 jobs:
   publish:
@@ -22,8 +42,24 @@ jobs:
       contents: read
       packages: write
     steps:
+      # Stop at once, before anything is published, if a release cannot go to Docker Hub.
+      - name: Check that Docker Hub is set up
+        if: inputs.dockerhub && vars.DOCKERHUB_USERNAME == ''
+        run: |
+          echo "::error::The repository needs the variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN to publish to Docker Hub."
+          exit 1
+
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      # QEMU runs the build of the platforms that are not the one of the runner (only the stage of the
+      # server: the client is built once, natively, see the Dockerfile). Buildx builds for more than
+      # one platform in one go.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to the container registry
         uses: docker/login-action@v3
@@ -43,9 +79,48 @@ jobs:
             type=raw,value=${{ inputs.tag }}
 
       - name: Build and publish
+        id: app
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/s390x
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # The demo image starts from the image just published, by its digest: it is exactly that build.
+      - name: Name the image of the app
+        if: inputs.dockerhub
+        id: app_image
+        env:
+          DIGEST: ${{ steps.app.outputs.digest }}
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        if: inputs.dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Choose the name and the tags of the demo image
+        if: inputs.dockerhub
+        id: demo_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/se2-mountain-hut
+          tags: |
+            type=raw,value=${{ inputs.tag }}
+            type=raw,value=latest
+
+      - name: Build and publish the demo image to Docker Hub
+        if: inputs.dockerhub
+        uses: docker/build-push-action@v6
+        with:
+          context: demo
+          file: demo/Dockerfile
+          build-args: APP_IMAGE=${{ steps.app_image.outputs.name }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.demo_meta.outputs.tags }}
+          labels: ${{ steps.demo_meta.outputs.labels }}

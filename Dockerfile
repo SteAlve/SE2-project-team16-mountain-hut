@@ -1,8 +1,10 @@
 # The image of the app, in two stages: the first builds the client, the second has only what runs.
 # Build it from the root of the repository. docs/architecture.md (section 6) explains the setup.
 
-# 1. Build the client
-FROM node:22-alpine AS client
+# 1. Build the client. It is only files (HTML, CSS, JavaScript), the same on every processor, so this
+#    stage always runs on the machine that builds the image, also when the image is for another
+#    processor (arm64 is built on an amd64 machine): the build stays fast.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS client
 WORKDIR /app/client
 COPY client/package.json client/package-lock.json ./
 RUN npm ci
