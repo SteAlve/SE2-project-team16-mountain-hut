@@ -20,9 +20,13 @@ let fixture;
 // Fixture: a slot tomorrow with tables of the given seats, and the hikers the test creates.
 // ---------------------------------------------------------------------------------------------
 
-// Tomorrow in the time zone of the hut: always more than two hours away, and in the day strip.
-const tomorrowInRome = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' })
-  .format(new Date(Date.now() + 24 * 60 * 60 * 1000));
+// Tomorrow in the time zone of the hut: always more than two hours away, and in the day strip. It adds one
+// calendar day to today's date at the hut, not 24 hours, so the change of the daylight-saving time does not matter.
+const tomorrowInRome = () => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+  const [year, month, dayOfMonth] = today.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, dayOfMonth + 1)).toISOString().slice(0, 10);
+};
 
 // A start time between 10:00 and 11:59, so two runs do not meet on the same slot; the meal ends
 // two hours later, on the same day.
@@ -229,6 +233,19 @@ async function waitForEmail(request, address, count = 1) {
   // Mailpit lists the newest first.
   return { count: messages.length, ...(await readEmail(request, messages[0].ID)) };
 }
+
+// Makes sure no email reaches the address (the window is the time the server would need to send one).
+async function expectNoEmail(request, address) {
+  await new Promise((resolve) => { setTimeout(resolve, NO_EMAIL_WINDOW_MS); });
+  expect(await emailsTo(request, address)).toEqual([]);
+}
+
+// '2026-11-19' -> '19 November 2026', as the email writes the day.
+const emailDay = (date) => {
+  const [year, month, dayOfMonth] = date.split('-').map(Number);
+  const name = new Intl.DateTimeFormat('en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)));
+  return `${dayOfMonth} ${name} ${year}`;
+};
 
 const visibleText = (html) => html
   .replace(/<[^>]+>/g, ' ')
@@ -490,6 +507,7 @@ test.describe('MH-5 Provide party requirements', () => {
         expect(await savedNeedsCount(fixture.slotId)).toBe(0);
         const seating = await request.get(`/api/slots/${fixture.slotId}/seating`, { params: { partySize: 2 } });
         expect(seating.status()).toBe(200);
+        if (mailpit) await expectNoEmail(request, hiker.email);
       });
     }
 
@@ -647,6 +665,26 @@ test.describe('MH-5 Provide party requirements', () => {
       const reference = `QUOTA-${String(booking.id).padStart(5, '0')}`;
       expect(email.Subject).toContain(reference);
 
+      // The details of the email are the ones of the saved booking and of the slot (MH-3).
+      const saved = (await (await request.get('/api/bookings')).json()).find((b) => b.id === booking.id);
+      const details = {
+        'Booking reference': reference,
+        Name: `${hiker.firstName} ${hiker.lastName}`,
+        Date: emailDay(saved.date),
+        Time: `${saved.startsAt}–${saved.endsAt}`,
+        'Party size': String(saved.partySize),
+      };
+      expect(saved.date).toBe(fixture.date);
+      expect(saved.startsAt).toBe(fixture.startsAt.slice(0, 5));
+      expect(saved.partySize).toBe(4);
+      for (const [label, value] of Object.entries(details)) {
+        expect(email.Text.split('\n').map((l) => l.trimEnd())).toContain(`${label}: ${value}`);
+      }
+      const htmlText = visibleText(email.HTML);
+      for (const [label, value] of Object.entries(details)) {
+        expect(htmlText).toMatch(new RegExp(`${label}\\s*${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      }
+
       // The plain text: a section with a line per group, in the order of the lines, and the request as typed.
       expect(email.Text).toContain('Dietary needs:');
       const lines = email.Text.split('\n').map((l) => l.trimEnd());
@@ -772,8 +810,9 @@ test.describe('MH-5 Provide party requirements', () => {
       expect(await savedNeedsCount(fixture.slotId)).toBe(2);
     });
 
-    test('Scenario 13: a booking refused because the seats are gone saves no needs and sends no email', async ({ page, request }) => {
+    test('Scenario 13: a booking refused because the seats are gone saves no needs, sends no email and keeps the draft', async ({ page, request }) => {
       fixture = await createFixture([2]);
+      const another = await addSlot([2]);
       const hiker = await createHiker(request);
       const other = await createHiker(request);
 
@@ -789,10 +828,28 @@ test.describe('MH-5 Provide party requirements', () => {
       expect(status).toBe(409);
       expect(booking.code).toBe('NO_SEATS');
       await expect(page.getByText(/Those seats were just taken/)).toBeVisible();
+      await expect(reviewDialog(page)).toHaveCount(0);
       expect(await savedNeedsCount(fixture.slotId)).toBe(0);
-      await page.waitForTimeout(NO_EMAIL_WINDOW_MS);
-      expect(await emailsTo(request, hiker.email)).toEqual([]);
+      await expectNoEmail(request, hiker.email);
       expect((await waitForEmail(request, other.email)).count).toBe(1);
+
+      // The hiker chooses the other slot and reviews again: the needs typed before are still there.
+      const time = timeRadio(page, another.startsAt);
+      await time.click();
+      await expect(time).toHaveAttribute('aria-checked', 'true');
+      await page.getByRole('button', { name: 'Review booking' }).click();
+      await expect(reviewDialog(page)).toBeVisible();
+      await expect(rows(page)).toHaveCount(1);
+      await expect(rows(page).first()).toContainText('2 guests');
+      await expect(rows(page).first()).toContainText('Peanuts');
+      await expect(counter(page)).toContainText('2 of 2');
+
+      // Confirming there saves the needs, and the refused slot still has none.
+      const again = await confirm(page);
+      expect(again.status).toBe(201);
+      expect(again.booking.requirements).toHaveLength(2);
+      expect(await savedNeedsCount(another.slotId)).toBe(2);
+      expect(await savedNeedsCount(fixture.slotId)).toBe(0);
     });
   });
 
@@ -812,10 +869,7 @@ test.describe('MH-5 Provide party requirements', () => {
     expect(await savedNeedsCount(fixture.slotId)).toBe(0);
     const seating = await (await request.get(`/api/slots/${fixture.slotId}/seating`, { params: { partySize: 4 } })).json();
     expect(seating.tables.map((t) => t.seats)).toEqual([4]);
-    if (mailpit) {
-      await new Promise((resolve) => { setTimeout(resolve, NO_EMAIL_WINDOW_MS); });
-      expect(await emailsTo(request, hiker.email)).toEqual([]);
-    }
+    if (mailpit) await expectNoEmail(request, hiker.email);
 
     const accepted = await apiBook(request, fixture.slotId, 3, [{ diets: ['VEGAN'] }, { allergies: ['EGGS'] }, { diets: ['VEGETARIAN'] }]);
     expect(accepted.status).toBe(201);
