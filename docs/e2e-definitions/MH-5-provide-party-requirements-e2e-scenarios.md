@@ -83,7 +83,7 @@ user-facing text, not by CSS classes or element positions.
    **Edit line N** and **Remove line N**. A line with no choice yet says
    **Nothing chosen yet**.
 7. **Done** folds a valid line. A wrong line stays open with its problem marked
-   (see Scenario 6). **Cancel** or Esc leaves the line as it was, and a line
+   and is never folded (see Scenario 6, part A). **Cancel** or Esc leaves the line as it was, and a line
    just added goes away.
 8. **Confirm booking** checks every line first: a wrong line is opened with its
    problem and nothing is sent. While the booking is sent the needs controls are
@@ -290,7 +290,24 @@ seating preview), with each data set, and check the answer and `GET
 
 ## Scenario 6: A line that says nothing, or a text that is too long, cannot be sent
 
-Run this scenario in the browser, and then at API level with the same data.
+The browser and the API check the same rules. Part A runs in the browser and
+part B at API level; they are independent.
+
+### Part A: Browser validation
+
+An invalid line cannot be folded: **Done** keeps the popup open and marks the
+problem. So a booking is never sent from the browser with an invalid line, and
+the test does not need to reach one in any other way. Run part A with each data
+set.
+
+| Data set | The hiker enters | Message shown |
+|---|---|---|
+| Nothing chosen | nothing | **Choose a diet or an allergy, or write a request, or remove this line.** |
+| *Other* diet empty | **Other** in **Diet**, **Which diet?** left empty | **Write which diet, or unselect Other.** |
+| *Other* allergy empty | **Other** in **Allergies**, **Which allergy?** left empty | **Write which allergy, or unselect Other.** |
+| *Other* diet too long | **Other** in **Diet**, 101 characters in **Which diet?** | **Too long: at most 100 characters.** |
+| *Other* allergy too long | **Other** in **Allergies**, 101 characters in **Which allergy?** | **Too long: at most 100 characters.** |
+| Request too long | 301 characters in **Anything else the kitchen should know?** | **Too long: at most 300 characters.** |
 
 **Given**
 
@@ -298,27 +315,45 @@ Run this scenario in the browser, and then at API level with the same data.
 
 **When**
 
-1. The hiker adds a line and selects **Done** without choosing anything.
-2. The hiker types 301 characters in **Anything else the kitchen should know?**
-   (or 101 in **Which diet?**, after selecting **Other**) and selects **Done**.
-3. The hiker presses Esc to leave the popup of a wrong line, then selects
-   **Edit line 1** on any wrong line that is still folded, and selects
-   **Confirm booking** without correcting it.
-4. At API level, the test sends `requirements: [{}]` and a requirement with
-   `otherRequests` of 301 characters.
+1. The hiker selects **+ Add a guest's needs** and enters the data set in the
+   popup.
+2. The hiker selects **Done**.
+3. The hiker corrects the problem (chooses something, or types a valid text) and
+   selects **Done** again.
 
 **Then**
 
-1. A wrong line cannot be folded: the popup stays open and says **Choose a diet or an allergy, or write a
-   request, or remove this line.** for an empty line, and **Too long: at most
-   300 characters.** for the text (100 for an *Other* diet or allergy).
-2. **Confirm booking** opens the first wrong line with the problem marked, and no
-   booking request is sent.
-3. At API level the answer is `400 ValidationError` (`Each requirement needs a
-   diet, an allergy or a request`, `otherRequests can be at most 300
-   characters`) and no booking, no needs and no email are created.
-4. The longest texts allowed (100, 100 and 300 characters) are accepted and
-   saved.
+1. After the first **Done** the popup stays open, the message of the data set is
+   shown, and the line is not folded: there is no row for it in the dialog.
+2. No booking request is sent while the line is wrong.
+3. After the correction, **Done** folds the line and the message goes away.
+4. The longest texts allowed (100 characters for an *Other* diet or allergy, 300
+   for the requests) are accepted and fold normally.
+
+### Part B: API validation
+
+**Given**
+
+1. A hiker is logged in and a slot has free seats for a party of two.
+
+**When**
+
+1. The test sends `POST /api/bookings`, with the tables of the seating preview,
+   once with each of these `requirements`: `[{}]`, `[{ "otherRequests": "   " }]`,
+   a requirement with `otherRequests` of 301 characters, and one with
+   `otherDiet` of 101 characters.
+2. The test sends the booking again with texts of exactly 100 (`otherDiet`,
+   `otherAllergy`) and 300 (`otherRequests`) characters.
+
+**Then**
+
+1. Each request of the first step is refused with `400 ValidationError`
+   (`Each requirement needs a diet, an allergy or a request`, `otherRequests
+   cannot be empty`, `otherRequests can be at most 300 characters`,
+   `otherDiet can be at most 100 characters`), and no booking, no needs and no
+   email are created; the seats left do not change.
+2. The booking of the second step is accepted with `201 Created` and the texts
+   are saved with their full length.
 
 ## Scenario 7: A request for the kitchen with no diet or allergy
 
@@ -424,27 +459,34 @@ Run this scenario in the browser, and then at API level with the same data.
 2. A hiker is logged in and has opened **Check your booking** for a party of
    four.
 3. The hiker adds the three lines of Scenario 3 (a vegan with a peanut allergy,
-   a shellfish allergy, two vegetarians) and one request, `No mushrooms`, on the
-   shellfish line.
+   a shellfish allergy, two vegetarians), and on the shellfish line the request
+   `No mushrooms <b>no nuts</b> & "spicy"`, typed in **Anything else the kitchen
+   should know?**. It contains HTML-like characters on purpose.
 
 **When**
 
 1. The hiker selects **Confirm booking**.
 2. The test waits for the new message in Mailpit and reads its plain-text
-   body, and its HTML body.
+   body, and its HTML body (both its source and its rendered text).
 
 **Then**
 
 1. The message is addressed to the hiker and has a dietary needs section, **Dietary needs**.
 2. It lists the groups in the order of the lines, each with its number of guests:
    `1 guest` with **Allergies: Peanuts** and **Diet: Vegan**, `1 guest` with
-   **Allergies: Shellfish** and the request **"No mushrooms"**, and `2 guests`
-   with **Diet: Vegetarian**.
+   **Allergies: Shellfish** and the request `No mushrooms <b>no nuts</b> &
+   "spicy"` in quotes, and `2 guests` with **Diet: Vegetarian**.
 3. The allergies are listed before the diets, as the kitchen reads them.
 4. The date, time, party size and booking reference of the message are the ones
    of the booking (MH-3), and the table numbers are not in it.
-5. What the hiker typed is shown as text: a request such as `<b>no nuts</b>`
-   appears as those characters and is not read as markup.
+5. The request is escaped in the HTML version: the source of the HTML body
+   contains `&lt;b&gt;no nuts&lt;/b&gt;` and `&amp;`, and does not contain a
+   `<b>no nuts</b>` tag of its own, so the rendered text of the message shows the
+   characters exactly as typed and `no nuts` is not bold.
+6. The plain-text version keeps the request literally, as typed:
+   `No mushrooms <b>no nuts</b> & "spicy"`, with no escaping.
+7. The request, saved with `201 Created`, is returned unchanged by the API and
+   by **Table booked** and **My bookings**, where React shows it as text.
 
 ## Scenario 12: Each booking sends only its own needs
 
