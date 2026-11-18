@@ -15,6 +15,8 @@ const bookings = await import('../../server/src/dao/bookings.js');
 const { hash } = await import('../../server/src/passwordHasher.js');
 
 const PASSWORD = 'quota-e2e-mh08';
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MAILPIT = process.env.MAILPIT_URL;
 const ZONE = 'Europe/Rome';
 const GENERIC = 'Something went wrong on our side. Try again in a minute.';
@@ -31,10 +33,8 @@ const romeDay = (days = 0) => {
   return `${p.year}-${p.month}-${p.day}`;
 };
 const dayLabel = (date) => {
-  const p = parts(new Date(`${date}T12:00:00Z`), {
-    timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short',
-  });
-  return `${p.weekday} ${p.day} ${p.month}`;
+  const d = new Date(`${date}T12:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 };
 const longDay = (date) => new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric',
@@ -236,8 +236,9 @@ async function cancelThroughBrowser(page, booking) {
   await confirm(page).click();
   const response = await deleted;
   const finished = Date.now();
-  expect(response.status(), await response.text()).toBe(204);
-  expect(await response.text()).toBe('');
+  // Chromium may not expose a response body for 204. S6 API independently checks
+  // the empty body through APIRequestContext, where reading it is supported.
+  expect(response.status()).toBe(204);
   expect((await refreshed).status()).toBe(200);
   await expect(dialog(page)).toHaveCount(0);
   await expect(card(page, booking)).toHaveCount(0);
@@ -443,13 +444,19 @@ test('S7 — cancellation email contains original details and server-local cance
     `Cancelled on: ${localMoment(row.booking.cancelled_at)}`,
   ]) expect(email.Text).toContain(value);
   const html = email.HTML.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-  for (const value of [reference(t.booking.id), 'Mara Rossi', longDay(t.meal.date),
-    localMoment(row.booking.cancelled_at)]) expect(html).toContain(value);
-  expect(email.Text).toContain('The seats are free again for other guests.');
-  expect(email.Text).toContain('We hope to see you at the hut another time.');
-  expect(email.Text).not.toContain('Dietary needs');
-  expect(email.HTML).not.toContain('Dietary needs');
-  expect(email.Text).not.toContain('Table 1');
+  const time = `${t.meal.startsAt.slice(0, 5)}–${t.meal.endsAt.slice(0, 5)}`;
+  for (const body of [email.Text, html]) {
+    for (const value of [
+      reference(t.booking.id), 'Mara Rossi', longDay(t.meal.date), time,
+      localMoment(row.booking.cancelled_at),
+      'The seats are free again for other guests.',
+      'We hope to see you at the hut another time.',
+    ]) expect(body).toContain(value);
+    expect(body).toMatch(new RegExp(`Party size:?\\s+${t.booking.partySize}\\b`));
+    expect(body).toContain('Cancelled on');
+    for (const value of ['Dietary needs', 'Vegan', 'Table 1']) expect(body).not.toContain(value);
+    expect(body).not.toMatch(/\btable\s*#?\s*\d+\b/i);
+  }
 });
 
 // Scenario 8: second DELETE is a genuine 422; missing booking is a genuine 404.
@@ -607,6 +614,9 @@ test('S11 — pending state blocks duplicate actions and Escape until real 204',
     await expect(dialog(page).getByRole('button', { name: 'Cancelling…' })).toBeDisabled();
     await expect(keep(page)).toBeDisabled();
     await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeVisible();
     await page.mouse.click(2, 2);
     await expect(dialog(page)).toBeVisible();
     expect(observed).toHaveLength(1);
@@ -640,11 +650,11 @@ test('S11 UI contract — a controlled 500 leaves the dialog open and real retry
   await expect(dialog(page).getByRole('alert')).toHaveText(GENERIC);
   await expect(keep(page)).toBeEnabled();
   await expect(confirm(page)).toBeEnabled();
+  await expect(page.getByRole('status').filter({ hasText: 'cancelled. We emailed you a confirmation.' })).toHaveCount(0);
   expect(await snapshot(t.booking.id)).toEqual(t.before);
   await noCancellationMail(f, t.owner, t.booking);
   await page.unroute(path, failOnce);
-  const response = await cancelThroughBrowser(page, t.booking);
-  expect(response.finished).toBeGreaterThanOrEqual(response.started);
+  await cancelThroughBrowser(page, t.booking);
   expect(observed).toHaveLength(2); // One controlled 500, one real 204.
   await cancelled(t.booking, t.before);
   await waitForCancellationMail(f, t.owner, t.booking);

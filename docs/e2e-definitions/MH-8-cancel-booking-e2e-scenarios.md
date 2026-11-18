@@ -1,8 +1,10 @@
 # MH-8 - Cancel a booking
 
 These Given/When/Then scenarios define MH-08 browser E2E coverage and explicitly
-identified API/server-level checks. This is Phase 1: no Playwright implementation.
-The review baseline is `origin/qa` at `d03e63b` on branch `test/MH-08-e2e`.
+identified API/server-level checks. The approved scenarios are implemented by the
+22 tests in [mh-8-cancel-booking.spec.js](../../e2e/tests/mh-8-cancel-booking.spec.js).
+The original frontend/backend baseline was `origin/qa` at `d03e63b`; the current
+QA comparison is `de196ba`, which includes PR #119's unit/integration tests.
 
 The story lets a hiker cancel a table booking so the hut can make the places
 available to other guests. The PO clarification is explicit: **There are no time
@@ -49,7 +51,10 @@ belongs to MH-06; its editor and dietary popup are not part of this flow.
 1. Only an authenticated HIKER can cancel their own booking. Another owner's
    booking is hidden behind the same `404` as a missing booking.
 2. `DELETE /api/bookings/:bookingId` has no cancellation request body. Successful
-   `204 No Content` has an empty response body: inspect text/bytes, not JSON.
+   `204 No Content` has an empty response body. Browser response checks assert
+   status only: Chromium may not expose a 204 body through `response.text()` or
+   `response.json()`. Scenario 6's APIRequestContext check independently verifies
+   empty response text.
    No seating preview, PATCH, or alternative cancellation endpoint is involved.
 3. No editing, booking-closing, or cancellation deadline applies to this DELETE.
    The server clock determines `cancelled_at`; a browser clock does not control it.
@@ -183,7 +188,8 @@ The backdrop variant is supported by the current dialog's outside-click handler.
 **Then**
 
 1. Exactly one DELETE targets the recorded ID, with no body, and returns `204`
-   with empty response text/bytes. Do not call `response.json()` on that response.
+   with no content. Assert the browser response status without reading its body;
+   the separate Scenario 6 API check verifies empty response text safely.
 2. The dialog closes, only the target card disappears, and the exact status is
    `Booking QUOTA-xxxxx cancelled. We emailed you a confirmation.`
 3. The refreshed and reloaded authenticated lists exclude the target. The other
@@ -357,7 +363,8 @@ with the bookings return context, with no cancellation or false success notice.
 the real backend; observers are registered before confirmation.
 
 **When** the hiker rapidly double-clicks the enabled confirm button, then presses
-Escape and clicks the backdrop while the request remains gated.
+Escape twice and clicks the backdrop while the request remains gated. Check that
+the dialog remains visible after each Escape and after the backdrop click.
 
 **Then** exactly one DELETE is observed, Cancelling… and Keep booking are disabled,
 the dialog remains visible, and no success notice is shown. Do not force-click a
@@ -412,10 +419,11 @@ one or use a sleep; the real refresh/reload cases above remain mandatory.
 
 ## Existing coverage and execution boundaries
 
-PR [#119](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/119) was
-still open when reviewed, at head `c9d3a470389f3f4cd4f8b8f03ccb5ba22058df58`.
-Its files are not yet on this QA baseline. They were inspected from that branch,
-not copied, merged, or executed as part of this documentation-only task.
+PR [#119](https://github.com/SteAlve/SE2-project-team16-mountain-hut/pull/119) is
+merged into `qa` at `de196ba`. Its unit/integration files are available on
+`origin/qa`; the E2E branch originally predates that merge and needs a manual QA
+update. The comparison adds only those tests and their unit-discovery configuration,
+with no production or E2E infrastructure changes.
 
 - `server/test/api/cancelBooking.test.js`: real HTTP/SQL seat release, rebooking,
   unchanged history/other bookings, auth/ID errors, repeat cancellation, SMTP
@@ -430,6 +438,12 @@ not copied, merged, or executed as part of this documentation-only task.
 - Scenarios 6's historical check and 9–10's rejection requests are API/server-level
   assertions. Scenario 11's controlled failures and optional response-order case
   are UI contracts; never report them as proof of backend fault handling or races.
+- The 22 E2E tests cover all 12 numbered scenarios; S4 also checks the multi-booking
+  variant of S12. S11 implements the controlled HTTP 500 and real retry; transport
+  abort and the optional out-of-order list response are not implemented test cases.
+- Displayed date assertions use the client's fixed weekday/month abbreviations,
+  including **Sep**, rather than locale-dependent **Sept**. Dates are civil meal
+  dates; cancellation timestamps separately use the Europe/Rome timezone.
 
 ## Implementation/mockup discrepancies and review points
 
