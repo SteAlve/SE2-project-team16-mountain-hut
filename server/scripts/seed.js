@@ -6,7 +6,7 @@
  * that already has bookings is not changed, and a demo slot that another slot of the day overlaps
  * (one the staff added) is skipped.
  *
- * The password below is a DEMO password, published in the README. Do not seed a real hut with it.
+ * The password below is a DEMO password, published in docs/docker-demo.md. Do not seed a real hut with it.
  */
 import { fileURLToPath } from 'node:url';
 import { clock } from '../src/clock.js';
