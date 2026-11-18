@@ -469,7 +469,7 @@ test.describe('MH-4 Check availability', () => {
     expect((await get('SELECT COUNT(*)::INTEGER AS count FROM booking WHERE slot_id = $1', [fixture.slotId])).count)
       .toBe(0);
 
-    await page.getByRole('link', { name: 'Change search' }).click();
+    await page.getByRole('button', { name: 'Change day or time' }).click();
     await page.getByRole('button', { name: 'Check availability' }).click();
     answer = page.getByRole('status', { name: 'Table availability' });
     await expect(answer.getByText('Available', { exact: true })).toBeVisible();
