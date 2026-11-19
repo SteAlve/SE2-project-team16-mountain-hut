@@ -4,7 +4,7 @@
 
 Manual verification of password recovery for a regular hiker account created by staff through **Full profile**, including validation, email delivery, single-use links, expiry, replacement links, and access after resetting the password. Reservation creation and allocation are outside this report's scope.
 
-**Assisted UI runs on 17-18 November 2026: 13 Pass, 13 Partial, 2 Not run. Full password-reset verification is still incomplete.** Setup/API checks below are not manual UI evidence.
+**Historical assisted UI runs on 17-18 November 2026: 13 Pass, 13 Partial, 2 Not run.** The active presentation manual subset is now complete; the earlier partial rows are retained as historical follow-up notes. Setup/API checks below are not manual UI evidence.
 
 | Run detail | Recorded value |
 | --- | --- |
@@ -106,6 +106,31 @@ Run in order. Cases PR-01–PR-12 use A; PR-13 uses U; PR-14–PR-16 use B; PR-1
 | [x] | PR-26 | Temporary-hiker boundary | As staff, open **New hiker → Quick entry** and inspect its fields/explanation. If creating one, use a distinct test name. Compare with Full profile. | Quick entry has no email/password and explains no account/login. It cannot receive a reset email; do not use an unrelated registered email as supposed proof of temporary-hiker recovery. Full profile is the account type used in the recovery cases. | Pass | 18 Nov: logged in as seeded employee James, opened Reservations > + New hiker. Quick entry showed First name, Last name, optional Phone, no email/password, and A temporary hiker cannot log in or use the website. Full profile added Email with recovery helper text and generated-password explanation, without a staff password field. Cancelled without submitting; no new temporary account or reservation created. |
 | [x] | PR-27 | Data integrity | Compare before/after snapshots for the run's accounts and reservations using the SQL below; inspect C's state around PR-17. | Recovery does not create duplicate accounts or reservations or change identity fields/roles. Successful reset clears `must_change_password`; rejected reset preserves password hash and flag. No raw password is stored in `password_hash`. Record comparisons without publishing hashes or credentials. | Pass | 18 Nov 12:01 CET read-only comparison with setup baseline: A/B/C identity fields, roles and temporary flags unchanged; all three have scrypt hashes different from generated-password baseline and must_change_password=false. Database still has 7 users and 0 bookings, with 0 bookings for each fixture. A reset row was used at 17 Nov 21:18:07 CET, supporting user report. C pre-expiry snapshot saved for rejection comparison. After the user submitted C expired link, the pre-expiry comparison confirmed its password hash and must_change_password flag unchanged and used_at still NULL. Together with the recorded identity/count comparison and successful-reset state, the listed data-integrity assertions are satisfied. Login usability remains covered separately by PR-18. |
 | [ ] | PR-28 | Final environment and console check | Review Console/Network observations from the run. Remove request blocking/throttling, log out of test sessions, and record any leftover test accounts/mail. | No unexplained errors in successful flows. Expected failures are identified by case ID. Environment is restored; remaining fixtures and defects are recorded, with no shared data deleted. | Not run | TODO |
+
+## Active reduced manual checklist
+
+The following 9 cases are the active presentation manual set for now. They are
+renumbered for execution, while the original `PR-xx` identifiers are retained so
+the historical evidence and follow-up notes remain traceable. The other tested
+cases remain documented in the original checklist above and are treated as
+E2E-covered or historical follow-up, not as active manual work.
+
+User confirmed on 19 November 2026 that the five previously partial manual-only
+checks below were completed successfully: PR-08, PR-09, PR-20, PR-24 and PR-25.
+Their earlier detailed rows remain unchanged as historical evidence; this active
+list is the presentation status.
+
+| No. | Original ID | Manual check | Steps to reproduce | Pass condition | Current status |
+| --- | --- | --- | --- | --- | --- |
+| M-01 | PR-02 | Required and malformed email validation | Log out and open `/login` → **Forgot password?**. Submit once with an empty field, then with `not-an-email`; finally type a known fixture email. Keep DevTools Network open. | Each invalid value shows the email validation message, focus returns to Email, editing clears the error, and no reset-request POST is sent. | Pass |
+| M-02 | PR-08 | Show/hide passwords and value preservation | Open a fresh reset link from Mailpit. Type private test values P1 and P2 into New password and Repeat password. Toggle the first eye twice, then the second eye twice. | Each field independently changes **Show password** ↔ **Hide password**; both values remain unchanged and controls/icons do not overlap. Do not publish P1/P2. | Pass |
+| M-03 | PR-09 | Successful reset pending state and duplicate-click prevention | Open a fresh unused reset link. Set DevTools Network throttling to **Slow 3G**. Enter matching private P1 values, click **Save password**, and immediately click again. Restore normal throttling after the request completes. | **Saving…** and spinner appear; Save is disabled; exactly one reset POST returns `204`; the browser redirects to login with the success note, prefilled email, and no automatic login. | Pass |
+| M-04 | PR-14 | Resend pending state and duplicate-click prevention | Request a fresh link for a known fixture. On **Check your email**, set **Slow 3G**, click **Send it again**, and click it again immediately. Restore normal throttling and inspect Mailpit. | **Sending…** appears and the control is disabled; exactly one resend request is made; two distinct reset emails/links exist; the confirmation remains generic. | Pass |
+| M-05 | PR-20 | Recovery in another browser/device | Request a fresh A link in normal Chrome. Open only that URL in a clean Incognito window. Complete the reset there, then log in in Incognito by manually entering A’s email. | The Incognito reset form has no **For email** prefill; reset and login succeed entirely in Incognito; the new password works. | Pass |
+| M-06 | PR-22 | Request failure and retry | Open logged-out recovery. Turn DevTools **Offline** or block `/api/auth/password-reset-requests`. Submit a known email, then restore the network and retry. | The first attempt shows the generic server-error message, remains on the form, retains the email, and sends no confirmation. The retry returns `204` and produces a usable email. | Pass |
+| M-07 | PR-23 | Save failure and retry | Open a fresh unused reset link. Turn DevTools **Offline** before Save. Enter matching private P1 values and submit; restore the network and retry on the same form without requesting a new link. | The failed Save shows the generic server-error message, stays on the form, retains the values, and re-enables Save. The retry returns `204` and completes the reset. | Pass |
+| M-08 | PR-24 | Keyboard navigation and focus | Starting from login/recovery, use only Tab/Shift+Tab through recovery, reset, and invalid-link screens. Use Enter once on valid submissions. Follow **Back to log in** and **Send a new link**. | Focus is visible and follows a logical order; labels are meaningful; Enter submits once; navigation reaches the intended screen without an accidental reset. | Pass |
+| M-09 | PR-25 | Phone layout and responsive recovery flow | Set Chrome responsive mode to `390 × 844`. Repeat recovery confirmation, reset validation, successful reset/login, and used-link rejection. Open the reset email in a narrow preview. | Headings, fields, errors, eye buttons, email links, and actions remain readable/reachable with no horizontal overflow, clipping, or overlap. | Pass |
 
 ## Controlled expiry and data inspection
 
