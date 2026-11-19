@@ -192,9 +192,13 @@ async function chooseHiker(page, person) {
   await expect(summary(page)).toContainText(fullName(person));
 }
 
-const dayLabel = (date) => new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
-}).format(new Date(date + 'T12:00:00Z')).replaceAll(',', '');
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayLabel = (date) => {
+  const [year, month, day] = date.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return `${WEEKDAYS[parsed.getUTCDay()]} ${day} ${MONTHS[month - 1]}`;
+};
 const dayChoice = (page, slot = fixture.slot) => page.getByRole('radiogroup', { name: 'Day', exact: true })
   .getByRole('radio', { name: new RegExp(escapeRegex(dayLabel(slot.date)).replaceAll(' ', '\\s+')) });
 const timeChoice = (page, slot = fixture.slot) => page.getByRole('radiogroup', { name: 'Time', exact: true })
@@ -287,8 +291,13 @@ async function pendingAction(page, path, action, control, pendingText, editable 
 async function openHikerDialog(page, type) {
   await page.getByRole('button', { name: '+ New hiker', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'New hiker', exact: true });
-  await dialog.getByRole('radio', { name: type, exact: true }).check();
+  await selectHikerType(dialog, type);
   return dialog;
+}
+async function selectHikerType(dialog, type) {
+  const option = dialog.getByRole('radio', { name: type, exact: true });
+  await option.click();
+  await expect(option).toHaveAttribute('aria-checked', 'true');
 }
 async function fillHiker(dialog, person, full) {
   await dialog.getByLabel(/^First\ name\s*\*?$/).fill(person.firstName);
@@ -846,7 +855,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await expect(dialog.getByLabel(/^Last\ name\s*\*?$/)).toHaveValue(person.lastName);
     await expect(dialog).toBeVisible();
     await dialog.getByLabel(/^Phone\s*\*?$/).fill(person.phone);
-    await dialog.getByRole('radio', { name: 'Full profile', exact: true }).check();
+    await selectHikerType(dialog, 'Full profile');
     await dialog.getByLabel(/^Email\s*\*?$/).fill('');
     await submit();
     await expect(dialog.getByText(/Enter a valid email/)).toBeVisible();
