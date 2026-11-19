@@ -9,6 +9,8 @@ Mockup for story **MH-09 Repeat a weekly schedule**, used by the staff frontend 
 - *Week option*: a week the schedule can be copied to. Variants: `Content` (Empty, Has slots, Booked) and `Selected` (No, Yes). A booked week cannot be ticked.
 - *Week day*: one day of the copied week with its number of slots. Variants: `State` (Slots, None).
 - *Week summary*: the copied week, with its dates, its total slots and one *Week day* for each day.
+- *Week nav*: the week shown in the day strip (`Mon 12 – Sun 18 Jul`) between the two day arrows. Variants: `Size` (Desktop, Phone). The phone shows the short dates (`12 – 18 Jul`).
+- *Day*: gets a new `Size` property. `Regular` is the day already used by MH-02. `Compact` is a narrower day without the month, so the 7 days of a week fit on one line on a phone.
 
 Same QUOTA brand, colours and fonts.
 
@@ -22,9 +24,17 @@ Same QUOTA brand, colours and fonts.
 | Story | A week with slots and no reservations can be copied onto: the copy completely replaces its schedule. |
 | [#45](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/45) | Copied slots can be adjusted later with MH-19. MH-09 adds no way to change a slot. |
 
+## The week strip
+
+With MH-09 the day strip of *Slots & tables* shows one whole week instead of today and the next 6 days, so it is always clear which week is copied:
+
+- The strip always shows 7 days, from Monday to Sunday. Days before today stay in it, so the week is always complete.
+- Above the strip, the week line shows the dates of the week. The arrows move one whole week (7 days) at a time; on a phone a swipe does the same. The earlier arrow is off on the current week, as in MH-02.
+- *Copy this week* sits on the week line, next to the dates it copies.
+
 ## The flow
 
-1. **Copy this week.** On *Slots & tables*, the button on the same line as the page title copies the week (Monday to Sunday) of the day picked in the strip (screen 1).
+1. **Copy this week.** On *Slots & tables*, the button on the week line copies the week shown in the strip, Monday to Sunday (screen 1).
 2. **Choose the weeks.** The dialog shows the week being copied and the slots of each day. Below it are the following weeks, and *Show more weeks* adds more of them (screen 2).
    - **Empty week:** can be ticked. Nothing is replaced.
    - **Week with slots and no bookings:** can be ticked. Once ticked, the row says in red that its slots will be replaced (screen 3).
@@ -48,7 +58,7 @@ Each copied slot keeps its day of the week, its start and end time and its table
 
 ### On a phone
 
-The same website in a phone browser. *Copy this week* sits on the same line as the page title, and *+ Add a slot* stays in the bar fixed at the bottom. The dialog becomes a sheet from the bottom: the weeks scroll, and the buttons stay at the bottom with the main button first.
+The same website in a phone browser. The 7 days of the week fit on one line (compact days) and a swipe moves one whole week. *Copy this week* sits on the week line, and *+ Add a slot* stays in the bar fixed at the bottom. The dialog becomes a sheet from the bottom: the weeks scroll, and the buttons stay at the bottom with the main button first.
 
 | # | Screen | Image |
 |---|---|---|
