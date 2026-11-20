@@ -1,9 +1,12 @@
-/** Keep the previous answer during background refreshes of the same party and time only. */
+/**
+ * Keep the previous answer, marked refreshing, while the next check runs (a new party, time,
+ * retry or capacity): the card does not blank out at each change. Only the first check loads.
+ */
 export function availabilityResult(result, key, revision, metadata) {
-  if (!result || result.key !== key) return { status: 'loading' };
+  if (!result) return { status: 'loading' };
   return {
     ...result,
     ...metadata,
-    isRefreshing: result.revision !== revision,
+    isRefreshing: result.key !== key || result.revision !== revision,
   };
 }

@@ -17,7 +17,7 @@ We do not accept the reuse of our code in proprietary products. Anyone who distr
 ```text
 .github/             workflows, branch rulesets, Pull Request and issue templates
 client/              the web client: React, built with Vite
-docs/                the architecture, the API contract, the mockups, the e2e definitions, the manual test reports and the SonarQube setup
+docs/                the architecture, the API contract, the mockups, the e2e definitions, the manual test reports, the Docker demo and the SonarQube setup
 e2e/                 end-to-end tests: Playwright, with the real client and server
 retrospective_docs/  the retrospective of each sprint
 server/              the API: Node.js and Express
@@ -93,52 +93,37 @@ Run these commands in `server`. They use the database of `DATABASE_URL`:
 |---|---|
 | `npm run db:create` | Creates the empty database, if it does not exist. The user of the URL needs the permission to create databases. |
 | `npm run db:migrate` | Applies the migrations not applied yet. Safe to run again. |
-| `npm run db:seed` | Creates the demo accounts below, the demo tables and the demo slots. Safe to run again. |
+| `npm run db:seed` | Creates the demo accounts ([listed in the Docker demo guide](docs/docker-demo.md#demo-accounts)), the demo tables and the demo slots. Safe to run again. |
 | `npm run db:drop` | Deletes every table and all the data, and leaves the database empty. It refuses to run when `NODE_ENV` is `production`. |
 | `npm run db:reset` | `db:drop` and then `db:migrate`: the tables are created again from the migrations. Run `db:seed` after it. |
 
-#### Demo accounts
+#### Slots that overlap
 
-`db:seed` creates one warden, two employees and one hiker. Other hikers can sign up from the application.
+The slots of a day cannot overlap (migration `004_slot_no_overlap.sql`). Before it, they could, so on an older database the migration can stop with `Some slots of the same day overlap`, followed by the pairs of slots; with Docker Compose the app then does not start. The migration does not change slots by itself, because they can have bookings. Change or delete one slot of each pair, then run `npm run db:migrate` again (with Docker Compose, start the app again). For example, with Docker Compose, for the slot `42`:
 
-| Role | Name | Email | Password |
-|---|---|---|---|
-| Warden | Emily Parker | `emily.parker@quota.example` | `quota-demo-2026` |
-| Employee | James Taylor | `james.taylor@quota.example` | `quota-demo-2026` |
-| Employee | Oliver Wilson | `oliver.wilson@quota.example` | `quota-demo-2026` |
-| Hiker | Lucas Bennett | `lucas.bennett@quota.example` | `quota-demo-2026` |
+```bash
+docker compose exec db psql -U postgres -d mountain_hut -c "UPDATE slot SET ends_at = '13:00' WHERE id = 42"
+```
 
-This password is public: use the seed only for development and demos, never on a real deployment.
+To delete a slot that has bookings, delete its bookings first. On a database for development only, `npm run db:reset` and `npm run db:seed` start again from scratch.
 
 ## Run with Docker
 
-The whole app runs on a machine that has only Docker. From the root of the repository:
+The whole app, with its database and a mailbox for the emails, is in one image on Docker Hub. Someone who has only Docker, and no code, runs it with:
 
 ```bash
-docker compose up --build
+docker run --rm -p 3001:3001 -p 8025:8025 stealve/se2-mountain-hut
 ```
 
-Open http://localhost:3001. The first start takes a few minutes, because it builds the image. The migrations run by themselves every time the app starts.
-
-To add the demo accounts and slots, with the app running, in another terminal:
-
-```bash
-docker compose exec app node scripts/seed.js
-```
-
-The password of the database is `postgres`. To use another one, set `POSTGRES_PASSWORD` before the first start, with any characters: it does not go in a URL, so nothing needs encoding. PostgreSQL reads it only when it creates the data, so to change it later use `docker compose down -v` first, which deletes the data.
-
-Emails do not leave your machine: **Mailpit** keeps them, and you can read them on http://localhost:8025. See [Emails](#emails).
-
-`docker compose down` stops the app and keeps the data. `docker compose down -v` also deletes the data. If port 3001 is taken, start it with `PORT=8080 docker compose up --build`.
+Open http://localhost:3001 and log in with a demo account. The [Docker demo guide](docs/docker-demo.md) has the rest: the demo accounts and the emails (Mailpit). To build and run the app from the source, with the database in its own container, use `docker compose up --build` from the root of the repository.
 
 ## Emails
 
-The app sends one email: the **booking confirmation**, to the hiker who booked a table (MH-03). It leaves right after the booking is saved. If the email cannot be sent, the booking still stands; the error is only written to the server log.
+The app emails the hiker: the **confirmation**, the **change** and the **cancellation** of a booking (MH-03, MH-06, MH-08), the **account** made by the staff and the **password reset** (MH-07). The email of a booking leaves right after the booking is saved. If it cannot be sent, the booking still stands; the error is only written to the server log.
 
 During development no email reaches a real inbox. The demo accounts use `@quota.example` addresses, which do not exist, so the emails are caught on your machine:
 
-- **With Docker**, `docker compose up` also starts **Mailpit**, a local email inbox. The app sends every email to it (`SMTP_HOST=mailpit`, port `1025`). Open **http://localhost:8025** to read them: each email shows its recipient, subject and content, whatever address it was sent to. If port 8025 is taken, start with `MAILPIT_PORT=8026 docker compose up --build` and open that port.
+- **With Docker**, Compose also starts **Mailpit**, a local email inbox. The app sends every email to it (`SMTP_HOST=mailpit`, port `1025`) and you read them on **http://localhost:8025**. The steps are in the [Docker demo guide](docs/docker-demo.md#emails).
 - **Without Docker** (`npm run dev`), when `SMTP_HOST` is not set nothing is sent: the server writes the email (recipient, subject and text) to its terminal. To see it as a real email, start Mailpit alone and point the server to it:
 
   ```bash
@@ -146,8 +131,6 @@ During development no email reaches a real inbox. The demo accounts use `@quota.
   ```
 
   Then set `SMTP_HOST=localhost` and `SMTP_PORT=1025` in `server/.env`, restart the server and open http://localhost:8025.
-
-To try it: log in as the demo hiker (`lucas.bennett@quota.example`), book a table, then open Mailpit. The confirmation is there, with the booking code (for example `QUOTA-00004`), the date, the time and the number of people.
 
 To send real emails, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` (see [Configuration](#configuration)) for an email service you own, and book with an account whose address is a real inbox. Never commit these values.
 
@@ -366,8 +349,19 @@ The workflows are in [`.github/workflows`](.github/workflows).
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the branch flow |
 | `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
 | `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `qa.yml` and `deploy.yml` also publish the Docker image, tagged `qa` and `latest`, and `deploy.yml` builds the client |
+| `release.yml` | a Release published on GitHub, at the end of a sprint | Publishes the Docker demo image to Docker Hub, tagged with the release (`sprint-2`) and `latest`. See [Release at the end of a sprint](#release-at-the-end-of-a-sprint) |
 
 To run the same checks on your computer: `npm run lint` and `npm test` in `server`, `npm run lint`, `npm test` and `npm run build` in `client`, and `npm run e2e` in `e2e`.
+
+## Release at the end of a sprint
+
+The Docker image of the demo goes to [Docker Hub](https://hub.docker.com/r/stealve/se2-mountain-hut) only when the team decides, at the end of a sprint, not at every merge. Everything else is published by the merges as before: the image of the app to GitHub, tagged `qa` and `latest`.
+
+1. Merge the last Pull Request of the sprint into `main` and wait for the **Deploy** checks to pass.
+2. On GitHub open **Releases → Draft a new release**, create a new tag named `sprint-1`, `sprint-2` and so on, with the target `main`, and publish the release.
+3. The **Release** workflow checks that the commit is in `main`, publishes the image (`stealve/se2-mountain-hut:sprint-2` and `stealve/se2-mountain-hut:latest`) and updates the page of the image on Docker Hub with the [Docker demo guide](docs/docker-demo.md), so nothing is pasted by hand.
+
+It needs the variable `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN` in the repository settings (Secrets and variables → Actions). The token is a Docker Hub access token with the permissions **Read, Write and Delete**: Delete is what lets it edit the page. If a release failed, open the run in the **Actions** tab and use **Re-run jobs**.
 
 ## Commit convention
 

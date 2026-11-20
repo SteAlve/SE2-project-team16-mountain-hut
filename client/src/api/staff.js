@@ -19,7 +19,8 @@ export const getStaffSlots = (from, to) =>
   request(`/staff/slots?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
 
 // `tableSetId` null: a slot with no tables yet. Resolves to the new slot. Rejects with ApiError 400,
-// 404 (no such table set) or 409 (a slot starting at that time already exists on that day).
+// 404 (no such table set) or 409: a slot starting at that time already exists on that day, or (code
+// SLOT_OVERLAP) another slot of that day overlaps it.
 export const createSlot = ({ date, startsAt, endsAt, tableSetId }) =>
   request('/staff/slots', {
     method: 'POST',

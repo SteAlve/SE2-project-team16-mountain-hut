@@ -4,7 +4,7 @@ Mockup for story **MH-02 Define slot capacity**, used by the staff frontend and 
 
 > "As an employee I want to define the set of tables and seats available for each time slot so that the hut does not accept more customers than it can serve."
 
-**Figma (source of truth):** page *MH-02 Slots & tables* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=246-126). Every element is an instance from the *Components* page: the ones already used by the [login](../login/README.md) and [booking](../booking/README.md) mockups (navbar, day, day arrow, button, text field, alert, phone bars) and four new ones for this story: *Slot row*, *Table set option*, *Table row* and *Table chip*. Same QUOTA brand, colours and fonts.
+**Figma (source of truth):** page *MH-02 Slots & tables* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=246-126). Every element is an instance from the *Components* page: the ones already used by the [login](../login/README.md) and [booking](../booking/README.md) mockups (navbar, day, day arrow, button, text field, alert, phone bars) and four new ones for this story: *Slot row*, *Table set option*, *Table row* and *Table chip*. The week strip also uses *Week nav* (the dates of the week between the two arrows) and the `Compact` size of *Day* on a phone, shared with the [copy a week](../copy-week/README.md) mockup. Same QUOTA brand, colours and fonts.
 
 ## Rules on these screens
 
@@ -22,7 +22,7 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 
 A **table set** is a named list of tables (e.g. *Lunch, main room*: tables 1–5, 14 seats). It is made once and given to any number of slots, which is how the tables are reused ([API](../../openapi.json): `POST /api/staff/table-sets`, `GET /api/staff/table-sets`).
 
-1. **Pick a day** in the strip. Every day can be picked, also the ones with no slots; the strip has no end, as on Book a table.
+1. **Pick a day** in the strip. Every day can be picked, also the ones with no slots. The strip always shows one whole week, from Monday to Sunday, with its dates above it (`‹ Mon 12 – Sun 18 Jul ›`); the arrows move one week (7 days) at a time and the strip has no end. Days before today stay in the strip, so the week is always complete. Working by weeks keeps the page aligned with MH-09, which copies the week shown ([mockup](../copy-week/README.md)). *Book a table* keeps its own strip, starting at today.
 2. **The slots of the day** are listed in order of time, each with its table set, its tables (`T3 · 4` = table 3, 4 seats) and its total seats (`GET /api/staff/slots`).
 3. **Add a slot**: day, start, end, and one of the table sets (`POST /api/staff/slots`). *No tables for now* saves a slot with 0 seats, which hikers cannot book yet.
 4. **+ New table set** (in the Add a slot dialog or in the Table sets card): a name and the tables. *Copy the tables of* fills the list from a set already made, so only what differs is changed. After saving, the new set is chosen in the Add a slot dialog it came from.
@@ -47,7 +47,7 @@ The page shows only total seats. Booked and free seats per slot are MH-12, so th
 
 ### On a phone
 
-The same website in a phone browser, not a separate app. Below 992 px (react-bootstrap `lg`) the page is one column, the navbar folds into the menu button, the days are swiped sideways (no arrows), each slot shows time and seats on top and the tables below, *Add a slot* moves to a bar fixed at the bottom, and the dialogs become sheets from the bottom: the content scrolls, the buttons stay at the bottom, the main button first. Time fields use `type="time"`, number fields `inputmode="numeric"`, so the phone shows the right keyboard.
+The same website in a phone browser, not a separate app. Below 992 px (react-bootstrap `lg`) the page is one column, the navbar folds into the menu button, the 7 days of the week fit on one line (compact days) and the arrows, or a swipe, move one whole week, each slot shows time and seats on top and the tables below, *Add a slot* moves to a bar fixed at the bottom, and the dialogs become sheets from the bottom: the content scrolls, the buttons stay at the bottom, the main button first. Time fields use `type="time"`, number fields `inputmode="numeric"`, so the phone shows the right keyboard.
 
 | # | Screen | Image |
 |---|---|---|
@@ -118,7 +118,7 @@ These belong to other stories and are added with them: changing the time or the 
 Not asked to the product owner; the mockup works either way:
 
 - Table sets have a name, unique, so the employee can recognise them when reusing them (the stories only say the tables are reused).
-- Two slots of a day cannot start at the same time; slots that overlap (e.g. 12:00–13:00 and 12:30–13:30) are not refused.
-- A slot can be added on any day, also a past one; the strip starts at today.
+- Two slots of a day cannot overlap: one after the other is fine (12:00–13:00 and 13:00–14:00), 12:00–13:00 and 12:30–13:30 are not. The server answers `409` for a slot that starts at the same time and for one that overlaps; the mockup shows the message only for the same start (screen 4). The page also shows one for an overlap, naming the slot in the way ("This slot overlaps the slot from 12:00 to 13:00 on …").
+- A slot can be added on any day, also a past one; the strip starts at the current week (its Monday, also when it is before today).
 
 Sample data (hut, names, dates, tables) is invented for the mockup.
