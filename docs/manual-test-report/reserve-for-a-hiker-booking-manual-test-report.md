@@ -14,7 +14,7 @@ Nadim Aride manually checked employee reservations using Full profile and Quick 
 | Date / time / time zone | 19–20 November 2026, Europe/Rome (CET). For the 19 Nov run, Mailpit records the first account email at 18:51:34 and its booking email at 18:51:50. The mobile repeat was reported on 20 Nov; exact interaction times were not recorded. |
 | Original report branch / commit | `test/manual-reserve-for-a-hiker-test-report` / `34705fa`. This identifies the report, not a verified application source revision. |
 | Tested application build | The Docker app container created on 19 Nov at 18:47:30 CET uses image `sha256:0e64f83ffe175ff4094e2bc01a1b260fbd5e3d81d70fceaebfbc20364b912bac`. Inspected on 20 Nov; the source commit was not recorded during the run. |
-| Browser / operating system | Windows; browser name/version was not recorded for this booking run. |
+| Browser / operating system | Google Chrome on Windows for all checks, confirmed by Nadim Aride. Version `158.0.8127.36` was inspected on 20 November for the mobile repeat; the exact version on 19 November was not recorded. |
 | Viewport | Mobile repeat: **384 × 695**, reported by Nadim Aride on 20 November 2026. Desktop dimensions were not recorded. |
 | Client / API URL | Both served at `http://localhost:3001`. |
 | Mailpit | `http://localhost:8026` for this run; host port 8026 maps to container port 8025. The default host port 8025 was occupied by a separate test inbox. |
@@ -23,7 +23,7 @@ Nadim Aride manually checked employee reservations using Full profile and Quick 
 
 ## Method
 
-The tester used the real employee UI, Docker application, PostgreSQL database, and Mailpit inbox. The observations below distinguish the original browser results from later inspection of saved data. Database persistence does not establish that the reservation list was inspected in the browser.
+The tester used the real employee UI, Docker application, PostgreSQL database, and Mailpit inbox. The observations below distinguish the original browser results from later inspection of saved data. The tester confirmed that the employee interface has no reservation list, so a list-appearance check is not applicable. Saving is evidenced by the confirmation popup and, where recorded, database persistence.
 
 No account-email bodies, generated passwords, session cookies, or reset tokens are included.
 
@@ -32,8 +32,8 @@ No account-email bodies, generated passwords, session cookies, or reset tokens a
 | ID | Manual check | Steps performed | Expected result | Actual result / evidence | Status |
 | --- | --- | --- | --- | --- | --- |
 | MH07-B-01 | Full profile account and reservation | Created a Full profile hiker, booked the 20 Nov 2026 slot from 15:00 to 17:30 for 5 people, checked both emails, and changed the password. | A regular hiker account and booking are created; both emails arrive; the hiker can change the password. | The tester reported all steps succeeded. Saved booking `QUOTA-00001` belongs to regular hiker ID 5. Account email `RUoSQSeNgCdTWAsPMFQuV5` was received at 18:51:34 CET; booking email `hBsFNYbcT22cRDswemJ79W` at 18:51:50 CET. The booking email confirms 20 Nov, 15:00–17:30, 5 people. Password-change success was reported by the tester; its HTTP response was not retained. | Pass |
-| MH07-B-02 | Quick entry reservation, repeated | Used Quick entry to reserve for a temporary hiker, then repeated the procedure for another temporary hiker. | Reservations can be saved without creating regular login accounts. | The tester reported successful reservations. Database inspection found bookings 2 and 3 for temporary hiker IDs 6 and 7, both on 20 Nov 2026, 15:00–17:30, for 10 and 4 people respectively. These are two executions of the same check. Appearance in the UI reservation list was not recorded. | Pass |
-| MH07-B-03 | Mobile Full profile and Quick entry | Repeated both employee booking flows at **384 × 695** on 20 November 2026. | Both flows can be completed on a mobile layout and show a saved-reservation confirmation. | Nadim Aride reported repeating both flows. The supplied Quick entry screenshot shows **Reservation saved**, Testhiker Antonio, Sat 21 Nov, 12:00–13:00, 1 person, table T1; **Done** and **+ New reservation** are visible. Quick entry completion is supported by this screenshot; Full profile completion is tester-reported. The screenshot does not show the reservation list or booking reference. | Pass |
+| MH07-B-02 | Quick entry reservation, repeated | Used Quick entry to reserve for a temporary hiker, then repeated the procedure for another temporary hiker. | Reservations can be saved without creating regular login accounts. | The tester reported successful reservations. Database inspection found bookings 2 and 3 for temporary hiker IDs 6 and 7, both on 20 Nov 2026, 15:00–17:30, for 10 and 4 people respectively. These are two executions of the same check. Employee reservation-list verification is not applicable because that interface has no reservation list. | Pass |
+| MH07-B-03 | Mobile Full profile and Quick entry | Repeated both employee booking flows at **384 × 695** on 20 November 2026. | Both flows can be completed on a mobile layout and show a saved-reservation confirmation. | Nadim Aride reported repeating both flows. The supplied Quick entry screenshot shows **Reservation saved**, Testhiker Antonio, Sat 21 Nov, 12:00–13:00, 1 person, table T1; **Done** and **+ New reservation** are visible. Quick entry completion is supported by this screenshot; Full profile completion is tester-reported. The screenshot does not show a booking reference; employee reservation-list verification is not applicable. | Pass |
 
 ## Coverage
 
@@ -51,7 +51,7 @@ None observed in the reported executions.
 
 ## Evidence and follow-up
 
-The retained email and database records substantiate the original saved bookings. For the 20 November mobile repeat, the tester supplied the 384 × 695 viewport and confirmed both hiker types; the Quick entry success screenshot provides visual evidence of the saved details. Browser/version, tested source commit, mobile booking references, and reservation-list observations were not recorded. The viewport is tester-reported rather than inferred from the screenshot's pixel dimensions.
+The retained email and database records substantiate the original saved bookings. For the 20 November mobile repeat, the tester supplied the 384 × 695 viewport and confirmed both hiker types and Chrome usage; Chrome version `158.0.8127.36` was inspected on the same day. The Quick entry success screenshot provides visual evidence of the saved details. The tested source commit and mobile booking references were not recorded. The viewport is tester-reported rather than inferred from the screenshot's pixel dimensions.
 
 Moving this documentation onto a branch based on qa does not establish that the original browser checks were run against qa.
 
