@@ -22,7 +22,7 @@ the following observable behaviour to users and Playwright tests.
 
 ### Labels and accessible controls
 
-1. The page title or main heading is **Reservations**.
+1. The page's main heading is **New reservation**. The navigation item is **Reservations**.
 2. The hiker search has the accessible name **Find the hiker** and the
    placeholder **Name, phone or email**.
 3. The page exposes stable, user-facing controls named:
@@ -34,8 +34,8 @@ the following observable behaviour to users and Playwright tests.
    - **Save reservation**
    - **+ New reservation**
    - **Done**
-4. Reservation fields have accessible names for **Day**, **People**, and the
-   available time choices.
+4. Reservation fields have accessible names for **Day**, **How many people**,
+   and **Time**. The summary labels the party size **People**.
 5. Hiker results expose the hiker's name, email and phone as readable text.
 6. Tests use accessible roles, labels and stable user-facing text rather than
    CSS classes or element positions.
@@ -43,8 +43,9 @@ the following observable behaviour to users and Playwright tests.
 ### Asynchronous operations
 
 1. Searching starts only after the user has entered at least two characters.
-2. While a search, hiker creation or reservation is pending, the relevant
-   control is disabled and a visible pending state is shown.
+2. Search remains editable while requests are pending, so staff can refine the query.
+   While hiker creation or reservation is pending, the submit control is disabled
+   and a visible pending state is shown.
 3. A successful hiker creation selects the new hiker without a page reload.
 4. A successful reservation shows **Reservation saved** and the saved details.
 5. A failed request leaves the hiker, day, people and time choices in a state
@@ -87,7 +88,8 @@ the following observable behaviour to users and Playwright tests.
 9. A hiker can have at most one active reservation for a slot.
 10. A regular hiker receives the normal booking confirmation email after a
     successful staff reservation. A temporary hiker receives no email.
-11. Until a hiker is selected, the day, people and time controls are locked and
+11. Until a hiker is selected, the day, people and time controls are unavailable
+    (not rendered or disabled), **Choose the hiker first.** is shown, and
     **Save reservation** is disabled.
 
 The story's 24-hour reset-link requirement is consistent with section 3.8 of
@@ -163,8 +165,8 @@ the same product rule to the reset link.
 
 1. The temporary hiker is created successfully.
 2. The dialog closes and the new temporary hiker is selected.
-3. The selected hiker shows no email and is identified as temporary or having no
-   login.
+3. The selected hiker shows no email. Quick entry explains before creation that
+   a temporary hiker cannot log in or use the website.
 4. No account password email is sent.
 5. The day, people and time controls become available.
 
@@ -353,7 +355,8 @@ the same product rule to the reset link.
 1. An employee is logged in and has selected a hiker.
 2. A slot is available before its start and has enough seats.
 3. The employee has selected the slot and opened the reservation summary.
-4. The E2E fixture records the slot ID and its seating proposal.
+4. The E2E fixture records the slot ID and checks its seating proposal. The UI
+   requests seating when Save is clicked, before submitting the booking.
 
 **When**
 
@@ -451,8 +454,9 @@ advance the server clock.
 
 1. An employee is logged in and has selected a hiker.
 2. The employee has selected a slot and opened the reservation summary.
-3. Another booking consumes the seats or changes the available table
-   allocation before the employee saves.
+3. Another booking consumes seats after the save-time seating preview and before
+   the booking request reaches the server. For TABLES_CHANGED, another competing
+   booking also consumes the replacement allocation during the single retry.
 
 **When**
 
@@ -462,7 +466,9 @@ advance the server clock.
 
 1. The request is rejected with the documented `409` response, either
    `NO_SEATS` or `TABLES_CHANGED`.
-2. No reservation is created for the selected hiker.
+2. TABLES_CHANGED may trigger one fresh seating preview and booking retry. If
+   that also conflicts, no reservation is created for the selected hiker. NO_SEATS
+   is rejected immediately without retry.
 3. The available times and seating choices are refreshed.
 4. The employee can choose another time or party size.
 5. No confirmation email is sent for the rejected request.
