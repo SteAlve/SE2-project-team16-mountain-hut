@@ -57,6 +57,8 @@ import { makeChangePassword } from './usecases/changePassword.js';
 import { makeCreateBooking } from './usecases/createBooking.js';
 import { makeChangeBooking } from './usecases/changeBooking.js';
 import { makeChangeBookingAndNotify } from './usecases/changeBookingAndNotify.js';
+import { makeCancelBooking } from './usecases/cancelBooking.js';
+import { makeCancelBookingAndNotify } from './usecases/cancelBookingAndNotify.js';
 import { makeListMyBookings } from './usecases/listMyBookings.js';
 import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSlotOpen.js';
 import { makeCreateHiker } from './usecases/createHiker.js';
@@ -78,6 +80,7 @@ import { makeStartSession } from './usecases/startSession.js';
 
 // 3. controllers
 import {
+  makeCancelBookingController,
   makeChangeBookingController,
   makeCreateBookingController,
   makeListMyBookingsController,
@@ -158,6 +161,10 @@ const changeBooking = makeChangeBooking({
 const changeBookingAndNotify = makeChangeBookingAndNotify({
   changeBooking, bookings, mailer, clock, hutTimeZone: config.hutTimeZone,
 });
+const cancelBooking = makeCancelBooking({ bookings, clock });
+const cancelBookingAndNotify = makeCancelBookingAndNotify({
+  cancelBooking, bookings, mailer, clock, hutTimeZone: config.hutTimeZone,
+});
 
 const slotsRouter = makeSlotsRouter({
   listSlotsController: makeListSlotsController({ listSlots }),
@@ -167,6 +174,7 @@ const bookingsRouter = makeBookingsRouter({
   createBookingController: makeCreateBookingController({ bookTable }),
   listMyBookingsController: makeListMyBookingsController({ listMyBookings }),
   changeBookingController: makeChangeBookingController({ changeBookingAndNotify }),
+  cancelBookingController: makeCancelBookingController({ cancelBookingAndNotify }),
   requireAuth,
 });
 

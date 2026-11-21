@@ -1,0 +1,62 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 84px;
+  padding: 14px 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.card:hover:not(:disabled) {
+  background: var(--mist);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+.card:disabled {
+  cursor: not-allowed;
+}
+
+.name {
+  max-width: 100%;
+  line-height: normal;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.diet,
+.diet:hover:not(:disabled) {
+  border: 2px solid var(--pine);
+  background: var(--moss-soft);
+  color: var(--pine);
+  font-weight: 600;
+}
+
+.allergy,
+.allergy:hover:not(:disabled) {
+  border: 2px solid var(--error);
+  background: var(--error-soft);
+  color: var(--error);
+  font-weight: 600;
+}
+
+.check {
+  /* 6px from the outer edge, inside the 2px border of a selected card */
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}

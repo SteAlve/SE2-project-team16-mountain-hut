@@ -3,6 +3,10 @@
  * After login a hiker goes to Book a table, the staff to Slots & tables. A protected page (or
  * Book a table, at Review booking) that sends a visitor here passes `state: { from: '/its/path', page: 'book a table' }`: the page
  * shows "Log in to book a table." and the login goes back to `from`.
+ * A hiker whose account was made by the staff (mustChangePassword) goes first to Choose your
+ * password (screen 15), and from there on to `from`.
+ * "Forgot password?" opens the password reset (screen 10), with the email typed here. After a reset
+ * the page gets `state: { passwordChanged: true, email? }` (screen 14).
  */
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -17,7 +21,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const { submit, submitting, fieldErrors, alert, clearFieldError } = useLoginForm();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(state?.email ?? '');
   const [password, setPassword] = useState('');
   const formRef = useRef(null);
 
@@ -26,7 +30,9 @@ export function LoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const result = await submit({ email, password });
-    if (result.user) {
+    if (result.user?.mustChangePassword) {
+      navigate('/change-password', { replace: true, state: state?.from ? { from: state.from } : undefined });
+    } else if (result.user) {
       navigate(state?.from ?? START_PAGE[result.user.role]?.path ?? '/', { replace: true });
     } else if (result.errors) {
       focusField(Object.keys(result.errors)[0]);
@@ -49,7 +55,10 @@ export function LoginPage() {
 
       <form ref={formRef} className={styles.fields} onSubmit={handleSubmit} noValidate>
         {alert && <Alert>{alert}</Alert>}
-        {!alert && state?.page && <Alert variant="info">Log in to {state.page}.</Alert>}
+        {!alert && state?.passwordChanged && (
+          <Alert variant="info">Your password has been changed. Log in with the new one.</Alert>
+        )}
+        {!alert && !state?.passwordChanged && state?.page && <Alert variant="info">Log in to {state.page}.</Alert>}
         <TextField
           label="Email"
           name="email"
@@ -77,6 +86,9 @@ export function LoginPage() {
             clearFieldError('password');
           }}
         />
+        <Link to="/forgot-password" state={{ email: email.trim() }} className={styles.forgot}>
+          Forgot password?
+        </Link>
         <button type="submit" className={styles.submit} disabled={submitting}>
           {submitting && <span className={styles.spinner} aria-hidden="true" />}
           {submitting ? 'Logging in…' : 'Log in'}
