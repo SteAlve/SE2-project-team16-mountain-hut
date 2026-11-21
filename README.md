@@ -159,7 +159,7 @@ To start the test database again from zero: `NODE_ENV=test npm run db:reset` (Po
 
 Do not point `TEST_DATABASE_URL` at a database containing data you need to keep.
 
-The E2E tests start the server and the client by themselves. The server uses `E2E_DATABASE_URL` when it is set, and `DATABASE_URL` otherwise. The first time, install everything and the browser:
+The E2E tests start the server and the client by themselves. The complete suite requires a dedicated, migrated PostgreSQL database through `E2E_DATABASE_URL`, plus a running [Mailpit](https://mailpit.axllent.org) instance for real email delivery. The first time, install everything and the browser:
 
 ```bash
 cd server && npm install && cd ..
@@ -167,14 +167,32 @@ cd client && npm install && cd ..
 cd e2e && npm install && npx playwright install chromium
 ```
 
-Then, from the `e2e` directory, run `npm run e2e`. Ports 3001 and 5173 must be free, so stop your own server and client first. To see the report of the last run, use `npx playwright show-report`.
-
-The tests of the confirmation email (MH-3) read the emails from [Mailpit](https://mailpit.axllent.org), and are skipped without it. To run them, start Mailpit and give the server and the tests its addresses:
+From the repository root, configure the dedicated database and Mailpit (replace the example database credentials with your local ones). Do not set `NODE_ENV=test` for E2E: that selects the separate `TEST_DATABASE_URL` used by backend tests.
 
 ```bash
+export E2E_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/mountain_hut_e2e
+export MAILPIT_URL=http://localhost:8025
+export SMTP_HOST=localhost
+export SMTP_PORT=1025
+DATABASE_URL="$E2E_DATABASE_URL" npm run db:create --prefix server
+DATABASE_URL="$E2E_DATABASE_URL" npm run db:migrate --prefix server
 docker run -d --rm --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.29
-SMTP_HOST=localhost SMTP_PORT=1025 MAILPIT_URL=http://localhost:8025 npm run e2e
 ```
+
+In PowerShell, set the same variables with `$env:E2E_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/mountain_hut_e2e"`, `$env:MAILPIT_URL = "http://localhost:8025"`, `$env:SMTP_HOST = "localhost"`, and `$env:SMTP_PORT = "1025"`. For database creation and migration, temporarily set `$env:DATABASE_URL = $env:E2E_DATABASE_URL`, run `npm run db:create --prefix server` and `npm run db:migrate --prefix server`, then restore its previous value. Start Mailpit with the same Docker command above, or run a local Mailpit binary listening on SMTP port 1025 and HTTP port 8025. Keep `SMTP_USER` and `SMTP_PASSWORD` unset or empty for this local Mailpit instance.
+
+The `e2e/start-server.js` launcher passes `E2E_DATABASE_URL` to the backend as `DATABASE_URL`. Its legacy `DATABASE_URL` fallback does not satisfy MH-06/MH-08: these suites explicitly require `E2E_DATABASE_URL` and reject the development database `mountain_hut` before fixture cleanup. Use an E2E-only database without manual data.
+
+Mailpit's HTTP API must be reachable at `MAILPIT_URL`; the backend sends mail to `SMTP_HOST` and `SMTP_PORT`. Older MH-03 confirmation-email tests optionally skip when Mailpit is unconfigured; MH-06 and MH-08 require it and fail if prerequisites are missing, so cancellation/change coverage is never silently skipped. CI provides PostgreSQL 16 and Mailpit, exports all four variables, and migrates the E2E database before running the suite.
+
+With those variables still exported, run from `e2e`:
+
+```bash
+npm run e2e -- mh-6-change-booking.spec.js  # MH-06 only: 24 tests
+npm run e2e                               # complete E2E suite
+```
+
+Ports 3001 and 5173 must be free, so stop your own server and client first. To see the report of the last run, use `npx playwright show-report`.
 
 Lint: `npm run lint`, in `server` and in `client`.
 
