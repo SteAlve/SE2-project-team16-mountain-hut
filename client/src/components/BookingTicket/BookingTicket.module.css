@@ -64,7 +64,7 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--ink);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .details .sub {

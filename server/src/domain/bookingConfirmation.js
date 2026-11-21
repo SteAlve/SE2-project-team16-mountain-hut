@@ -11,6 +11,8 @@
  * purpose. Guests with exactly the same needs are shown once, with how many they are, as on the
  * Table booked screen.
  */
+import { toHourMinute } from './time.js';
+
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -23,8 +25,6 @@ const LINE = '#d8dfda';
 const MIST = '#eef2ef';
 const BLAZE = '#e0352b';
 const FONT = "font-family:Helvetica,Arial,sans-serif;";
-
-const time = (value) => value.slice(0, 5); // 'HH:MM:SS' -> 'HH:MM'
 
 // 'YYYY-MM-DD' -> '4 November 2026'
 const day = (date) => {
@@ -158,7 +158,7 @@ const toHtml = ({ title, intro, rows, needs, end = SEE_YOU }) => `<!doctype html
 const bookingParts = ({ bookingId, firstName, lastName, date, startsAt, endsAt, partySize, requirements = [] }) => {
   const name = `${firstName} ${lastName}`;
   const ref = reference(bookingId);
-  const slotTime = `${time(startsAt)}–${time(endsAt)}`;
+  const slotTime = `${toHourMinute(startsAt)}–${toHourMinute(endsAt)}`;
   return {
     name,
     ref,

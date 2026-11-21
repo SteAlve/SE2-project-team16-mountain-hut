@@ -31,8 +31,10 @@ test('a closure keeps the old answer marked refreshing until revalidated', () =>
 });
 
 for (const changedKey of ['2:2:0', '1:6:0', '1:2:1']) {
-  test(`a changed time, party or explicit retry ${changedKey} cannot display the old answer`, () => {
-    assert.deepEqual(availabilityResult(result, changedKey, '10:true', {}), { status: 'loading' });
+  test(`a changed time, party or explicit retry ${changedKey} keeps the old answer marked refreshing`, () => {
+    const answer = availabilityResult(result, changedKey, '10:true', {});
+    assert.equal(answer.status, 'available');
+    assert.equal(answer.isRefreshing, true);
   });
 }
 

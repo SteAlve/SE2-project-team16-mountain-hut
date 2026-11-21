@@ -116,7 +116,9 @@ The employees and the warden define what can be booked (`/api/staff/...`, every 
 
 An id that does not exist gives `404` everywhere, in the path or in the body. The staff endpoints use `capacity` for the seats of a table; `seats` is only used in a booking and in the seating preview, where it is the seats of the party at that table.
 
-Not decided yet (questions for the product owners): whether two slots can overlap in time (today only the same start is refused, so overlapping slots with the same tables could be booked twice), and whether a slot can be created, or given tables, in the past.
+The slots of a day cannot overlap in time: the database refuses an overlap (migration `004_slot_no_overlap.sql`) and the API answers `409`; one slot after the other (12:00-13:00 and 13:00-14:00) is fine. Without this rule the same tables could be booked twice in two overlapping slots. The product owner confirmed this rule (SE2-Polito/AY26-27-Mountain-Hut#31).
+
+Not decided yet (question for the product owners): whether a slot can be created, or given tables, in the past.
 
 ### Reservations for a hiker and passwords (MH-07)
 
@@ -151,7 +153,7 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`).
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `409` of a slot that overlaps another slot of the day (`SLOT_OVERLAP`, MH-02), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`). It can also carry `details`, data the client can show, added to the answer too: the times of the slot in the way of a `SLOT_OVERLAP`.
 
 | Error | Status | Meaning |
 |---|---|---|
@@ -286,6 +288,8 @@ Not designed yet, to be decided when it is needed: a limit on login attempts.
 - **`db`:** the official PostgreSQL image, with a named volume so the data survives when the container is replaced.
 - **`mailpit`:** a test email service. It keeps every email and shows them on port `8025`, so no email leaves the machine. The end-to-end tests can read them through its API.
 
+`docker-compose.yml` builds the image from the `Dockerfile`. For demos there is also a single image with the three in one container (`demo/Dockerfile`: the app image with PostgreSQL and Mailpit added, and `demo/entrypoint.sh` to start them), published to Docker Hub at the end of each sprint, so that someone with only Docker runs the whole app with one `docker run`.
+
 The web client runs in the browser of each device: the visitor's, the employee's and the warden's. They all reach only the `app` container. With a real email service, the API reaches it outside the host with the SMTP settings given as environment variables.
 
 **What the code offers to Docker**
@@ -303,7 +307,7 @@ The web client runs in the browser of each device: the visitor's, the employee's
 
 **In development Docker is not needed.** Copy `server/.env.example` to `server/.env`, create the database with `npm run db:create`, apply the schema with `npm run db:migrate` (and `npm run db:seed` for the demo data). The server runs with `npm run dev` and the client with the Vite dev server, which forwards `/api` to the server.
 
-The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml` and the workflow `.github/workflows/docker.yml`. The commands are in the [README](../README.md#run-with-docker).
+The Docker files are `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `demo/Dockerfile`, `demo/entrypoint.sh` and the workflows `.github/workflows/docker.yml` and `.github/workflows/release.yml`. The commands, the demo accounts and the emails are in the [Docker demo guide](docker-demo.md).
 
 ## 7. CI/CD pipelines
 
@@ -322,11 +326,12 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
 | `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
-| `docker.yml` | called by `qa.yml` and `deploy.yml`, after their checks | Builds the Docker image from the verified commit and publishes it, tagged `qa` or `latest` |
+| `docker.yml` | called by `qa.yml`, `deploy.yml` and `release.yml`, after their checks | Builds the Docker image from the verified commit, for amd64, arm64, arm/v7, arm/v6 and s390x, and publishes it to GitHub, tagged `qa`, `latest` or the release; for a release, also the demo image (with the database inside) to Docker Hub, for amd64 and arm64 |
+| `release.yml` | a Release published on GitHub, at the end of a sprint | Checks that the commit is in `main` and that the tag is a valid Docker tag, then calls `docker.yml` to publish the demo image to Docker Hub, tagged with the release (`sprint-2`) and `latest`, and updates the page of the image there with the [Docker demo guide](docker-demo.md) |
 | `sonarqube.yml` | every Pull Request into `qa` and every push to `qa` | Runs the server tests with coverage and sends the analysis to SonarQube Cloud. No ruleset requires it. What it analyses, and why only `qa`, is in [SonarQube](sonarqube.md) |
 
 **Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
 
 **Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
-**How Docker fits.** The image is built and published by its own workflow, called on `qa` and `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image is published to a container registry: `qa` for the demos, `latest` for the release.
+**How Docker fits.** The image is built and published by its own workflow, called on `qa` and `main` and only after the checks of that commit passed, so what is delivered is what was tested. The image of the app is published to GitHub's container registry (`ghcr.io`), as a public package: `qa` for the batch being tested, `latest` for the release. It is built for every architecture of its base image, so it runs on a PC and on a Mac with an Apple chip alike. The demo image, which has PostgreSQL and Mailpit inside, goes to Docker Hub only when the team publishes a Release at the end of a sprint (`release.yml`): a merge into `qa` or `main` never publishes there, so what is on Docker Hub changes only when the team decides. It needs the variable `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN` in the repository.

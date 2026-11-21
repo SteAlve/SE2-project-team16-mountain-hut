@@ -37,6 +37,12 @@ function setup({ sets = [lunch], slots = [] } = {}) {
       slotRows.push({ slotId: 100 + slotRows.length, ...input });
       return { slotId: slotRows.at(-1).slotId };
     },
+    // As the real dao: a slot of that day that starts before the new one ends and ends after it starts.
+    findOverlapping: async ({ serviceDate, startsAt, endsAt }) => slotRows.find((slot) => (
+      slot.serviceDate === serviceDate
+      && slot.startsAt.slice(0, 5) < endsAt.slice(0, 5)
+      && slot.endsAt.slice(0, 5) > startsAt.slice(0, 5)
+    )) ?? null,
     assignTableSet: async (slotId, tableSetId) => {
       calls.push(['assign', slotId, tableSetId]);
       const slot = slotRows.find((row) => row.slotId === slotId);

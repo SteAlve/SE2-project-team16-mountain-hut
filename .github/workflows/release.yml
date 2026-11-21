@@ -1,0 +1,77 @@
+# Release
+#
+# The end of a sprint. Runs when a Release is published on GitHub, and publishes the demo image to
+# Docker Hub (docker.yml), tagged with the name of the release and with latest. Nothing else publishes
+# to Docker Hub: a merge into qa or main does not.
+#
+# To release: when the last Pull Request of the sprint is in main, open Releases > Draft a new
+# release, choose a new tag named sprint-1, sprint-2 ... with the target main, and publish it.
+# Needs the variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN (Settings > Secrets and variables),
+# a Docker Hub access token with the permissions Read, Write and Delete: Delete is needed to edit the page.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the release
+    runs-on: ubuntu-latest
+    steps:
+      # A release is what the professors run: only a commit of main, whose checks passed, can be one.
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: The release is on main and its tag is a Docker tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
+            echo "::error::The tag \"$TAG\" is not a valid Docker tag: use letters, digits, - . _ and no spaces (for example sprint-2)."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::The commit of this release is not in main. Create the release from main, after the last Pull Request of the sprint."
+            exit 1
+          fi
+
+  # The permission to publish is given here, so the check keeps read-only access.
+  image:
+    name: Docker image
+    needs: check
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ github.event.release.tag_name }}
+      dockerhub: true
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # The page of the image on Docker Hub is the guide docs/docker-demo.md, as it is in the release, so
+  # nobody pastes it by hand. It is its own job: if it fails (for example the token cannot edit the
+  # page), the image is already published and only this job has to run again.
+  description:
+    name: Docker Hub page
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Update the page of the image
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/se2-mountain-hut
+          short-description: "Mountain Hut demo: Software Engineering 2 project, Politecnico di Torino, A.Y. 2026/2027, Team 16"
+          readme-filepath: docs/docker-demo.md
