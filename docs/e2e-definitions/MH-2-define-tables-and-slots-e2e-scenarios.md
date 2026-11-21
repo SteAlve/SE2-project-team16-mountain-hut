@@ -251,3 +251,24 @@ the following observable behaviour to users and Playwright tests.
 2. The visitor is not authenticated to the staff operation.
 3. No table set or slot is created.
 
+## Scenario 8: A slot that overlaps another slot of the day is refused
+
+The product owner confirmed that slots can follow each other but cannot overlap
+(SE2-Polito/AY26-27-Mountain-Hut#31).
+
+**Given**
+
+1. An employee is logged in.
+2. A slot from `12:00` to `13:00` exists on a future date.
+
+**When**
+
+1. The employee creates a slot on the same date from `12:30` to `13:30`.
+
+**Then**
+
+1. The slot is refused with `409 Conflict` and the code `SLOT_OVERLAP`.
+2. The dialog stays open and says: "This slot overlaps the slot from 12:00 to
+   13:00 on *day*. The day was reloaded: choose times that do not overlap."
+3. Both the start and the end are marked "Overlaps another slot."
+4. The date still has only the `12:00`–`13:00` slot.

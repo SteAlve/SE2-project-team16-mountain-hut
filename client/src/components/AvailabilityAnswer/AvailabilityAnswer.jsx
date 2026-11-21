@@ -4,9 +4,11 @@ import { Alert } from '../Alert/Alert.jsx';
 import { unavailableMessage } from '../../lib/availabilityMessage.js';
 import styles from './AvailabilityAnswer.module.css';
 
-export function AvailabilityAnswer({ answer, partySize }) {
+export function AvailabilityAnswer({ answer, partySize: chosenPartySize }) {
   if (!answer) return null;
   const { status, tables, message } = answer;
+  // While the next check runs, the old answer is drawn for the party it was given for.
+  const partySize = answer.partySize ?? chosenPartySize;
   return (
     <div className={styles.answer} role="status" aria-label="Table availability" aria-live="polite" aria-busy={Boolean(answer.isRefreshing)}>
       {status === 'loading' && <>

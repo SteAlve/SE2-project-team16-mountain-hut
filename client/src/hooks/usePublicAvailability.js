@@ -17,17 +17,12 @@ export function usePublicAvailability(slot, partySize, onSlotsRefreshed) {
   useEffect(() => {
     if (!slotId) return;
     let active = true;
-    // Polling already fetched the slot list. Only a new selection/retry needs a follow-up list.
+    // Polling already fetches the slot list: only a refused new selection/retry reloads it.
     const refreshSlots = previousQuery.current !== key;
     previousQuery.current = key;
     getSeating(slotId, partySize).then(
-      async ({ tables }) => {
-        if (!active) return;
-        const latestSlots = refreshSlots ? await getSlots().catch(() => null) : null;
-        if (active) {
-          if (latestSlots) onSlotsRefreshed(latestSlots);
-          setResult({ key, revision, status: 'available', tables });
-        }
+      ({ tables }) => {
+        if (active) setResult({ key, revision, partySize, status: 'available', tables });
       },
       async (error) => {
         if (!active) return;
@@ -36,7 +31,7 @@ export function usePublicAvailability(slot, partySize, onSlotsRefreshed) {
         const latest = latestSlots?.find((s) => s.slotId === slotId);
         if (active) {
           if (latestSlots) onSlotsRefreshed(latestSlots);
-          setResult({ key, revision, status: unavailable ? 'unavailable' : 'error', error, latest });
+          setResult({ key, revision, partySize, status: unavailable ? 'unavailable' : 'error', error, latest });
         }
       },
     );
@@ -44,7 +39,7 @@ export function usePublicAvailability(slot, partySize, onSlotsRefreshed) {
   }, [slotId, partySize, revision, key, onSlotsRefreshed]);
   if (!slotId) return null;
   return availabilityResult(result, key, revision, {
-    freeSeats: result?.revision === revision ? result.latest?.freeSeats ?? freeSeats : freeSeats,
+    freeSeats: result?.key === key && result.revision === revision ? result.latest?.freeSeats ?? freeSeats : freeSeats,
     label,
     retry,
   });

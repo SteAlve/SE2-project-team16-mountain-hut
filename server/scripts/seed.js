@@ -2,10 +2,11 @@
  * SEED: creates the demo accounts (one warden, two employees, one hiker) and the demo table sets and meal
  * slots (the next three weeks, counted from the day it runs), so that the app can be tried and demoed without a sign up page for staff.
  * Run it with `npm run db:seed`, after `npm run db:migrate`.
- * It is safe to run again: an account whose email already exists is left untouched, and a slot
- * that already has bookings is not changed.
+ * It is safe to run again: an account whose email already exists is left untouched, a slot
+ * that already has bookings is not changed, and a demo slot that another slot of the day overlaps
+ * (one the staff added) is skipped.
  *
- * The password below is a DEMO password, published in the README. Do not seed a real hut with it.
+ * The password below is a DEMO password, published in docs/docker-demo.md. Do not seed a real hut with it.
  */
 import { fileURLToPath } from 'node:url';
 import { clock } from '../src/clock.js';
@@ -95,7 +96,12 @@ export async function seedSlots(today = clock.today(config.hutTimeZone)) {
     for (const slot of demoSlots(today)) {
       const result = await run(
         `INSERT INTO slot AS existing (service_date, starts_at, ends_at, table_set_id)
-         VALUES ($1, $2, $3, $4)
+         SELECT $1::DATE, $2::TIME, $3::TIME, $4::INTEGER
+         WHERE NOT EXISTS (
+           SELECT 1 FROM slot AS other
+           WHERE other.service_date = $1 AND other.starts_at <> $2
+             AND other.starts_at < $3 AND other.ends_at > $2
+         )
          ON CONFLICT (service_date, starts_at) DO UPDATE
          SET ends_at = EXCLUDED.ends_at, table_set_id = EXCLUDED.table_set_id
          WHERE NOT EXISTS (

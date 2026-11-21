@@ -429,6 +429,21 @@ test.describe('MH-2 Define tables and slots', () => {
       await expect(dialog).toBeVisible();
       expect(await countSlotsOf(day)).toBe(1);
     });
+
+    test('a slot cannot overlap another one of the day, and the page names the slot in the way', async ({ page }) => {
+      const day = newDay();
+      await createSlotInDb(day, '12:00', '13:00');
+      await openSlotsPage(page);
+
+      const dialog = await addSlotInPage(page, { day, startsAt: '12:30', endsAt: '13:30', tables: null });
+
+      await expect(dialog.getByText(
+        `This slot overlaps the slot from 12:00 to 13:00 on ${dayLabel(day)}. The day was reloaded: choose times that do not overlap.`,
+      )).toBeVisible();
+      await expect(dialog.getByText('Overlaps another slot.')).toHaveCount(2);
+      await expect(dialog).toBeVisible();
+      expect(await countSlotsOf(day)).toBe(1);
+    });
   });
 
   test.describe('only the staff defines tables and slots', () => {

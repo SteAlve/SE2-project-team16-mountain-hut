@@ -1,12 +1,14 @@
 // Base classes: app.js maps them to HTTP status codes.
 // `name` is the concrete class name, so the API can answer { error: err.name, message: err.message }.
 // An error may carry a `code`: a stable word the client can switch on when the status alone
-// is not enough (for example the two reasons of a 409). It is sent in the answer.
+// is not enough (for example the two reasons of a 409). It is sent in the answer. It may also carry
+// `details`, data the client can show (for example the slot in the way of a new one), sent too.
 export class DomainError extends Error {
-  constructor(message, { code } = {}) {
+  constructor(message, { code, details } = {}) {
     super(message);
     this.name = new.target.name;
     if (code !== undefined) this.code = code;
+    if (details !== undefined) this.details = details;
   }
 }
 
