@@ -6,7 +6,7 @@
 
 - Number of stories committed vs done: **4 / 4**
 - Total points committed vs done: **16 / 16**
-- Nr of hours planned vs spent (as a team): **96h 30m** / **97h 35m**
+- Nr of hours planned vs spent (as a team): **96h 30m** / **97h 40m**
 
 **Remember**  a story is done ONLY if it fits the Definition of Done:
 
@@ -21,13 +21,13 @@
 
 | Story                          | # Tasks      | Points       | Hours est.        | Hours actual      |
 | ------------------------------ | ------------ | ------------ | ----------------- | ----------------- |
-| #0 - Uncategorized             | 12           | -            | 32h 50m           | 31h 00m           |
+| #0 - Uncategorized             | 12           | -            | 32h 50m           | 31h 05m           |
 | MH-05                          | 12           | 2            | 13h 30m           | 14h 05m           |
 | MH-06                          | 14           | 3            | 16h 30m           | 17h 10m           |
 | MH-07                          | 17           | 8            | 27h 40m           | 26h 47m           |
 | MH-08                          | 9            | 3            | 6h 00m            | 7h 05m            |
 | MH-09 (partial, not committed) | 2            | -            | 1h 40m            | 1h 28m            |
-| **Total**                | **66** | **16** | **98h 10m** | **97h 35m** |
+| **Total**                | **66** | **16** | **98h 10m** | **97h 40m** |
 
 - Hours per task per person: average **0.849 hours** (about 51 minutes), standard deviation **0.710 hours** (about 43 minutes).
 - Total task estimation error ratio: **-0.59%** (97h 35m / 98h 10m - 1)
@@ -37,7 +37,7 @@
 - Unit Testing:
   - Total hours estimated: **2h 30m**
   - Total hours spent: **2h 30m**
-  - Nr of automated unit test cases: **329**
+  - Nr of automated unit test cases: **684**
   - Coverage: **97.52% lines, 97.55% statements, 95.2% branches, 98.61% functions**
 - Integration testing:
   - Total hours estimated: **4h 20m**
