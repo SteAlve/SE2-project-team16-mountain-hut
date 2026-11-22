@@ -1,95 +1,99 @@
-# Retrospective — Sprint 1 (Team 16)
+# Retrospective — Sprint 2 (Team 16)
 
-## PROCESS MEASURES 
+## PROCESS MEASURES
 
 ### Macro statistics
 
-- Number of stories committed vs done: **4 / 4**
-- Total points committed vs done: **16 / 16**
-- Nr of hours planned vs spent (as a team): **109h 30m** / **97h 23m**
+- Number of stories committed vs done: **TBD / TBD**
+- Total points committed vs done: **TBD / TBD**
+- Number of hours planned vs spent as a team: **TBD / TBD**
+  - Initial planning baseline: **96 hours**
+  - The final plan was higher than the initial 96-hour estimate; the exact value should be confirmed from the task tracker.
 
-**Remember**  a story is done ONLY if it fits the Definition of Done:
- 
-- Unit Tests passing
-- Code review completed
-- Code present on VCS
-- End-to-End tests performed
+**Definition of Done for this sprint**
+
+A story is considered done only when it satisfies the following:
+
+- Backend automated tests achieve at least **80% coverage**.
+- Code review is completed.
+- Code is present on the version-control system.
+- End-to-end tests are performed according to the story requirements.
+- Frontend manual tests are documented in a written report for every test performed.
 
 ### Detailed statistics
 
 | Story | # Tasks | Points | Hours est. | Hours actual |
-|-------|---------|--------|------------|--------------|
-| #0 - Uncategorized | 20 | - | 51h 00m | 47h 05m |
-| MH-01 | 12 | 8 | 17h 30m | 18h 25m |
-| MH-02 | 14 | 3 | 19h 15m | 17h 43m |
-| MH-03 | 7 | 2 | 6h 00m | 5h 00m |
-| MH-04 | 13 | 3 | 15h 45m | 9h 10m |
-| **Total** | **66** | **16** | **109h 30m** | **97h 23m** |
-  
+|-------|---------:|-------:|-----------:|--------------:|
+| _Story data to be completed_ | | | | |
+| **Total** | | | | |
 
-- Hours per task per person: average **0.946 hours**, standard deviation **0.650 hours**.
+The detailed task statistics, including hours per person and the total estimation error ratio, should be completed from the task tracker before the retrospective is finalized.
 
-- Total task estimation error ratio: **-11.07%** (97h 23m / 109h 30m - 1)
-
-  
 ## QUALITY MEASURES
 
-- Unit Testing:
-  - Total hours estimated: **10h 30m**
-  - Total hours spent: **5h 45m**
-  - Nr of automated unit test cases: **349**
-  - Coverage: **96.81% lines, 96.82% statements, 94.78% branches, 97.70% functions**
+- Unit testing:
+  - Total hours estimated: **TBD**
+  - Total hours spent: **TBD**
+  - Number of automated test cases: **TBD**
+  - Coverage: Backend coverage must be at least **80%**; measured result: **TBD**
 - Integration testing:
-  - Total hours estimated: **3h 00m**
-  - Total hours spent: **2h 40m**
+  - Total hours estimated: **TBD**
+  - Total hours spent: **TBD**
 - E2E testing:
-  - Total hours estimated: **9h 45m**
-  - Total hours spent: **8h 40m**
+  - Total hours estimated: **TBD**
+  - Total hours spent: **TBD**
 - Code review:
-  - Total hours estimated: **13h 30m**
-  - Total hours spent: **12h 10m**
+  - Total hours estimated: **TBD**
+  - Total hours spent: **TBD**
+- Manual frontend testing:
+  - A written report is required for each manual test.
+  - Number of tests/reports completed: **TBD**
+
+### UI and mockup discussion
+
+The UI should be reviewed as a team before implementation begins. The review should confirm the main user flow, navigation, states for loading/empty/error cases, validation messages, and the expected behavior on the target screen sizes. Decisions and unresolved questions should be recorded with the story. Mockup creation and review need their own time estimate because ambiguity in the mockup is likely to reappear as frontend rework or as inconsistent manual-test results.
+
+### Manual testing procedure
+
+Manual testing should be risk-based and use the same procedure for each story:
+
+1. **Before E2E testing:** perform a short exploratory test intended to break the feature. Check invalid input, boundary cases, unexpected navigation, missing data, loading/error states, and visible UI problems. Record each finding with steps to reproduce, expected result, actual result, severity, and evidence where useful.
+2. **After E2E testing:** use the feature normally, following the main acceptance scenario from start to finish. Confirm that the user flow is understandable and that the final UI behavior matches the mockup and story requirements. Record the result, including any deviations.
+
+Manual testing is required when the behavior depends on visual layout, user interaction, navigation, device/browser behavior, or an end-to-end workflow that automated tests cannot adequately verify. It should be reduced or skipped when the check is fully deterministic and already covered by reliable automated tests, when the build is not stable enough to produce meaningful results, or when the same check would simply duplicate an existing report. In a time-constrained sprint, prioritize critical user journeys, newly changed areas, and high-risk failure cases, and document which lower-risk checks were deferred.
 
 ## ASSESSMENT
 
-### What caused your errors in estimation (if any)?
+### What caused errors in estimation?
 
-- Some tasks took less time than expected because they reused work from earlier stories. We did not consider this enough when estimating.
-- We did not always discuss the mockups together, so some details became clear only during development.
-- Manual frontend testing and some fixes took more time than expected.
-- Too many people worked on separate parts of the same story. It took extra time to understand each other's work.
+- Implementation time was overestimated in some cases because parts of development were faster than expected. Estimates should account for the actual implementation effort while still reserving enough time for validation and review.
+- Mockups, mockup discussions, and mockup reviews required more time than estimated.
+- Manual testing was underestimated because the team had not agreed in advance on uniform criteria, scope, or reporting requirements.
+- Code review and bug-fixing time need to be estimated explicitly rather than treated as leftover capacity.
 
-### What lessons did you learn (both positive and negative) in this sprint?
+### What lessons did we learn in this sprint?
 
-- Clear deadlines and a flexible architecture helped us work on different parts of the application at the same time.
-- We learned that we need to agree on how features should work before coding, reduce handovers and leave time for integration tests and possible fixes.
+- The process of serializing the work inside each story—mockup, backend, frontend, and testing—while parallelizing separate stories worked well and should be retained.
+- Manual testing is more consistent and less time-consuming when the team agrees beforehand on what is required, what evidence is recorded, and which checks are covered by automation.
+- E2E requirements should be reviewed at the start of the story, not only when testing begins.
+- Implementation estimates can be reduced when development work is expected to be faster, but testing, review, integration, and debugging estimates should increase or be protected.
 
-### Which improvement goals from the previous retrospective did you achieve?
+### Which improvement goals from the previous retrospective were achieved?
 
-We achieved all the improvement goals set in the previous retrospective.
+The current story workflow worked well: work inside a story was kept in a clear sequence, while independent stories were developed in parallel. This allowed the team to use parallel capacity without losing the order needed within each story.
 
-- We discussed together which stories to include in the sprint.
-- A small group created the YouTrack tasks after the team discussion during sprint planning.
-- We improved task descriptions and made it clearer which tasks had to be finished first.
-- We included code review in our planning.
-- We set deadlines to help finish the work that others were waiting for.
-- We divided work across backend, frontend and database, so development, review and testing could move forward at the same time.
+The team also identified and clarified a more deliberate manual-testing approach: exploratory testing before E2E testing and normal-use testing after E2E testing.
 
-### Which goals were you not able to achieve? Why?
-
-- None. We achieved the goals set in the previous retrospective. The next goals build on this progress.
+All improvement goals from the previous retrospective were achieved.
 
 ### Improvement goals for the next sprint and how to achieve them
 
-- **Improve planning and estimates.**
-  - Check the dependencies between stories before estimating and plan the tasks in the right order.
-  - Discuss the mockups together before coding. Agree on how each feature should work and write down the decisions.
-  - Include time for integration tests in our estimates and allow extra time for possible fixes.
-- **Improve coordination and preparation for testing.**
-  - Avoid splitting a story among too many people. For example, one person can work on the backend and another on the frontend, with other people reviewing and testing.
-  - Ask the PO questions earlier through GitHub issues and track this work in YouTrack. Choose one person to check the replies and share them with the team.
-  - Involve the people who will present the demo in manual testing, so they understand the main features and feel more confident with the application.
-  - Report delays early and leave time for fixes during the week. Keep respecting deadlines and aim to keep weekends free.
+- **Make estimation risk-based and complete.**
+  - Estimate each story separately according to its mockup complexity, backend/frontend work, testing needs, review effort, and expected bug-fixing effort.
+  - Reduce implementation estimates where development is expected to be faster, but explicitly reserve time for testing, code review, integration, and corrections.
 
-### One thing you are proud of as a team
+- **Consider allocating a small portion of time to team management.**
 
-- We are proud of how we planned our schedule and met our deadlines. Our flexible architecture helped us work in parallel and reduced the time spent waiting for other tasks.
+### One thing we are proud of as a team
+
+We are proud that our workflow of sequencing tasks within each story and parallelizing independent stories worked well. It gave the team a practical balance between coordination and parallel development, and it provides a strong basis for improving estimation and quality practices in the next sprint.
