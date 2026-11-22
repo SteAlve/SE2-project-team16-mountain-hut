@@ -4,50 +4,50 @@
 
 ### Macro statistics
 
-- Number of stories committed vs done: **TBD / TBD**
-- Total points committed vs done: **TBD / TBD**
-- Number of hours planned vs spent as a team: **TBD / TBD**
-  - Initial planning baseline: **96 hours**
-  - The final plan was higher than the initial 96-hour estimate; the exact value should be confirmed from the task tracker.
+- Number of stories committed vs done: **4 / 4**
+- Total points committed vs done: **16 / 16**
+- Nr of hours planned vs spent (as a team): **96h 30m** / **97h 35m**
 
-**Definition of Done for this sprint**
+**Remember**  a story is done ONLY if it fits the Definition of Done:
 
-A story is considered done only when it satisfies the following:
-
-- Backend automated tests achieve at least **80% coverage**.
-- Code review is completed.
-- Code is present on the version-control system.
-- End-to-end tests are performed according to the story requirements.
-- Frontend manual tests are documented in a written report for every test performed.
+- Unit Tests passing
+- Code review completed
+- Code present on VCS
+- End-to-End tests performed
+- backend: 80% coverage on sonarqube
+- frontend: written report for manual tests
 
 ### Detailed statistics
 
-| Story | # Tasks | Points | Hours est. | Hours actual |
-|-------|---------:|-------:|-----------:|--------------:|
-| _Story data to be completed_ | | | | |
-| **Total** | | | | |
+| Story                          | # Tasks      | Points       | Hours est.        | Hours actual      |
+| ------------------------------ | ------------ | ------------ | ----------------- | ----------------- |
+| #0 - Uncategorized             | 12           | -            | 32h 50m           | 31h 00m           |
+| MH-05                          | 12           | 2            | 13h 30m           | 14h 05m           |
+| MH-06                          | 14           | 3            | 16h 30m           | 17h 10m           |
+| MH-07                          | 17           | 8            | 27h 40m           | 26h 47m           |
+| MH-08                          | 9            | 3            | 6h 00m            | 7h 05m            |
+| MH-09 (partial, not committed) | 2            | -            | 1h 40m            | 1h 28m            |
+| **Total**                | **66** | **16** | **98h 10m** | **97h 35m** |
 
-The detailed task statistics, including hours per person and the total estimation error ratio, should be completed from the task tracker before the retrospective is finalized.
+- Hours per task per person: average **0.849 hours** (about 51 minutes), standard deviation **0.710 hours** (about 43 minutes).
+- Total task estimation error ratio: **-0.59%** (97h 35m / 98h 10m - 1)
 
 ## QUALITY MEASURES
 
-- Unit testing:
-  - Total hours estimated: **TBD**
-  - Total hours spent: **TBD**
-  - Number of automated test cases: **TBD**
-  - Coverage: Backend coverage must be at least **80%**; measured result: **TBD**
+- Unit Testing:
+  - Total hours estimated: **2h 30m**
+  - Total hours spent: **2h 30m**
+  - Nr of automated unit test cases: **329**
+  - Coverage: **97.52% lines, 97.55% statements, 95.2% branches, 98.61% functions**
 - Integration testing:
-  - Total hours estimated: **TBD**
-  - Total hours spent: **TBD**
+  - Total hours estimated: **4h 20m**
+  - Total hours spent: **4h 00m**
 - E2E testing:
-  - Total hours estimated: **TBD**
-  - Total hours spent: **TBD**
+  - Total hours estimated: **6h 30m**
+  - Total hours spent: **8h 55m**
 - Code review:
-  - Total hours estimated: **TBD**
-  - Total hours spent: **TBD**
-- Manual frontend testing:
-  - A written report is required for each manual test.
-  - Number of tests/reports completed: **TBD**
+  - Total hours estimated: **14h 30m**
+  - Total hours spent: **13h 30m**
 
 ### UI and mockup discussion
 
