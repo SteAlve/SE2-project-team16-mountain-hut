@@ -6,7 +6,7 @@
 
 - Number of stories committed vs done: **4 / 4**
 - Total points committed vs done: **16 / 16**
-- Nr of hours planned vs spent (as a team): **96h 30m** / **97h 40m**
+- Nr of hours planned vs spent (as a team): **98h 10m** / **97h 40m**
 
 **Remember**  a story is done ONLY if it fits the Definition of Done:
 
@@ -14,7 +14,7 @@
 - Code review completed
 - Code present on VCS
 - End-to-End tests performed
-- backend: 80% coverage on sonarqube
+- backend: more than 80% coverage on SonarQube
 - frontend: written report for manual tests
 
 ### Detailed statistics
@@ -30,7 +30,7 @@
 | **Total**                | **66** | **16** | **98h 10m** | **97h 40m** |
 
 - Hours per task per person: average **0.849 hours** (about 51 minutes), standard deviation **0.710 hours** (about 43 minutes).
-- Total task estimation error ratio: **+0.01%** (97h 35m / 96h 30m - 1)
+- Total task estimation error ratio: **+-0.51%** (97h 40m / 98h 10m - 1)
 
 ## QUALITY MEASURES
 
@@ -60,8 +60,8 @@
 ### What lessons did we learn in this sprint?
 
 - The process of serializing the work inside each story mockup, backend, frontend, and testing while parallelizing separate stories worked well and should be retained.
-- Manual testing is more consistent and less time-consuming when the team agrees beforehand on what is required, what evidence is recorded.
-- Implementation estimates can be reduced when development work is expected to be faster, but testing, review, integration, and debugging estimates should increase or be protected.
+- Manual testing is more consistent and less time-consuming when the team agrees in advance on the requirements to be met and the evidence to be documented.
+- Implementation estimates can be reduced when development work is expected to be faster, but testing, review, integration, and debugging estimates should increase.
 
 ### Which improvement goals from the previous retrospective were achieved?
 
@@ -75,13 +75,13 @@ All improvement goals from the previous retrospective were achieved.
 
 ### Which goals were you not able to achieve? Why?
 
-- None. We achieved the goals set in the previous retrospective. The next goals build on this progress.
+- None. We achieved the goals set in the previous retrospective.
 
 ### Improvement goals for the next sprint and how to achieve them
 
 * Reduce implementation estimates where development is expected to be faster
 * Increase time for manual testing
-* Increase time for mockup imlementation and their discussion
+* Increase time for mockup implementation and their discussion
 
 ### One thing we are proud of as a team
 
