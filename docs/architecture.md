@@ -322,7 +322,7 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright. When only Markdown files (`*.md`) changed, a first job notices it and these checks are skipped; `sonarqube.yml` does not run either |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright. When only Markdown files (`*.md`) or the mockups (everything in `docs/mockups/`) changed, a first job notices it and these checks are skipped; `sonarqube.yml` does not run either |
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
 | `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |

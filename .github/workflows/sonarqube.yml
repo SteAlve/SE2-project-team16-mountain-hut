@@ -15,21 +15,24 @@
 
 name: SonarQube
 
-# A change that is only in Markdown files (*.md) is not analysed: there is no code to analyse, and the
-# analysis runs the server tests. No ruleset requires this check, so a skipped run cannot block a merge:
-# if it is ever required, change this as ci.yml does (skip the jobs, do not filter the paths).
+# A change that is only in Markdown files (*.md) or in the mockups (docs/mockups/) is not analysed:
+# there is no code to analyse, and the analysis runs the server tests. It is the same list of files
+# as in ci.yml. No ruleset requires this check, so a skipped run cannot block a merge: if it is ever
+# required, change this as ci.yml does (skip the jobs, do not filter the paths).
 on:
   push:
     branches:
       - qa
     paths-ignore:
       - "**.md"
+      - "docs/mockups/**"
   pull_request:
     branches:
       - qa
     types: [opened, synchronize, reopened]
     paths-ignore:
       - "**.md"
+      - "docs/mockups/**"
 
 # The job only reads the repository. SonarQube Cloud decorates the Pull Request through its own GitHub App.
 permissions:

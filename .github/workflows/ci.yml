@@ -9,11 +9,13 @@
 #   Client: lint and build   always
 #   E2E tests                Pull Requests into qa and main, and when the caller asks for it
 #
-# None of them runs when the change is only in Markdown files (*.md): there is no code to check.
+# None of them runs when the change is only in documentation: Markdown files (*.md) and the mockups
+# (everything in docs/mockups/, images included). There is no code to check.
 # The job "Which files changed" looks at the files, and the others are skipped, not left out of the
 # workflow: GitHub counts a skipped job as passed, so a check that a ruleset requires does not stay
 # waiting. A paths-ignore on the trigger would leave it waiting, and the PR could not merge.
 # When the rulesets start to require these checks, confirm it with a Pull Request of only .md files.
+# sonarqube.yml has the same list of files, in its paths-ignore.
 
 name: CI
 
@@ -41,7 +43,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Is there something to check? Not when every changed file is a Markdown file.
+  # Is there something to check? Not when every changed file is a Markdown file or in docs/mockups/.
   # On a Pull Request the files are the ones of the PR; after a push (integration, qa and deploy call
   # this workflow) they are the ones between the old and the new head of the branch. When the files
   # cannot be worked out (a new branch, a forced push), everything runs.
@@ -56,7 +58,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Only Markdown files changed?
+      - name: Only documentation files changed?
         id: diff
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
@@ -71,11 +73,11 @@ jobs:
           fi
           echo "Changed files:"
           printf '%s\n' "$files"
-          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qv '\.md$'; then
+          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qvE '(\.md$|^docs/mockups/)'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "Only Markdown files changed: the server, client and E2E checks are skipped."
+            echo "Only Markdown files and mockups changed: the server, client and E2E checks are skipped."
           fi
 
   server:
