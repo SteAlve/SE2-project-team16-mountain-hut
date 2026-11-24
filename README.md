@@ -347,7 +347,7 @@ The workflows are in [`.github/workflows`](.github/workflows).
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the branch flow |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests** |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | **Server: lint and tests** and **Client: lint and build**; for a Pull Request into `qa` or `main`, also **E2E tests**. They are skipped when only `.md` files or the mockups (`docs/mockups/`) changed |
 | `integration.yml`, `qa.yml`, `deploy.yml` | push to `dev`, `qa`, `main` | The checks of `ci.yml` again on the merged result (the E2E tests too on `qa` and `main`); `qa.yml` and `deploy.yml` also publish the Docker image, tagged `qa` and `latest`, and `deploy.yml` builds the client |
 | `release.yml` | a Release published on GitHub, at the end of a sprint | Publishes the Docker demo image to Docker Hub, tagged with the release (`sprint-2`) and `latest`. See [Release at the end of a sprint](#release-at-the-end-of-a-sprint) |
 

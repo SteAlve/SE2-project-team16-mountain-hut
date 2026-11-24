@@ -322,7 +322,7 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | Workflow | When it runs | What it does |
 |---|---|---|
 | `branch-flow.yml` | every Pull Request into `dev`, `qa` or `main` | Checks the flow: who can merge into whom, that `qa` is promoted before a new batch, that the fixes of `qa` are back in `dev`, that a branch contains the current `dev` |
-| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright |
+| `ci.yml` | every Pull Request into `dev`, `qa` or `main` | Installs, runs the lint and the tests of the server (against a PostgreSQL service, with `TEST_DATABASE_URL` set), the lint and the build of the client; for a Pull Request into `qa` or `main`, also the end-to-end tests with Playwright. When only Markdown files (`*.md`) or the mockups (everything in `docs/mockups/`) changed, a first job notices it and these checks are skipped; `sonarqube.yml` does not run either |
 | `integration.yml` | push to `dev` | The checks of `ci.yml` again, on the merged `dev` |
 | `qa.yml` | push to `qa` | The checks of `ci.yml`, end-to-end tests included, again on the merged `qa`; then the `qa` Docker image |
 | `deploy.yml` | push to `main` | The checks of `ci.yml`, end-to-end tests included, one last time; then builds the client, keeps the build and delivers |
@@ -330,7 +330,7 @@ feature/* ──PR──▶ dev ──PR──▶ qa ──PR──▶ main
 | `release.yml` | a Release published on GitHub, at the end of a sprint | Checks that the commit is in `main` and that the tag is a valid Docker tag, then calls `docker.yml` to publish the demo image to Docker Hub, tagged with the release (`sprint-2`) and `latest`, and updates the page of the image there with the [Docker demo guide](docker-demo.md) |
 | `sonarqube.yml` | every Pull Request into `qa` and every push to `qa` | Runs the server tests with coverage and sends the analysis to SonarQube Cloud. No ruleset requires it. What it analyses, and why only `qa`, is in [SonarQube](sonarqube.md) |
 
-**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml` and of `ci.yml`: the server and the client on every branch, and the end-to-end tests on `qa` and `main`. Nothing merges while they are red.
+**Branch protection.** The rules of `main`, `qa` and `dev` are in `.github/rulesets/`. The checks they require are the ones of `branch-flow.yml`: *Validate branch flow* on `main` and `qa`, *Qa is promoted to main* and *Dev has everything from qa* on `qa`, *Branch is up to date with dev* on `dev`. The checks of `ci.yml` are not required yet, so a red CI does not block a merge: the names to require are *Server: lint and tests* and *Client: lint and build* on every branch, and *E2E tests* on `qa` and `main` (see the [CI/CD test report](ci-cd-test-report.md)).
 
 **Tests.** The tests are written on `qa`, by the people who test the batch. The pipelines of `dev` run the tests already merged. The end-to-end tests run on the Pull Requests into `qa` and `main`, so a new test runs before it merges into `qa`.
 
