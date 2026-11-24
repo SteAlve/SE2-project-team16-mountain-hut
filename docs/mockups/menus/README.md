@@ -9,11 +9,11 @@ Mockup for story **MH-10 Define menus**, used by the staff and hiker frontend ta
 - *Format button*: one button of the editor toolbar. Variants: `Kind` (Bold, Italic, List, Sub-item, Up a level) and `State` (Default, Active: the format where the cursor is).
 - *Menu toolbar*: the five format buttons on top of the editor. Property `Show hint` (the keyboard hint, hidden on a phone).
 - *Menu text*: a menu as it is shown, with bold, italic, items and sub-items. Variants: `Content` (Short: the dinner used on most screens; Long: a three-course menu, to show how a long menu is read).
-- *Menu editor*: the *Menu* field. Variants: `State` (Empty, Filled, Error). The writing area has a fixed height: a long menu scrolls inside it (property `Scrollbar`).
+- *Menu editor*: the *Menu* field. Variants: `State` (Empty, Filled, Error). The writing area has a fixed height: a long menu scrolls inside it (property `Scrollbar`). Under it, on the right, the character counter; the error message goes on the left.
 - *Previous menu*: a menu already written for another slot, to start from. Variants: `State` (Default, Selected, Open). *Open* shows the whole menu, formatted, inside the card (phone).
-- *Slot menu*: the menu line at the bottom of a slot on *Slots & tables*. Variants: `State` (Set, Empty, and Expanded only on a phone) and `Size` (Desktop, Phone). *Set* shows the first words of the menu and *Show menu*; on a phone it also has *Edit menu*, and *Expanded* shows the whole menu under the slot.
+- *Slot menu*: the menu line at the bottom of a slot on *Slots & tables*. Variants: `State` (Set, Empty) and `Size` (Desktop, Phone). *Set* shows the first words of the menu and *Show menu*. On a phone the same content takes two lines: the label and the button on top, the first words under them.
 - *Slot with menu*: a *Slot row* with its *Slot menu* under it.
-- *Menu card*: the menu of the chosen time on *Book a table*. Variants: `State` (Set, Empty).
+- *Menu card*: the menu of the chosen time in the *Your booking* summary of *Book a table*. Variants: `State` (Set, Empty). *Set* shows the whole menu in an area of fixed height: a long menu scrolls inside it, with a scrollbar. It does not repeat the time: the summary already shows it.
 - *Booking menu*: the menu at the bottom of a booking on *My bookings*. Variants: `State` (Collapsed, Expanded, Empty) and `Size` (Desktop, Phone).
 
 Same QUOTA brand, colours and fonts.
@@ -42,15 +42,17 @@ Same QUOTA brand, colours and fonts.
    - the button of the format where the cursor is looks pressed.
 
    The writing area keeps its height: a long menu scrolls inside it. Under the field, on the right, a counter shows the characters used, `N / 2000`.
+
+   There is no separate title field: a menu that needs a title gets it in the editor, as its first line in bold (for example **Dinner – three courses**, screens 3 and 4). Being the first line, the title is also what the first words show on the slot, in the previous menus and on *My bookings*.
 5. **Start from a previous menu.** *Choose a menu* opens the menus already written for other slots, newest first (screen 3). The same text is listed once, with the last slot it was given to. On the left, each menu shows its slot and its first two lines, so it can be recognised; *Search the menus* finds a dish or a day, and *Show older menus* loads more. On the right, the **preview** shows the chosen menu whole, formatted as hikers see it (bold, italic, items and sub-items); a long menu scrolls inside the preview. On a phone there is no room for two columns: tapping a menu opens it inside its card, formatted, and the sheet scrolls (phone screen 3). *Use this menu* copies it into the editor and replaces what was there; *Back* returns to the editor as it was.
-6. **Change the copied menu.** The copied menu is in the editor, with its bold, italic and lists, and can be changed like any text; here a starter was changed. An info alert says where it was copied from (screen 4). *Choose another menu* goes back to step 5.
+6. **Change the copied menu.** The copied menu is in the editor, with its bold, italic and lists, and can be changed like any text; here a starter was changed. An info alert says where it was copied from (screen 4). *Start from a previous menu*, at the bottom left, goes back to step 5 to pick another menu.
 7. **Save menu.** The dialog closes, an alert names the slot, and the slot shows the first words of its new menu and *Show menu* (screen 5). Hikers see the menu from now on.
 
-On a phone, *Show menu* opens the menu under the slot instead of in a dialog, and *Edit menu* sits next to it (phone screen 1); it opens *Edit the menu* in a sheet, with *Start from a previous menu* under the editor (phone screen 5).
+On a phone the slots look the same (phone screen 1), and *Show menu* opens the menu in a sheet from the bottom, with *Edit menu* and *Close* (phone screen 5). *Edit menu* opens *Edit the menu* in a sheet, with *Start from a previous menu* under the editor (phone screen 6).
 
 ### Hiker and visitor
 
-- **Book a table** (screen 9, logged in) and **Check availability** (screen 10, before logging in): with a time chosen, the *Your booking* summary shows the whole menu of that time, under the day, the time and the people. Choosing another time shows its menu. A time with no menu yet says "No menu yet for this time. You can still book it."
+- **Book a table** (screen 9, logged in) and **Check availability** (screen 10, before logging in): with a time chosen, the *Your booking* summary shows the whole menu of that time, under the day, the time and the people. The *Menu* box does not repeat the time, which is already in the summary, and keeps its height: a long menu scrolls inside it, with a scrollbar. Choosing another time shows its menu. A time with no menu yet says "No menu yet for this time. You can still book it."
 - **My bookings** (screen 11): each booking has a *Menu* line at the bottom: the first words and *Show menu*, which opens the whole menu under the booking; *Hide menu* closes it. A booking whose time has no menu yet says "No menu yet for this time." The menu belongs to the slot: when the employee changes it, the hiker sees the new one.
 
 ## Screens
@@ -69,22 +71,23 @@ On a phone, *Show menu* opens the menu under the slot instead of in a dialog, an
 | 10 | Check availability: the menu of the time | ![Check availability](10-check-availability.png) |
 | 11 | My bookings: the menu of each booking | ![My bookings](11-my-bookings.png) |
 
-Screens 10 and 11 are taller than 800 px: the page scrolls.
+Screen 11 is taller than 800 px: the page scrolls.
 
 ### On a phone
 
-The same website in a phone browser. Below 992 px (react-bootstrap `lg`) the dialogs become sheets from the bottom, with *Save menu* (or *Use this menu*) as the first button at the bottom. The toolbar keeps its five buttons; the keyboard hint is hidden. On *Slots & tables* there is no room for a second dialog over the page: *Show menu* opens the menu under the slot, and *Edit menu* is next to it (phone screen 1). In *Start from a previous menu* the chosen menu opens inside its card (phone screen 3). On *Book a table* the menu is under the times. On *Check availability* the answer sits in the bar at the bottom ([availability mockup](../availability/README.md)), so the menu is there too, closed like on *My bookings*: the first words and *Show menu*.
+The same website in a phone browser. Below 992 px (react-bootstrap `lg`) the dialogs become sheets from the bottom, with *Save menu* (or *Use this menu*) as the first button at the bottom. The toolbar keeps its five buttons; the keyboard hint is hidden. On *Slots & tables* each slot shows its menu as on a desktop (phone screen 1); *Show menu* opens it in a sheet, with *Edit menu* as the first button at the bottom (phone screen 5). In *Start from a previous menu* the chosen menu opens inside its card (phone screen 3). On *Book a table* the *Menu* box is under the times, with the same fixed height and scrollbar as on a desktop. On *Check availability* the answer sits in the bar at the bottom ([availability mockup](../availability/README.md)), so the menu is there too, closed like on *My bookings*: the first words and *Show menu*.
 
 | # | Screen | Image |
 |---|---|---|
-| 1 | Slots of a day, with a menu opened | ![Slots of a day on a phone](phone/01-slots-of-a-day.png) |
+| 1 | Slots of a day, with menus | ![Slots of a day on a phone](phone/01-slots-of-a-day.png) |
 | 2 | Write the menu | ![Write the menu on a phone](phone/02-write-the-menu.png) |
 | 3 | Start from a previous menu | ![Start from a previous menu on a phone](phone/03-previous-menu.png) |
 | 4 | Change the copied menu | ![Change the copied menu on a phone](phone/04-change-the-copied-menu.png) |
-| 5 | Edit the menu | ![Edit the menu on a phone](phone/05-edit-the-menu.png) |
-| 6 | A hiker sees the menu on Book a table (scrolled to step 3) | ![A hiker sees the menu on a phone](phone/06-hiker-sees-the-menu.png) |
-| 7 | Check availability: the menu in the bar | ![Check availability on a phone](phone/07-check-availability.png) |
-| 8 | My bookings: the menu of each booking | ![My bookings on a phone](phone/08-my-bookings.png) |
+| 5 | Show the menu | ![Show the menu on a phone](phone/05-show-the-menu.png) |
+| 6 | Edit the menu | ![Edit the menu on a phone](phone/06-edit-the-menu.png) |
+| 7 | A hiker sees the menu on Book a table (scrolled to step 3) | ![A hiker sees the menu on a phone](phone/07-hiker-sees-the-menu.png) |
+| 8 | Check availability: the menu in the bar | ![Check availability on a phone](phone/08-check-availability.png) |
+| 9 | My bookings: the menu of each booking | ![My bookings on a phone](phone/09-my-bookings.png) |
 
 ## Fields and rules
 
@@ -105,22 +108,22 @@ The formatting is kept as text the server can store and check, for example a sma
 |---|---|
 | Slot with a menu (desktop) | **MENU** · the first words, on one line · button *Show menu* |
 | Show menu (desktop) | Dialog **Menu** · *day* · *start – end* · *table set*, then the whole menu, formatted. Buttons: Close, Edit menu |
-| Slot with a menu (phone) | **MENU** · the first words · buttons *Show menu ▾* and *Edit menu*; opened: *Hide menu ▴*, then the whole menu |
+| Slot with a menu (phone) | **MENU** · button *Show menu*, the first words under them. *Show menu* opens the sheet **Menu** · *day* · *start – end* · *table set*, then the whole menu, formatted. Buttons: Edit menu, Close |
 | Slot with no menu | **MENU** · No menu yet. Hikers see only the time. · button *Write the menu* |
 | Dialog title | Write the menu (a slot with no menu) or Edit the menu (from *Edit menu*) · under it: *day* · *start – end* · *table set* |
 | Start from a previous menu (box) | **Start from a previous menu** Copy a menu you already wrote, then change what is different. Button: Choose a menu |
 | Previous menus | Left: each menu with its slot and its first two lines. Right: **PREVIEW** · *day* · *start – end*, then the chosen menu, formatted. Note: The menu you choose replaces what is in the editor. You can change it before saving. A long menu scrolls inside the preview. Buttons: Show older menus, Back, Use this menu |
 | No previous menus yet | The box *Start from a previous menu* is not shown. |
 | Search with no result | No menu has "*search*". Try a dish or a day. |
-| Menu copied | Info alert: Copied from *day*, *start – end*. Changing it here does not change that menu. |
-| Under the editor | Hikers see the menu as you write it here. · *N* / 2000 |
+| Menu copied | Info alert: Copied from *day*, *start – end*. Changing it here does not change that menu. Button at the bottom left: Start from a previous menu |
+| Under the editor | *N* / 2000 (on the right) |
 | Menu saved (`200`) | The dialog closes. Info alert on the page: Menu saved for *day*, *start – end*. Hikers see it when they choose this time. |
 | Menu empty or too long (`400`) | The message under the field (see *Fields and rules*). |
 | Slot no longer exists (`404`) | The dialog closes, the day is reloaded, alert on top: "That slot no longer exists." |
 | Not logged in (`401`) | The login page with the blue note "Log in to see the slots and tables." (login mockup, screen 4). |
 | A hiker tries to save a menu (`403`) | The "Staff only" page (login mockup, screen 7). |
 | Server or network down | Something went wrong on our side. Try again in a minute. |
-| Book a table, time with a menu | **Menu** *start – end*, then the menu as it was written |
+| Book a table, time with a menu | **Menu**, then the menu as it was written, scrolling inside the box when it is long |
 | Book a table, time with no menu | No menu yet for this time. You can still book it. |
 | My bookings | **MENU** · the first words · *Show menu ▾* / *Hide menu ▴*; with no menu: No menu yet for this time. |
 
