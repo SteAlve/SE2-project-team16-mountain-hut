@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.10.0",
-    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, checking meal-slot availability, booking a table, changing and cancelling a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+    "version": "1.14.0",
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -2099,6 +2099,271 @@
         }
       }
     },
+    "/api/staff/slots/weeks": {
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "List schedule period summaries",
+        "description": "Returns complete seven-day periods between `from` and `to`, including the number of slots, the number of bookings, whether the period can be replaced, and the slot count for each day. The first period starts at `from`; the inclusive range must contain complete seven-day periods. Only an employee or the warden can read these summaries.",
+        "operationId": "listStaffPeriodSummaries",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "First day of the first seven-day period.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-11-04"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "Last day of the last seven-day period.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-12-01"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The schedule summaries in chronological order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffPeriodSummary"
+                  }
+                },
+                "example": [
+                  {
+                    "from": "2026-11-04",
+                    "to": "2026-11-10",
+                    "slotCount": 4,
+                    "bookingCount": 0,
+                    "canReplace": true,
+                    "days": [
+                      { "date": "2026-11-04", "slotCount": 2 },
+                      { "date": "2026-11-05", "slotCount": 0 },
+                      { "date": "2026-11-06", "slotCount": 0 },
+                      { "date": "2026-11-07", "slotCount": 1 },
+                      { "date": "2026-11-08", "slotCount": 0 },
+                      { "date": "2026-11-09", "slotCount": 1 },
+                      { "date": "2026-11-10", "slotCount": 0 }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "A date is missing or invalid, `to` is before `from`, or the inclusive range does not contain complete seven-day periods.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "from and to must delimit complete seven-day periods"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/slots/copy-week": {
+      "post": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Copy a weekly schedule",
+        "description": "Copies every slot from one seven-day source period into one or more destination intervals. Each destination interval must contain one or more whole seven-day periods; the source schedule is repeated in every period. Copied slots keep their relative day offset, times and table-set assignments. Source bookings are never copied. Destination slots are completely replaced only when none of the selected destination intervals has a booking. All destinations are processed atomically, and only an employee or the warden can perform it.",
+        "operationId": "copyWeeklySchedule",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyWeekScheduleRequest"
+              },
+              "example": {
+                "sourceStart": "2026-11-04",
+                "destinationIntervals": [
+                  {
+                    "from": "2026-11-18",
+                    "to": "2026-12-01"
+                  },
+                  {
+                    "from": "2026-12-16",
+                    "to": "2026-12-22"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The source schedule was copied into every selected destination period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyWeekScheduleResult"
+                },
+                "example": {
+                  "copiedSlots": 4,
+                  "replacedSlots": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid, a destination interval is not a whole number of seven-day periods, intervals overlap, or the source period contains no slots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "overlappingPeriods": {
+                    "summary": "Selected periods overlap",
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "Destination periods must not overlap."
+                    }
+                  },
+                  "emptySource": {
+                    "summary": "There is nothing to copy",
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "The source period contains no slots."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "At least one selected destination interval contains a booking, so the operation is rejected and no destination is changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "message": "A destination period contains bookings.",
+                  "code": "WEEK_HAS_BOOKINGS"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/staff/slots/{slotId}/table-set": {
       "put": {
         "tags": [
@@ -3065,9 +3330,10 @@
               "BOOKING_CHANGED",
               "SLOT_OVERLAP",
               "PASSWORD_CHANGE_REQUIRED",
-              "RESET_LINK_NOT_VALID"
+              "RESET_LINK_NOT_VALID",
+              "WEEK_HAS_BOOKINGS"
             ],
-            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
+            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains bookings. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
           },
           "details": {
             "type": "object",
@@ -3425,6 +3691,127 @@
             "format": "int64",
             "minimum": 1,
             "description": "Table set to give to the slot."
+          }
+        }
+      },
+      "StaffPeriodSummary": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "slotCount",
+          "bookingCount",
+          "canReplace",
+          "days"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "First day of the seven-day period."
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "Last day of the seven-day period."
+          },
+          "slotCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of slots in the period."
+          },
+          "bookingCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of bookings in the period."
+          },
+          "canReplace": {
+            "type": "boolean",
+            "description": "True when the period has no bookings and can be replaced by a copy."
+          },
+          "days": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "slotCount"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "slotCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "CopyWeekScheduleRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceStart",
+          "destinationIntervals"
+        ],
+        "properties": {
+          "sourceStart": {
+            "type": "string",
+            "format": "date",
+            "description": "First day of the seven-day source period. Slots from this day through the following six days are copied."
+          },
+          "destinationIntervals": {
+            "type": "array",
+            "minItems": 1,
+            "description": "One or more non-overlapping destination intervals. Each interval must contain one or more whole seven-day periods and must not overlap the source period.",
+            "items": {
+              "$ref": "#/components/schemas/CopyWeekDestinationInterval"
+            }
+          }
+        }
+      },
+      "CopyWeekDestinationInterval": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "First day of the destination interval."
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "Last day of the destination interval. The inclusive interval length must be a multiple of seven days."
+          }
+        }
+      },
+      "CopyWeekScheduleResult": {
+        "type": "object",
+        "required": [
+          "copiedSlots",
+          "replacedSlots"
+        ],
+        "properties": {
+          "copiedSlots": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Total number of copied slots across all selected destination periods."
+          },
+          "replacedSlots": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of unreserved destination slots removed before copying."
           }
         }
       },

@@ -11,9 +11,11 @@ import {
 } from '../dto/bookings.js';
 import {
   parseAssignTableSet,
+  parseCopyWeekSchedule,
   parseCreateHiker,
   parseCreateSlot,
   parseCreateTableSet,
+  parseListStaffPeriodSummaries,
   parseListStaffSlots,
   parseSearchHikers,
   toHikerDto,
@@ -42,9 +44,19 @@ export const makeListStaffSlotsController = ({ listStaffSlots }) => async (req, 
   res.status(200).json(slots.map(toStaffSlotDto));
 };
 
+export const makeListStaffPeriodSummariesController = ({ listStaffPeriodSummaries }) => async (req, res) => {
+  const input = parseListStaffPeriodSummaries(req.query);
+  res.status(200).json(await listStaffPeriodSummaries({ user: req.user, ...input }));
+};
+
 export const makeAssignTableSetController = ({ assignTableSet }) => async (req, res) => {
   const input = parseAssignTableSet(req.params, req.body);
   res.status(200).json(toStaffSlotDto(await assignTableSet({ user: req.user, ...input })));
+};
+
+export const makeCopyWeeklyScheduleController = ({ copyWeeklySchedule }) => async (req, res) => {
+  const input = parseCopyWeekSchedule(req.body);
+  res.status(200).json(await copyWeeklySchedule({ user: req.user, ...input }));
 };
 
 // GET /api/staff/hikers?q=: the regular accounts that match (MH-07).
