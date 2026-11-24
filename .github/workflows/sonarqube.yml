@@ -15,14 +15,21 @@
 
 name: SonarQube
 
+# A change that is only in Markdown files (*.md) is not analysed: there is no code to analyse, and the
+# analysis runs the server tests. No ruleset requires this check, so a skipped run cannot block a merge:
+# if it is ever required, change this as ci.yml does (skip the jobs, do not filter the paths).
 on:
   push:
     branches:
       - qa
+    paths-ignore:
+      - "**.md"
   pull_request:
     branches:
       - qa
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "**.md"
 
 # The job only reads the repository. SonarQube Cloud decorates the Pull Request through its own GitHub App.
 permissions:

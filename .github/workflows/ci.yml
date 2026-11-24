@@ -3,10 +3,17 @@
 # Runs on every Pull Request into dev, qa and main, so a change is checked before it merges.
 # integration.yml, qa.yml and deploy.yml call it after a push, to check the merged result again.
 #
-# The names of the jobs are the names of the checks that the rulesets require.
+# The names of the jobs are the names of the checks that the rulesets are to require: today the
+# rulesets require only the checks of branch-flow.yml (see docs/ci-cd-test-report.md).
 #   Server: lint and tests   always
 #   Client: lint and build   always
 #   E2E tests                Pull Requests into qa and main, and when the caller asks for it
+#
+# None of them runs when the change is only in Markdown files (*.md): there is no code to check.
+# The job "Which files changed" looks at the files, and the others are skipped, not left out of the
+# workflow: GitHub counts a skipped job as passed, so a check that a ruleset requires does not stay
+# waiting. A paths-ignore on the trigger would leave it waiting, and the PR could not merge.
+# When the rulesets start to require these checks, confirm it with a Pull Request of only .md files.
 
 name: CI
 
@@ -34,8 +41,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Is there something to check? Not when every changed file is a Markdown file.
+  # On a Pull Request the files are the ones of the PR; after a push (integration, qa and deploy call
+  # this workflow) they are the ones between the old and the new head of the branch. When the files
+  # cannot be worked out (a new branch, a forced push), everything runs.
+  changes:
+    name: Which files changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Only Markdown files changed?
+        id: diff
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          if [ -n "$PR_BASE" ]; then
+            files=$(git diff --name-only "$PR_BASE...$PR_HEAD") || files=""
+          else
+            files=$(git diff --name-only "$PUSH_BEFORE" "$PUSH_AFTER") || files=""
+          fi
+          echo "Changed files:"
+          printf '%s\n' "$files"
+          if [ -z "$files" ] || printf '%s\n' "$files" | grep -qv '\.md$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Only Markdown files changed: the server, client and E2E checks are skipped."
+          fi
+
   server:
     name: "Server: lint and tests"
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -54,7 +100,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mountain_hut_test
-    # Do not rename this job: its name is a check required by the branch rulesets.
+    # Do not rename this job: its name is the check that the branch rulesets are to require.
     defaults:
       run:
         working-directory: server
@@ -86,6 +132,8 @@ jobs:
 
   client:
     name: "Client: lint and build"
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -115,8 +163,9 @@ jobs:
 
   e2e:
     name: E2E tests
+    needs: changes
     # Inputs are empty for pull_request events; only the target branch applies there.
-    if: inputs.e2e || github.base_ref == 'qa' || github.base_ref == 'main'
+    if: needs.changes.outputs.code == 'true' && (inputs.e2e || github.base_ref == 'qa' || github.base_ref == 'main')
     runs-on: ubuntu-latest
     services:
       postgres:
