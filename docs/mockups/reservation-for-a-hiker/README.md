@@ -13,7 +13,7 @@ A party arrives at the hut some time before the meal and asks for seats, or some
 - *Icon / Search*.
 - A `Search icon` option on *Text field*. It is off by default, so the other mockups are unchanged.
 
-The employee navbar gets a third link, **Reservations**. The navbar component has no property for links, so on these screens it is detached from the component.
+The employee navbar gets a third link, **Reservations**. On these screens the navbar is *Navbar / Logged in* with `Role=Employee, Page=Reservations`.
 
 Same QUOTA brand, colours and fonts.
 
