@@ -2396,7 +2396,7 @@
           "Staff"
         ],
         "summary": "Create a hiker",
-        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The password is never returned: the server stores only its hash and sends it by email to the hiker, so the employee does not see it. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
+        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The server stores only its hash, sends the password by email to the hiker, and returns it once to the authenticated employee or warden who created the account so it can be handed over at the reservation desk. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
         "operationId": "createHiker",
         "security": [
           {
@@ -2434,22 +2434,23 @@
         },
         "responses": {
           "201": {
-            "description": "Hiker created. For a regular account the generated password has been sent by email to the hiker; it is not in the response.",
+            "description": "Hiker created. For a regular account the generated password is sent by email to the hiker and returned once to the authenticated staff member who created the account. A temporary hiker has no password.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Hiker"
+                  "$ref": "#/components/schemas/CreatedHiker"
                 },
                 "examples": {
                   "regular": {
-                    "summary": "A regular account: the password goes to the hiker by email",
+                    "summary": "A regular account: the password is handed to staff and emailed to the hiker",
                     "value": {
                       "id": 21,
                       "firstName": "Marco",
                       "lastName": "Bianchi",
                       "email": "marco.bianchi@example.com",
                       "phone": "+39 340 555 1234",
-                      "temporary": false
+                      "temporary": false,
+                      "password": "generated-password"
                     }
                   },
                   "temporary": {
@@ -3517,6 +3518,23 @@
             "description": "True for a hiker the staff created with a name and, at most, a phone number: it has no email and no password, so it cannot log in or book on the web, and no confirmation email is sent for it. It is only returned by `POST /api/staff/hikers`: the search does not list temporary hikers."
           }
         }
+      },
+      "CreatedHiker": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Hiker"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The generated first password, returned once to the authenticated staff member who created a regular hiker account. It is omitted for temporary hikers."
+              }
+            }
+          }
+        ]
       },
       "CreateHikerRequest": {
         "type": "object",

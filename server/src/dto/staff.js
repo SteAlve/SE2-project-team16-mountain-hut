@@ -121,3 +121,10 @@ export const toHikerDto = ({ id, firstName, lastName, email, phone, temporary })
   phone,
   temporary,
 });
+
+// A newly created regular hiker also carries the generated password for the one-time staff handoff.
+// Search results continue to use toHikerDto and never expose it.
+export const toCreatedHikerDto = (hiker) => ({
+  ...toHikerDto(hiker),
+  ...(hiker.password === undefined ? {} : { password: hiker.password }),
+});

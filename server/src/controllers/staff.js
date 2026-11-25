@@ -16,6 +16,7 @@ import {
   parseCreateTableSet,
   parseListStaffSlots,
   parseSearchHikers,
+  toCreatedHikerDto,
   toHikerDto,
   toStaffSlotDto,
   toTableSetDto,
@@ -54,11 +55,11 @@ export const makeSearchHikersController = ({ searchHikers }) => async (req, res)
   res.status(200).json(hikers.map(toHikerDto));
 };
 
-// POST /api/staff/hikers: a regular account (with an email, the password goes to the hiker by email)
-// or a temporary hiker (without one). The password is never in the answer.
+// POST /api/staff/hikers: a regular account (with an email, the password goes to the hiker by email
+// and is returned once to the creating staff member) or a temporary hiker (without one).
 export const makeCreateHikerController = ({ createHiker }) => async (req, res) => {
   const input = parseCreateHiker(req.body);
-  res.status(201).json(toHikerDto(await createHiker({ user: req.user, ...input })));
+  res.status(201).json(toCreatedHikerDto(await createHiker({ user: req.user, ...input })));
 };
 
 // GET /api/staff/slots/:slotId/seating?partySize=: the seating preview, with the time limit of the staff.

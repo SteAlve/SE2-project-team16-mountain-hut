@@ -6,6 +6,7 @@ import {
   parseCreateTableSet,
   parseListStaffSlots,
   parseSearchHikers,
+  toCreatedHikerDto,
   toHikerDto,
   toStaffSlotDto,
   toTableSetDto,
@@ -122,6 +123,16 @@ describe('Reserve for a Hiker — hiker DTOs', () => {
     expect(() => parseSearchHikers({})).toThrow(new ValidationError('q is required'));
     expect(toHikerDto({ id: 1, firstName: 'A', lastName: 'B', email: null, phone: null, temporary: true, passwordHash: 'secret' }))
       .toEqual({ id: 1, firstName: 'A', lastName: 'B', email: null, phone: null, temporary: true });
+  });
+
+  it('includes the generated password only in the creation response shape', () => {
+    expect(toCreatedHikerDto({
+      id: 1, firstName: 'A', lastName: 'B', email: 'a@example.com', phone: null,
+      temporary: false, password: 'generated-password', passwordHash: 'secret',
+    })).toEqual({
+      id: 1, firstName: 'A', lastName: 'B', email: 'a@example.com', phone: null,
+      temporary: false, password: 'generated-password',
+    });
   });
 });
 
