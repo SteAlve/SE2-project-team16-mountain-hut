@@ -203,7 +203,7 @@ export const bookingConfirmationEmail = ({ email, ...booking }) => {
 };
 
 // 'YYYY-MM-DDTHH:MM' -> '10 November 2026, 18:05'
-const moment = (localDateTime) => {
+export const moment = (localDateTime) => {
   const [date, clockTime] = localDateTime.split('T');
   return `${day(date)}, ${clockTime}`;
 };

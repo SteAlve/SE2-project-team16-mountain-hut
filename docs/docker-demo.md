@@ -36,7 +36,7 @@ The demo creates one warden, two employees and one hiker. Other hikers can sign 
 
 ## Emails
 
-The app sends an email when a hiker books a table, changes or cancels a booking, gets an account made by the staff, or asks for a new password.
+The app sends an email when a hiker books a table, changes or cancels a booking, gets an account made by the staff, registers a hike, or asks for a new password.
 
 **By default the emails stay inside the demo.** Nobody receives them. A mailbox called Mailpit, which is part of the image, collects them, and you read them on http://localhost:8025. It shows each email with its recipient, subject and text, whatever the address is, so you can try the app without writing to real people.
 
