@@ -6,7 +6,7 @@ Mockup of the emails QUOTA sends to a hiker:
 - **Password reset.** The MH-07 clarifications say that "the hiker can recover their password via email".
 - **Booking changed** (MH-06). Sent when a change to a booking is saved.
 - **Booking cancelled** (MH-08). Sent when the hiker confirms the cancellation.
-- **Hiker account** (MH-07). When an employee adds a hiker with a full profile, the employee never sees the generated password: the server sends it to the hiker with this email.
+- **Hiker account** (MH-07). When an employee adds a hiker with a full profile, the server sends the generated password to the hiker with this email and shows it once to the employee in the account-created confirmation.
 
 All use the same layout.
 
@@ -28,7 +28,7 @@ Each email is shown inside a generic email app: subject, sender, recipient. The 
 | MH-07 | The hiker can recover the password by email. The email has a link to *Choose a new password* ([login mockup](../login/README.md), screen 12). |
 | Product owner, [#44](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/44) | The reset link works for 24 hours. |
 | Login, screen 11 | A reset email is sent only if the email has an account. The page answers the same in both cases, so nobody can find out which emails are registered. |
-| MH-07, team decision | When an employee adds a hiker with a full profile, the server generates the password and sends it with the hiker account email. The employee never sees it and the server keeps only its hash, so this email is the only place where the password is written. |
+| MH-07, team decision | When an employee adds a hiker with a full profile, the server generates the password, sends it with the hiker account email and returns it once to the creating staff member for the account-created confirmation. The server keeps only its hash after creation. |
 | Server | Sender: `QUOTA <no-reply@quota.example>` (`MAIL_FROM` in `server/src/config.js`). Every email has an HTML version, with tables and inline styles because that is what email apps support, and a plain text version for the apps that do not show HTML. |
 
 ## How they look

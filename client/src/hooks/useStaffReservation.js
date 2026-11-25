@@ -15,6 +15,8 @@
  *                          chosen any more)
  *   hiker                  the chosen hiker { id, firstName, lastName, email, phone, temporary }, or null
  *   chooseHiker(hiker)     chooses a hiker of the search; changeHiker() goes back to the search
+ *   newAccountPassword    the generated password returned for a newly created full-profile hiker
+ *   clearNewAccountPassword() clears that one-time password after it has been shown
  *   addHiker(form)         "New hiker": { mode, firstName, lastName, email, phone } -> { ok } (the new
  *                          hiker is chosen) or { ok: false, errors?, alert?, owner? }; `owner` is the
  *                          hiker who already has that email (409), to choose instead
@@ -53,8 +55,9 @@ export function useStaffReservation() {
   const [slotsByDate, setSlotsByDate] = useState(null); // null while loading
   const [loadError, setLoadError] = useState(false);
   const [hiker, setHiker] = useState(null);
-  // The id of the hiker account added on this page, whose password was emailed just now.
+  // The id and one-time generated password of the hiker account added on this page.
   const [newAccountId, setNewAccountId] = useState(null);
+  const [newAccountPassword, setNewAccountPassword] = useState(null);
   const [date, setDate] = useState(() => toDay(start));
   const [partySize, setPartySize] = useState(1);
   const [slotId, setSlotId] = useState(null);
@@ -112,10 +115,14 @@ export function useStaffReservation() {
 
   const addHiker = async (form) => {
     setIsPending(true);
+    setNewAccountPassword(null);
     try {
       const created = await createHiker(newHikerBody(form));
       chooseHiker(created);
-      if (created.email) setNewAccountId(created.id);
+      if (created.email) {
+        setNewAccountId(created.id);
+        setNewAccountPassword(created.password ?? null);
+      }
       return { ok: true };
     } catch (error) {
       if (error.status === 401) {
@@ -241,7 +248,12 @@ export function useStaffReservation() {
     chooseSlot: choose(setSlotId),
     hiker,
     chooseHiker,
-    changeHiker: () => chooseHiker(null),
+    changeHiker: () => {
+      chooseHiker(null);
+      setNewAccountPassword(null);
+    },
+    newAccountPassword,
+    clearNewAccountPassword: () => setNewAccountPassword(null),
     addHiker,
     save,
     isPending,
