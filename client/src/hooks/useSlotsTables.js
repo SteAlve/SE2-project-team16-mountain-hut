@@ -192,6 +192,8 @@ export function useSlotsTables() {
       }
     });
 
+  const markNeedsLogin = useCallback(() => setNeedsLogin(true), []);
+
   return {
     days,
     showMoreDays,
@@ -207,5 +209,7 @@ export function useSlotsTables() {
     alert,
     notice,
     needsLogin,
+    reload: reloadSlots,
+    markNeedsLogin,
   };
 }

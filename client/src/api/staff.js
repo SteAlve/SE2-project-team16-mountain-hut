@@ -1,5 +1,5 @@
 /**
- * API: the table sets and the slots of the staff (MH-02) and the reservations for a hiker (MH-07),
+ * API: the table sets and the slots of the staff (MH-02, MH-09) and the reservations for a hiker (MH-07),
  * one function per endpoint (see docs/openapi.json, tag "Staff"). Needs a logged-in employee or
  * warden: the session cookie is sent by the browser.
  * Every function rejects with ApiError 401 (not logged in) or 403 (not staff), besides the ones listed.
@@ -17,6 +17,19 @@ export const createTableSet = ({ name, tables }) =>
 // order of day and time. Resolves to [{ slotId, date, startsAt, endsAt, tableSet, totalSeats }].
 export const getStaffSlots = (from, to) =>
   request(`/staff/slots?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+
+// Seven-day periods starting at `from`, in seven-day continuation steps. Resolves to
+// [{ from, to, slotCount, bookingCount, canReplace, days }].
+export const getStaffPeriodSummaries = (from, to) =>
+  request(`/staff/slots/weeks?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+
+// Copies the source period into aligned continuation intervals. Rejects with ApiError 400 for an
+// invalid interval or empty source, and 409 code WEEK_HAS_BOOKINGS when a destination changed.
+export const copyWeeklySchedule = ({ sourceStart, destinationIntervals }) =>
+  request('/staff/slots/copy-week', {
+    method: 'POST',
+    body: JSON.stringify({ sourceStart, destinationIntervals }),
+  });
 
 // `tableSetId` null: a slot with no tables yet. Resolves to the new slot. Rejects with ApiError 400,
 // 404 (no such table set) or 409: a slot starting at that time already exists on that day, or (code

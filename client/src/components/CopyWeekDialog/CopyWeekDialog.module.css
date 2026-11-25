@@ -1,0 +1,160 @@
+.source {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--mist);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--ink);
+}
+
+.sectionTitle > span,
+.slotCount {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--stone);
+}
+
+.sourceDays {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayCounts {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dayCounts span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--snow);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dayCounts small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--stone);
+}
+
+.periods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.period {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.period:hover:not(.locked) {
+  border-color: var(--pine);
+}
+
+.period.checked {
+  border: 2px solid var(--pine);
+  padding: 11px 13px;
+}
+
+.period.locked {
+  background: var(--mist);
+  color: var(--stone);
+  cursor: not-allowed;
+}
+
+.period input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--pine);
+}
+
+.periodText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.periodText small {
+  color: var(--stone);
+}
+
+.periodText .replace {
+  color: var(--error);
+}
+
+.slotCount {
+  flex-shrink: 0;
+}
+
+.more {
+  align-self: flex-start;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.loading {
+  margin: 0;
+  color: var(--stone);
+}
+
+.confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--stone);
+  line-height: 1.5;
+}
+
+.confirmation p {
+  margin: 0;
+}
+
+.confirmation span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.confirmation strong {
+  color: var(--ink);
+}
+
+@media (max-width: 991.98px) {
+  .dayCounts span {
+    font-size: 17px;
+  }
+
+  .period {
+    align-items: flex-start;
+  }
+
+  .slotCount {
+    margin-left: auto;
+  }
+}
