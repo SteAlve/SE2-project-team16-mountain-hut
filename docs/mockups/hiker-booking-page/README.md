@@ -10,7 +10,7 @@ One new page, **My bookings**, lists the bookings of the hiker who is logged in.
 
 **Figma (source of truth):** page *MH-06 My Booking Page* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx). Every element is an instance from the *Components* page. Most of them are already used by the [booking](../booking/README.md), [dietary](../dietary/README.md) and [login](../login/README.md) mockups: navbar, step heading, day, people stepper, time slot, party seats, alert, button, need chip, the guest needs editor (in its popup) and the phone bars. This story adds:
 
-- *Navbar / Hiker with My bookings*: the hiker navbar with a third link, **My bookings**, after *The hut* and *Book a table*.
+- The hiker navbar gets a third link, **My bookings**, after *The hut* and *Book a table*: *Navbar / Logged in* with `Role=Hiker, Page=My bookings`.
 - *Booking card*: one booking of the list. Variants: `State` (Editable, Locked) and `Size` (Desktop, Phone). *Locked* is the booking that can no longer be changed: *Edit* is faded and a line says when changes closed.
 
 Same QUOTA brand, colours and fonts.
