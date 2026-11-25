@@ -66,7 +66,7 @@ export const findAvailableTablesBySlotId = (slotId, { exceptBookingId = null } =
   [slotId, exceptBookingId],
 );
 
-// The slot with that id, or null. Dates and times are read as text: the driver would turn a DATE
+// The slot with that id (with its menu, null when it has none), or null. Dates and times are read as text: the driver would turn a DATE
 // into a JavaScript Date at local midnight, which moves the day on a server in another time zone.
 // The id is compared as a BIGINT: the API ids are int64 and the column is an INTEGER, so an id
 // above 2147483647 must be a slot that does not exist, not an "out of range" error (500).
@@ -77,7 +77,8 @@ export const findById = (slotId) => get(
       service_date::TEXT AS "serviceDate",
       starts_at::TEXT AS "startsAt",
       ends_at::TEXT AS "endsAt",
-      table_set_id AS "tableSetId"
+      table_set_id AS "tableSetId",
+      menu
     FROM slot
     WHERE id = $1::BIGINT
   `,
@@ -85,7 +86,8 @@ export const findById = (slotId) => get(
 );
 
 // Every slot from a day to another, both included, in order of day and time (the staff view: slots
-// without tables too). Only the slot: its table set is read with the table set dao.
+// without tables too), each with its menu (null when it has none). Its table set is read with the
+// table set dao.
 export const findBetween = (from, to) => all(
   `
     SELECT
@@ -93,7 +95,8 @@ export const findBetween = (from, to) => all(
       service_date AS "serviceDate",
       starts_at AS "startsAt",
       ends_at AS "endsAt",
-      table_set_id AS "tableSetId"
+      table_set_id AS "tableSetId",
+      menu
     FROM slot
     WHERE service_date BETWEEN $1 AND $2
     ORDER BY service_date, starts_at
@@ -146,4 +149,77 @@ export const assignTableSet = async (slotId, tableSetId) => {
     [slotId, tableSetId],
   );
   return result.rowCount === 1;
+};
+
+// ---------- MH-10: the menu of a slot ----------
+
+// The menu of the slot with that id, with the day and the times of the slot, or null when there is no
+// such slot. menu is null when the slot has no menu yet. The id is compared as a BIGINT (see findById).
+export const findMenuById = (slotId) => get(
+  `
+    SELECT
+      id AS "slotId",
+      service_date::TEXT AS "serviceDate",
+      starts_at::TEXT AS "startsAt",
+      ends_at::TEXT AS "endsAt",
+      menu
+    FROM slot
+    WHERE id = $1::BIGINT
+  `,
+  [slotId],
+);
+
+// Saves the menu of a slot, replacing the one it had: the last save wins. Returns the menu of the slot
+// as findMenuById does, or null when there is no such slot.
+export const saveMenu = (slotId, menu, savedAt) => get(
+  `
+    UPDATE slot SET menu = $2, menu_saved_at = $3
+    WHERE id = $1::BIGINT
+    RETURNING
+      id AS "slotId",
+      service_date::TEXT AS "serviceDate",
+      starts_at::TEXT AS "startsAt",
+      ends_at::TEXT AS "endsAt",
+      menu
+  `,
+  [slotId, menu, savedAt],
+);
+
+// The text of a search, safe inside LIKE: % and _ match themselves.
+const likePattern = (text) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+
+// The menus already written, to start a new one from (MH-10), newest first. The same text is listed
+// once, with the last slot it was saved for. exceptSlotId leaves out the slot being edited.
+// search (optional) finds a dish in the text or a day, written as 2026-12-12, "Sat 12 Dec" or
+// "Saturday 12 December". Returns { menus, hasMore }: hasMore says that older menus are left.
+export const findPreviousMenus = async ({ exceptSlotId = null, search = null, limit, offset = 0 }) => {
+  const rows = await all(
+    `
+      SELECT "slotId", "serviceDate", "startsAt", "endsAt", menu
+      FROM (
+        SELECT DISTINCT ON (menu)
+          id AS "slotId",
+          service_date::TEXT AS "serviceDate",
+          starts_at::TEXT AS "startsAt",
+          ends_at::TEXT AS "endsAt",
+          menu,
+          menu_saved_at
+        FROM slot
+        WHERE menu IS NOT NULL
+          AND ($1::BIGINT IS NULL OR id <> $1::BIGINT)
+          AND (
+            $2::TEXT IS NULL
+            OR menu ILIKE $2
+            OR service_date::TEXT LIKE $2
+            OR to_char(service_date, 'Dy FMDD Mon YYYY') ILIKE $2
+            OR to_char(service_date, 'FMDay FMDD FMMonth YYYY') ILIKE $2
+          )
+        ORDER BY menu, menu_saved_at DESC, id DESC
+      ) AS last_use
+      ORDER BY menu_saved_at DESC, "slotId" DESC
+      LIMIT $3 OFFSET $4
+    `,
+    [exceptSlotId, search === null ? null : likePattern(search), limit + 1, offset],
+  );
+  return { menus: rows.slice(0, limit), hasMore: rows.length > limit };
 };

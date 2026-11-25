@@ -76,7 +76,7 @@ The server uses `DATABASE_URL`; tests use the separate `TEST_DATABASE_URL`, beca
 
 ### Database and scripts
 
-The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings), `002_booking_requirements.sql` (dietary needs of a booking) and `003_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset). The scripts in `server/scripts/` are run with npm:
+The schema is defined by the numbered migrations in `server/migrations/`: `000_users_and_sessions.sql` (users and sessions), `001_booking_schema.sql` (slots, tables, bookings), `002_booking_requirements.sql` (dietary needs of a booking) `003_hiker_accounts_and_password_reset.sql` (temporary hikers, the obligation to change a generated password, the links of the password reset), `004_slot_no_overlap.sql` (slots of a day cannot overlap) and `005_slot_menu.sql` (the menu of each slot). The scripts in `server/scripts/` are run with npm:
 
 | Command | What it does |
 |---|---|
@@ -120,6 +120,17 @@ The slots of a day cannot overlap in time: the database refuses an overlap (migr
 
 Not decided yet (question for the product owners): whether a slot can be created, or given tables, in the past.
 
+### The menus of the slots (MH-10)
+
+Each slot can have a **menu**, free text with a small subset of Markdown (`**bold**`, `*italic*`, `- ` for an item and two spaces before `- ` for a sub-item), as in the [menus mockup](mockups/menus/README.md) and the product owner's answer in SE2-Polito/AY26-27-Mountain-Hut#39. It is stored in the `slot` row (`menu`, `menu_saved_at`, migration `005_slot_menu.sql`).
+
+- `PUT /api/staff/slots/:slotId/menu` (staff): writes or changes the menu; the last save wins, and a menu is changed, never removed. `domain/menu.js` cleans the text (line ends, spaces at the end of a line, empty lines at the start and at the end) and checks it: `400` with `MENU_EMPTY` (no visible text), `MENU_TOO_LONG` (more than 2000 characters, an emoji counting as one, like `char_length` in the database) or `MENU_FORMAT` (a heading, a link, an image, HTML, or a sub-item not under an item). The database keeps the 2000 limit too.
+- `GET /api/staff/menus?exceptSlotId=&search=&limit=&offset=` (staff): the menus already written, to start a new one from ("Start from a previous menu"). Newest first; the same text once, with the last slot it was saved for. `search` finds a dish or a day. Starting from one copies its text, so changing it never changes the slot it came from.
+- `GET /api/slots/:slotId/menu` (public, like the availability): the menu of one slot, `null` when it has none. It is what hikers read on *Book a table*, *Check availability* and *My bookings* (MH-11).
+- `GET /api/staff/slots` gives the menu of each slot too.
+
+The menu is always shown escaped by the client: the format rules keep the text the editor can open again; they are not what keeps the page safe.
+
 ### Reservations for a hiker and passwords (MH-07)
 
 An employee or the warden can enter a reservation for a hiker who phones or arrives at the hut. The contract is in [`openapi.json`](openapi.json); these are the rules behind it.
@@ -153,7 +164,7 @@ Nothing is held between the preview and the booking: if someone books in between
 
 ### Errors
 
-The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `409` of a slot that overlaps another slot of the day (`SLOT_OVERLAP`, MH-02), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`). It can also carry `details`, data the client can show, added to the answer too: the times of the slot in the way of a `SLOT_OVERLAP`.
+The domain throws errors, never HTTP status codes. One middleware in `app.js` turns them into responses with the shape `{ "error": "<ErrorName>", "message": "..." }`. An error can also carry a `code`, a stable word the client can switch on when the status is not enough; it is added to the answer: the reasons of a `409` of a booking (`NO_SEATS` and `TABLES_CHANGED`, and `BOOKING_CHANGED` when the change of a booking meets another change, MH-06), the `409` of a slot that overlaps another slot of the day (`SLOT_OVERLAP`, MH-02), the `400` of a menu that breaks a rule (`MENU_EMPTY`, `MENU_TOO_LONG`, `MENU_FORMAT`, MH-10), the `403` of a hiker who has to change the password first (`PASSWORD_CHANGE_REQUIRED`) and the `422` of a password reset link that does not work (`RESET_LINK_NOT_VALID`). It can also carry `details`, data the client can show, added to the answer too: the times of the slot in the way of a `SLOT_OVERLAP`.
 
 | Error | Status | Meaning |
 |---|---|---|

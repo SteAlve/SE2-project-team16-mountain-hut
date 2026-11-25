@@ -171,6 +171,7 @@ describe('POST /api/staff/slots', () => {
       endsAt: '13:30',
       tableSet,
       totalSeats: 6,
+      menu: null,
     });
   });
 
@@ -180,7 +181,7 @@ describe('POST /api/staff/slots', () => {
     const res = await employee.post('/api/staff/slots').send(slotBody());
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ slotId: expect.any(Number), date: DAY, startsAt: '12:00', endsAt: '13:00', tableSet: null, totalSeats: 0 });
+    expect(res.body).toEqual({ slotId: expect.any(Number), date: DAY, startsAt: '12:00', endsAt: '13:00', tableSet: null, totalSeats: 0, menu: null });
   });
 
   it('creates more slots on one day, also one after the other, and lists them in order of time', async () => {
