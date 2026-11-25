@@ -30,7 +30,7 @@ export function parseSaveSlotMenu(params, body) {
   const slotId = requirePositiveIntegerText(params?.slotId, 'slotId');
   requireObject(body);
   rejectUnknownFields(body, ['menu']);
-  if (typeof body.menu !== 'string') throw new ValidationError('menu must be a text', { code: 'MENU_EMPTY' });
+  if (typeof body.menu !== 'string') throw new ValidationError('menu must be a text');
   return { slotId, menu: body.menu };
 }
 

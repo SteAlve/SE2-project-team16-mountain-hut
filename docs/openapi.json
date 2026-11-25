@@ -2538,7 +2538,7 @@
           "Staff"
         ],
         "summary": "The menus already written",
-        "description": "The menus already written for the slots, so that a new one can start from one of them (\"Start from a previous menu\"). Newest first, by the time each menu was saved. The same text is listed once, with the last slot it was saved for.",
+        "description": "The menus already written for the slots, so that a new one can start from one of them (\"Start from a previous menu\"). Newest first, by the time each menu was saved. The same text is listed once, with the last slot it was saved for (with `search`, the last one that matches it). `exceptSlotId` leaves out the slot being edited; the same text saved on another slot is still listed.",
         "operationId": "listPreviousMenus",
         "security": [
           {
@@ -4353,8 +4353,7 @@
         "properties": {
           "menu": {
             "type": "string",
-            "maxLength": 2000,
-            "description": "The menu. Windows line ends become `\\n`, the spaces at the end of each line and the empty lines at the start and at the end are removed before the rules are checked. Rules: at least one visible character (spaces, empty lines, empty items and formatting marks alone count as empty, `MENU_EMPTY`); at most 2000 characters, an emoji counting as one (`MENU_TOO_LONG`); only bold, italic, items and sub-items, so no headings, links, images or HTML, and a sub-item only right under an item or another sub-item (`MENU_FORMAT`).",
+            "description": "The menu. Windows line ends become `\\n`, the spaces at the end of each line and the empty lines at the start and at the end are removed before the rules are checked. Rules: at least one visible character (spaces, empty lines, empty items and formatting marks alone count as empty, `MENU_EMPTY`); at most 2000 characters after this cleanup, counted in Unicode code points like `[...text].length` (most emojis count as one, a flag as two, an emoji made of several as more; `MENU_TOO_LONG`); no headings, links, images or HTML tags such as `<b>`, and a sub-item only right under an item or another sub-item (`MENU_FORMAT`). Any other text, also one that looks like other Markdown such as `1. Soup` or `Soup <with bread>`, is kept and shown as plain text. A `menu` that is missing or not a text is a `400` without a code.",
             "example": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
           }
         }
@@ -4371,7 +4370,7 @@
             "items": {
               "$ref": "#/components/schemas/SlotMenu"
             },
-            "description": "The menus, newest first. The same text is listed once, with the last slot it was saved for. `menu` is never null here."
+            "description": "The menus, newest first. The same text is listed once, with the last slot it was saved for (with `search`, the last one that matches it). `menu` is never null here."
           },
           "hasMore": {
             "type": "boolean",

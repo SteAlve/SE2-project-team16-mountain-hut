@@ -66,8 +66,9 @@ export const findAvailableTablesBySlotId = (slotId, { exceptBookingId = null } =
   [slotId, exceptBookingId],
 );
 
-// The slot with that id (with its menu, null when it has none), or null. Dates and times are read as text: the driver would turn a DATE
-// into a JavaScript Date at local midnight, which moves the day on a server in another time zone.
+// The slot with that id (with its menu, null when it has none), or null. Dates and times are read
+// as text: the driver would turn a DATE into a JavaScript Date at local midnight, which moves the day
+// on a server in another time zone.
 // The id is compared as a BIGINT: the API ids are int64 and the column is an INTEGER, so an id
 // above 2147483647 must be a slot that does not exist, not an "out of range" error (500).
 export const findById = (slotId) => get(
@@ -189,7 +190,8 @@ export const saveMenu = (slotId, menu, savedAt) => get(
 const likePattern = (text) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 // The menus already written, to start a new one from (MH-10), newest first. The same text is listed
-// once, with the last slot it was saved for. exceptSlotId leaves out the slot being edited.
+// once, with the last slot it was saved for (with a search, the last one that matches it). exceptSlotId
+// leaves out the slot being edited; the same text saved on another slot is still listed, with that slot.
 // search (optional) finds a dish in the text or a day, written as 2026-12-12, "Sat 12 Dec" or
 // "Saturday 12 December". Returns { menus, hasMore }: hasMore says that older menus are left.
 export const findPreviousMenus = async ({ exceptSlotId = null, search = null, limit, offset = 0 }) => {

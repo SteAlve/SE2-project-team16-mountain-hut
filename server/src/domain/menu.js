@@ -3,13 +3,18 @@
  * SE2-Polito/AY26-27-Mountain-Hut#39). Its formatting is a small subset of Markdown, the one the
  * editor of the mockup writes (docs/mockups/menus/README.md, "Fields and rules"):
  *   **bold**, *italic*, "- " for an item and two spaces before "- " for a sub-item.
- * Nothing else is accepted: no headings, links, images or HTML. The menu is always shown escaped, so
- * this is about keeping the text the editor can open again, not about safety.
+ * Headings, links, images and HTML tags are refused, because they look like formatting the editor
+ * does not have. Any other text is kept as it is and shown as plain text, also when it looks like
+ * other Markdown ("1. Soup", "> note", "`x`"): a numbered line is normal text in a menu. The menu is
+ * always shown escaped, so this is about keeping the text the editor can open again, not about safety.
+ *
+ * The length is counted in Unicode code points, like char_length in PostgreSQL: most emojis count as
+ * one, but a flag counts as two and an emoji made of several (a family) as more.
  *
  * Errors carry a code, so the client shows the message of the mockup under the field:
  *   MENU_EMPTY      only spaces, empty lines, empty items or formatting marks
  *   MENU_TOO_LONG   more than MENU_MAX_LENGTH characters
- *   MENU_FORMAT     something the editor does not write (a heading, a link, HTML, a deeper level)
+ *   MENU_FORMAT     a heading, a link, an image, an HTML tag, or a sub-item not under an item
  */
 import { ValidationError } from './errors.js';
 
@@ -19,9 +24,16 @@ const ITEM = /^- /;
 const SUB_ITEM = /^ {2}- /;
 const HEADING = /^#{1,6}\s/;
 const LINK_OR_IMAGE = /!?\[[^\]]*\]\([^)]*\)/;
-const HTML_TAG = /<\/?[a-z][^>]*>/i;
+// Only the names of real HTML elements, so that a text such as "Soup <with bread>" is not taken for HTML.
+const HTML_ELEMENTS = [
+  'a', 'abbr', 'b', 'blockquote', 'body', 'br', 'button', 'code', 'del', 'div', 'em', 'embed', 'font',
+  'form', 'h[1-6]', 'head', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'li', 'link', 'mark', 'meta',
+  'object', 'ol', 'p', 'pre', 's', 'script', 'small', 'span', 'strong', 'style', 'sub', 'sup', 'svg',
+  'table', 'tbody', 'td', 'th', 'thead', 'tr', 'u', 'ul', 'video',
+];
+const HTML_TAG = new RegExp(`<\\/?(?:${HTML_ELEMENTS.join('|')})(?:\\s[^>]*)?\\/?>`, 'i');
 
-// Characters as the user counts them (and as PostgreSQL's char_length does): an emoji is one.
+// Code points, as PostgreSQL's char_length counts them (see the comment at the top).
 const lengthOf = (text) => [...text].length;
 
 // What is left once the formatting marks and the spaces are taken away.
