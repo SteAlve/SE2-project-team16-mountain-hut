@@ -46,6 +46,13 @@ const validateCopyIntervals = ({ sourceStart, destinationIntervals }) => {
     if (days < 1 || days % 7 !== 0) {
       throw fail('INVALID_DESTINATION_INTERVAL', 'Each destination interval must contain whole seven-day periods.');
     }
+    const daysFromSource = Math.round((from.getTime() - sourceDate.getTime()) / DAY_IN_MILLISECONDS);
+    if (daysFromSource < 7 || daysFromSource % 7 !== 0) {
+      throw fail(
+        'INVALID_DESTINATION_INTERVAL',
+        'Each destination interval must start on a continuation week after the source period.',
+      );
+    }
     return { from, to };
   });
 
@@ -277,8 +284,9 @@ export const assignTableSet = async (slotId, tableSetId) => {
 
 /**
  * Copies one source seven-day period into one or more destination intervals. Each destination
- * interval contains one or more whole seven-day periods, so a two-week interval repeats the source
- * schedule twice. Separate non-adjacent intervals can be supplied in the same atomic operation.
+ * interval contains one or more whole seven-day continuation periods, so a two-week interval repeats
+ * the source schedule twice. Separate non-adjacent continuation intervals can be supplied in the
+ * same atomic operation.
  *
  * The destination is replaced only when none of its slots has a booking. Bookings are deliberately
  * not copied: the new slots are independent slots that share only the source time and table-set
@@ -286,7 +294,8 @@ export const assignTableSet = async (slotId, tableSetId) => {
  *
  * Returns the number of inserted and replaced slots. Errors have stable codes for the use case:
  *   INVALID_WEEK_START           the source date is not an ISO date
- *   INVALID_DESTINATION_INTERVAL a destination is malformed or not a whole number of periods
+ *   INVALID_DESTINATION_INTERVAL a destination is malformed, not a whole number of periods, or is
+ *                                not aligned after the source period
  *   OVERLAPPING_WEEKS             source/destination periods overlap
  *   EMPTY_SOURCE_WEEK             the source period contains no slots
  *   WEEK_HAS_BOOKINGS             a destination period contains at least one booking

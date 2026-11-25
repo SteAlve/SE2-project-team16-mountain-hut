@@ -96,8 +96,9 @@ export function parseAssignTableSet(params, body) {
   return { slotId, tableSetId: requirePositiveInteger(body.tableSetId, 'tableSetId') };
 }
 
-// POST /api/staff/slots/copy-week. Each destination interval must contain one or more whole
-// seven-day periods; the DAO repeats the source schedule in every seven-day period.
+// POST /api/staff/slots/copy-week. The source period starts at the selected day. Each destination
+// interval must contain one or more whole seven-day continuation periods; the DAO repeats the
+// source schedule in every seven-day period.
 export function parseCopyWeekSchedule(body) {
   requireObject(body);
   rejectUnknownFields(body, ['sourceStart', 'destinationIntervals']);

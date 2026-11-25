@@ -2105,7 +2105,7 @@
           "Staff"
         ],
         "summary": "List schedule period summaries",
-        "description": "Returns complete seven-day periods between `from` and `to`, including the number of slots, the number of bookings, whether the period can be replaced, and the slot count for each day. The first period starts at `from`; the inclusive range must contain complete seven-day periods. Only an employee or the warden can read these summaries.",
+        "description": "Returns complete seven-day periods between `from` and `to`, including the number of slots, the number of bookings, whether the period can be replaced, and the slot count for each day. The first period starts on the selected day in the carousel; subsequent periods continue every seven days. The inclusive range must contain complete seven-day periods. Only an employee or the warden can read these summaries.",
         "operationId": "listStaffPeriodSummaries",
         "security": [
           {
@@ -2233,7 +2233,7 @@
           "Staff"
         ],
         "summary": "Copy a weekly schedule",
-        "description": "Copies every slot from one seven-day source period into one or more destination intervals. Each destination interval must contain one or more whole seven-day periods; the source schedule is repeated in every period. Copied slots keep their relative day offset, times and table-set assignments. Source bookings are never copied. Destination slots are completely replaced only when none of the selected destination intervals has a booking. All destinations are processed atomically, and only an employee or the warden can perform it.",
+        "description": "Copies every slot from one seven-day source period, beginning on the day selected in the carousel, into one or more continuation intervals. Each destination interval must start on a later continuation period (`sourceStart + 7n` days) and contain one or more whole seven-day periods; the source schedule is repeated in every period. Copied slots keep their relative day offset, times and table-set assignments. Source bookings are never copied. Destination slots are completely replaced only when none of the selected destination intervals has a booking. All destinations are processed atomically, and only an employee or the warden can perform it.",
         "operationId": "copyWeeklySchedule",
         "security": [
           {
@@ -2279,7 +2279,7 @@
             }
           },
           "400": {
-            "description": "The request body is invalid, a destination interval is not a whole number of seven-day periods, intervals overlap, or the source period contains no slots.",
+            "description": "The request body is invalid, a destination interval is not aligned to a later continuation period or is not a whole number of seven-day periods, intervals overlap, or the source period contains no slots.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3769,7 +3769,7 @@
           "destinationIntervals": {
             "type": "array",
             "minItems": 1,
-            "description": "One or more non-overlapping destination intervals. Each interval must contain one or more whole seven-day periods and must not overlap the source period.",
+            "description": "One or more non-overlapping continuation intervals. Each interval must start on a later seven-day period aligned with sourceStart, contain one or more whole seven-day periods, and must not overlap the source period.",
             "items": {
               "$ref": "#/components/schemas/CopyWeekDestinationInterval"
             }
@@ -3787,7 +3787,7 @@
           "from": {
             "type": "string",
             "format": "date",
-            "description": "First day of the destination interval."
+            "description": "First day of the destination interval. It must be sourceStart plus a positive multiple of seven days."
           },
           "to": {
             "type": "string",
