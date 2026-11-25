@@ -26,7 +26,8 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 | Team decision (not yet confirmed by the product owner) | **Active** means: from the planned departure time until the hiker declares the hike finished. A hike that has not started is not listed. A hike past its expected return time stays listed until it is finished. |
 | Team decision (not yet confirmed by the product owner) | The hikes are listed by expected return time, the soonest first. |
 | Team decision (not yet confirmed by the product owner) | Each hike shows the hiker's name, the expected return (time and day), the destination, the route, the departure and the passage points in order. A hike without passage points shows none. |
-| Team decision (not yet confirmed by the product owner) | The page is the same for the employee and for the warden, who can do everything an employee can (same navbar, *Warden*). It is reached from a new navbar link, *Active hikes*, after *Reservations*. |
+| Team decision (not yet confirmed by the product owner) | The warden is an extension of the employee (as on [Slots & tables](../slots/README.md)): the same page, with the same navbar link. The first part only for the warden is MH-25. The page is reached from a new navbar link, *Active hikes*, after *Reservations*. |
+| Team decision (not yet confirmed by the product owner) | The list **refreshes by itself every 5 minutes** and has a **Refresh** button that updates it at once. A line says when it was last updated. A failed refresh keeps the list as it was. |
 | Team decision | The page is read only. Marking a hike as completed by the staff (MH-30), the alerts for late hikers (MH-24, MH-26) and the emergency details (MH-25) are other stories. |
 
 ## The flow
@@ -38,7 +39,7 @@ Everything shown comes from the story or from the product owner's answers. Nothi
 5. A hike with many passage points shows all of them, in a line that wraps. The card grows and nothing is cut (screen 3).
 6. If the list cannot be loaded, a red note says so (screen 4).
 
-There is nothing to press on the page: the cards have no buttons.
+The only button is **Refresh**, next to the time of the last update (*Updated 14:20*). The list also refreshes by itself every 5 minutes, and the time of the update changes with it. If a refresh fails, the list stays as it was and the red note of screen 4 is shown above it. The cards have no buttons.
 
 ## Screens
 
@@ -73,6 +74,7 @@ The list with many passage points and the error are the same as on a computer.
 | Which hikes | The hikes of all hikers that have started (planned departure time passed) and are not finished. |
 | Order | By expected return time, the soonest first. |
 | Count | "*N* hikers on a hike", above the list, on the right. |
+| Refresh | The list loads when the page opens, refreshes by itself every 5 minutes, and **Refresh** updates it at once, whenever the employee wants. Beside the button: "Updated *HH:MM*", the time of the last update. |
 | Expected return | Time (*15:30*) and day (*Sat 17 Jul*). The day is shown also when it is not today. |
 | Hiker | The name of the hiker who registered the hike. |
 | Destination, route | The destination in bold, the route description after it (under it on a phone). |
@@ -85,7 +87,8 @@ The list with many passage points and the error are the same as on a computer.
 | When | What the employee sees |
 |---|---|
 | Page subtitle | Hikers on a hike now, by expected return time. |
-| *Good to know* | A hike is on this list from its planned departure time until the hiker declares it finished. · Hikes are listed by expected return time, the soonest first. · A hike whose expected return time has passed stays on the list until it is finished. · This helps the hut, but it does not replace rescue services. |
+| Refresh | Button **Refresh**; next to it "Updated 14:20". |
+| *Good to know* | A hike is on this list from its planned departure time until the hiker declares it finished. · Hikes are listed by expected return time, the soonest first. · A hike whose expected return time has passed stays on the list until it is finished. · The list refreshes by itself every 5 minutes. Use Refresh to update it now. |
 | No hikes | **No active hikes.** Hikers who are on a hike will appear here, with the time they expect to be back. |
 | List not loaded | Red note: "Something went wrong on our side. Try again in a minute." |
 | Not logged in (`401`) | The login page (login mockup, screen 4). |
@@ -98,18 +101,26 @@ These belong to other stories or were not asked for:
 - The emergency details of a party and the party members (MH-23, MH-25).
 - Marking a hike as completed by the staff and managing registered hikes (MH-30), registering a hike for a hiker (MH-28), updating a hike (MH-27).
 - The route on a map (MH-29).
-- Search, filters and any other way to sort the list.
+- Search, filters and any other way to sort the list (not for now).
 - The hiker's phone number and emergency contact.
 
 ## Open questions
 
 These are for the product owner. Until they are answered, the mockup follows the team decisions above.
 
-- **What an active hike is.** The mockup lists a hike from its planned departure time until the hiker declares it finished (#53), so a hike past its expected return time stays listed. Is this what the staff expect?
+- **What an active hike is.** The mockup lists a hike from its planned departure time until the hiker declares it finished (#53), so a hike past its expected return time stays listed (see the proposal below). Is this what the staff expect?
 - **Late hikes.** Should a hike past its expected return time be marked in the list, before the alerts of MH-24? The mockup does not mark it.
 - **What the employee sees of each hiker.** The mockup shows the name, the destination, the route, the times and the passage points. Does the employee also need the phone number or the number of people (MH-23)?
-- **Refresh.** Does the list refresh by itself (and how often), or is it loaded when the page is opened?
-- **Who sees it.** The employee and the warden see the same page. Is that right?
-- **Hikers with no hike.** The page lists hikes, not hikers: a hiker with two hikes in progress is not possible (two hikes cannot overlap, MH-20), so there is one card per hiker.
+- **Refresh interval.** The team proposes every 5 minutes plus the Refresh button. Is that enough for the staff?
+
+## How "active" can grow with the next stories
+
+Only MH-20 and MH-21 are built in this sprint, so nobody can yet declare a hike finished (MH-22). The team proposes to decide *active* in one place, so the later stories only add to it:
+
+- A hike has a planned departure, an expected return and a **finished** mark that is empty when the hike is registered (it can be a nullable `finished_at`).
+- **Active** = the planned departure time has passed **and** the hike is not finished. The list of this page asks exactly this.
+- MH-22 (the hiker) and MH-30 (the employee) only fill the *finished* mark: the hike leaves the list at the next refresh, and this page does not change.
+- MH-24 and MH-26 look at the same hikes (active, past the expected return time) and add the alerts. MH-27 changes the route or the expected return of a hike: the list shows the new values at the next refresh.
+- With only MH-20 and MH-21, a hike never leaves the list once it has started. For the demo it appears at the first refresh after its departure time, and it stays. The server already has a clock (`server/src/clock.js`) that can be moved in the tests and in the demo, so a hike can be shown starting without waiting.
 
 The names, hikes, days and times of the screens are examples. Sample data (hut, names, dates) is invented for the mockup.
