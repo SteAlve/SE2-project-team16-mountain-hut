@@ -11,7 +11,9 @@ export const makeStaffRouter = ({
   listTableSetsController,
   createSlotController,
   listStaffSlotsController,
+  listStaffPeriodSummariesController,
   assignTableSetController,
+  copyWeeklyScheduleController,
   searchHikersController,
   createHikerController,
   staffSeatingController,
@@ -26,6 +28,8 @@ export const makeStaffRouter = ({
   router.get('/staff/table-sets', listTableSetsController);
   router.post('/staff/slots', createSlotController);
   router.get('/staff/slots', listStaffSlotsController);
+  router.get('/staff/slots/weeks', listStaffPeriodSummariesController);
+  router.post('/staff/slots/copy-week', copyWeeklyScheduleController);
   router.put('/staff/slots/:slotId/table-set', assignTableSetController);
   router.get('/staff/slots/:slotId/seating', staffSeatingController);
   router.get('/staff/hikers', searchHikersController);
