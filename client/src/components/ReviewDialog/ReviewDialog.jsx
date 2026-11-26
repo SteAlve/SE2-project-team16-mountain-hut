@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { formatLongDay, formatTimeRange } from '../../lib/bookingDates.js';
+import { seats as seatsLabel } from '../../lib/slotAvailability.js';
 import { Alert } from '../Alert/Alert.jsx';
 import { Button } from '../Button/Button.jsx';
 import { DietaryNeeds } from '../DietaryNeeds/DietaryNeeds.jsx';
@@ -61,7 +62,7 @@ export function ReviewDialog({ open, date, slot, partySize, tables, needs, notic
                 <PartySeats partySize={partySize} tables={tables} heading={partyHeading} />
                 {tables?.length > 1 && (
                   <p className={styles.note}>
-                    No single table has {partySize} free seats at this time, so your party is split
+                    No single table has {seatsLabel(partySize)} free at this time, so your party is split
                     over {tables.length} tables.
                   </p>
                 )}
