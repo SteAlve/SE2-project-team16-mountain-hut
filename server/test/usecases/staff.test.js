@@ -116,7 +116,7 @@ describe('createStaffSlot', () => {
   it('creates a slot with a table set and answers with it', async () => {
     const t = setup();
     expect(await makeCreateStaffSlot(t)({ ...input, tableSetId: 3 })).toEqual({
-      slotId: 100, date: '2026-10-28', startsAt: '12:00', endsAt: '13:00', tableSet: described, totalSeats: 10,
+      slotId: 100, date: '2026-10-28', startsAt: '12:00', endsAt: '13:00', tableSet: described, totalSeats: 10, menu: null,
     });
     expect(t.calls).toEqual([['insertSlot', { serviceDate: '2026-10-28', startsAt: '12:00', endsAt: '13:00', tableSetId: 3 }]]);
   });

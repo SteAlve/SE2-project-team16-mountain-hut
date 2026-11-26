@@ -39,6 +39,7 @@ describe('slots dao', () => {
       startsAt: '12:30:00',
       endsAt: '13:30:00',
       tableSetId: slot.tableSetId,
+      menu: null,
     };
     expect(await slots.findById(slot.slotId)).toEqual(expected);
     expect(await slots.findById(999999999)).toBeNull();

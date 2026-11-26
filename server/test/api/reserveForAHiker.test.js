@@ -70,10 +70,10 @@ describe('Reserve for a Hiker — staff hiker and password flows', () => {
     expect(created.body).toMatchObject({
       firstName: 'Luca', lastName: 'Bianchi', email: 'luca.bianchi@example.com', temporary: false,
     });
-    expect(created.body).not.toHaveProperty('password');
+    expect(created.body.password).toBeTruthy();
     expect(inbox.emails).toHaveLength(1);
     const generatedPassword = inbox.emails[0].text.match(/^Password: (.+)$/m)?.[1];
-    expect(generatedPassword).toBeTruthy();
+    expect(generatedPassword).toBe(created.body.password);
 
     const hiker = request.agent(app);
     const login = await hiker.post('/api/auth/login').send({

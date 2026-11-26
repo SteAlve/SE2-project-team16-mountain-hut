@@ -30,7 +30,7 @@ describe('describeStaffSlot', () => {
 
   it('has 0 seats and no table set when the slot has none', () => {
     expect(describeStaffSlot(row, null)).toEqual({
-      slotId: 12, date: '2026-10-28', startsAt: '12:00:00', endsAt: '13:00:00', tableSet: null, totalSeats: 0,
+      slotId: 12, date: '2026-10-28', startsAt: '12:00:00', endsAt: '13:00:00', tableSet: null, totalSeats: 0, menu: null,
     });
   });
 

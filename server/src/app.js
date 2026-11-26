@@ -8,7 +8,7 @@
  * Wired so far: the authentication (sign up, login, logout, who am I, the change of the password
  * and the password reset by email), the slots, the seating preview, the booking of a table, its
  * confirmation email, the bookings of a hiker and their changes (with an email), the table sets and
- * slots of the staff, and the reservations that the staff makes for a hiker.
+ * slots of the staff, the reservations that the staff makes for a hiker, and the menus of the slots.
  * A story adds its own lines in each step.
  */
 
@@ -60,6 +60,9 @@ import { makeChangeBookingAndNotify } from './usecases/changeBookingAndNotify.js
 import { makeCancelBooking } from './usecases/cancelBooking.js';
 import { makeCancelBookingAndNotify } from './usecases/cancelBookingAndNotify.js';
 import { makeListMyBookings } from './usecases/listMyBookings.js';
+import { makeGetSlotMenu } from './usecases/getSlotMenu.js';
+import { makeListPreviousMenus } from './usecases/listPreviousMenus.js';
+import { makeSaveSlotMenu } from './usecases/saveSlotMenu.js';
 import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSlotOpen.js';
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
@@ -88,6 +91,11 @@ import {
   makeListMyBookingsController,
 } from './controllers/bookings.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
+import {
+  makeGetSlotMenuController,
+  makeListPreviousMenusController,
+  makeSaveSlotMenuController,
+} from './controllers/menus.js';
 import {
   makeAssignTableSetController,
   makeCreateHikerController,
@@ -173,6 +181,7 @@ const cancelBookingAndNotify = makeCancelBookingAndNotify({
 const slotsRouter = makeSlotsRouter({
   listSlotsController: makeListSlotsController({ listSlots }),
   seatingController: makeSeatingController({ previewSeating }),
+  getSlotMenuController: makeGetSlotMenuController({ getSlotMenu: makeGetSlotMenu({ slots }) }),
 });
 const bookingsRouter = makeBookingsRouter({
   createBookingController: makeCreateBookingController({ bookTable }),
@@ -223,6 +232,12 @@ const staffRouter = makeStaffRouter({
     previewStaffSeating: makePreviewStaffSeating({ slots, checkSlotOpen: checkSlotOpenForStaff }),
   }),
   createStaffBookingController: makeCreateStaffBookingController({ bookTableForHiker }),
+  saveSlotMenuController: makeSaveSlotMenuController({
+    saveSlotMenu: makeSaveSlotMenu({ slots, clock }),
+  }),
+  listPreviousMenusController: makeListPreviousMenusController({
+    listPreviousMenus: makeListPreviousMenus({ slots }),
+  }),
   requireAuth,
 });
 

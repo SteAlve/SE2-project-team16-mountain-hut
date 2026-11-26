@@ -1,6 +1,7 @@
 /**
  * Routes of the staff: the table sets and the slots of the hut (MH-02) and the reservations for a
- * hiker (MH-07): find or create the hiker, ask where the party would sit, book. Every one needs a
+ * hiker (MH-07): find or create the hiker, ask where the party would sit, book; the menus of the
+ * slots (MH-10): write or change one, list the previous ones. Every one needs a
  * logged-in user; the use cases answer 403 unless it is an employee or the warden.
  */
 import { Router } from 'express';
@@ -17,6 +18,8 @@ export const makeStaffRouter = ({
   createHikerController,
   staffSeatingController,
   createStaffBookingController,
+  saveSlotMenuController,
+  listPreviousMenusController,
   requireAuth,
 }) => {
   const router = Router();
@@ -32,5 +35,7 @@ export const makeStaffRouter = ({
   router.get('/staff/hikers', searchHikersController);
   router.post('/staff/hikers', createHikerController);
   router.post('/staff/bookings', createStaffBookingController);
+  router.put('/staff/slots/:slotId/menu', saveSlotMenuController);
+  router.get('/staff/menus', listPreviousMenusController);
   return router;
 };
