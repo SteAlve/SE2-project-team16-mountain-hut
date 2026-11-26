@@ -4,11 +4,18 @@ These end-to-end scenarios cover the employee's weekly schedule copy flow. They
 use Given/When/Then form so that they can be translated directly into Playwright
 tests.
 
-The operation copies the meal slots of one Monday-to-Sunday calendar week into
-another Monday-to-Sunday week. It does not copy reservations or create
-duplicate table sets. A destination week
-with reservations cannot be replaced; a destination week with slots but no
+The operation copies the meal slots of one selected seven-day period into one
+or more destination intervals. A period starts on the selected date and covers
+that date plus the following six days; it is not required to start on Monday.
+Destination intervals contain one or more aligned seven-day periods after the
+source, and may be contiguous or non-consecutive. The operation does not copy
+reservations or create duplicate table sets. A destination period with
+reservations cannot be replaced; a destination period with slots but no
 reservations is completely replaced by the copied schedule.
+
+> **Implementation note:** Review and update these scenarios after both the
+> frontend and backend implementations are available together in `dev`, before
+> translating them into executable E2E tests.
 
 ## Frontend contract for E2E testability
 
@@ -20,17 +27,19 @@ following observable behaviour to users and Playwright tests.
 1. The staff page is **Slots & tables**.
 2. The page provides one clearly named control, **Repeat weekly schedule**, to
    open the copy flow.
-3. The flow has accessible controls labelled **Source week** and
-   **Destination week**.
+3. The flow has accessible controls labelled **Source period** and
+   **Destination periods** (or equivalent labels that clearly identify the
+   selected start date and destination intervals).
 4. The flow has **Repeat schedule** and **Cancel** actions.
-5. The selected weeks are identifiable by their complete date ranges, not by an
-   ambiguous week number alone.
+5. The selected periods are identifiable by their complete date ranges, not by
+   an ambiguous week number alone.
 6. Tests locate controls by accessible roles, labels, and stable user-facing
    text, not CSS classes or element positions.
 
 ### Confirmation and saving
 
-1. Before saving, the flow identifies the selected source and destination weeks.
+1. Before saving, the flow identifies the selected source period and every
+   destination interval.
 2. If the destination already has slots, the flow makes clear that the
    destination schedule will be replaced. If reservations prevent the
    replacement, the server response is shown as a visible error.
@@ -43,39 +52,45 @@ following observable behaviour to users and Playwright tests.
 
 ### Validation and formatting
 
-1. The source and destination must be different weeks.
-2. Server-side validation remains authoritative for all copy rules.
-3. Week ranges and slot dates use one consistent readable format. API dates use
+1. The source and destination periods must be different.
+2. A destination interval must contain complete seven-day periods aligned to
+   the selected source date and must start after the source period.
+3. Server-side validation remains authoritative for all copy rules.
+4. Period ranges and slot dates use one consistent readable format. API dates use
    `YYYY-MM-DD`.
-4. Slot times use 24-hour `HH:MM` format and are displayed as
+5. Slot times use 24-hour `HH:MM` format and are displayed as
    `HH:MM–HH:MM`.
 
 ## Shared constraints
 
 1. Only an employee or the warden can repeat a weekly schedule.
-2. A week is Monday through Sunday. Every source slot is copied to the
-   corresponding weekday of the destination week.
+2. A seven-day period starts on the selected date and ends six days later.
+   Every source slot is copied to the corresponding relative day of each
+   destination period.
 3. A copied slot keeps its start time, end time, table-set assignment, table
    numbers, and capacities. A slot without a table set remains without one.
 4. Existing table sets are reused; the operation does not create duplicate
    table sets.
-5. Reservations/bookings are never copied from the source week.
-6. Copying into an empty destination creates the source week's slots.
-7. Copying into a destination that has slots but no reservations completely
-   replaces that destination schedule. Destination-only slots are removed.
-8. Copying into a destination with one or more reservations is refused. The
-   destination schedule and its reservations remain unchanged.
+5. Reservations/bookings are never copied from the source period.
+6. Copying into empty destination periods creates the source period's slots.
+7. Copying into destination periods that have slots but no reservations
+   completely replaces those periods' schedules. Destination-only slots are
+   removed.
+8. Copying into any destination period with one or more reservations is
+   refused. All destination schedules and reservations remain unchanged.
 9. The source schedule is unchanged by every copy attempt.
 
-## Scenario 1: An employee copies a schedule into an empty week
+## Scenario 1: An employee copies a schedule into an empty period
 
 **Given**
 
 1. An employee account exists with valid credentials, and the employee is
    logged in.
-2. The source week contains at least three slots, including two slots on one
-   day, one slot with a table set, and one slot without a table set.
-3. The destination is a different future week with no slots and no reservations.
+2. The source period starts on a selected non-Monday date and contains at least
+   three slots, including two slots on one day, one slot with a table set, and
+   one slot without a table set.
+3. The destination is a different future seven-day period with no slots and no
+   reservations.
 4. The source slot dates, times, table-set assignments, and seat totals are
    recorded.
 
@@ -83,15 +98,15 @@ following observable behaviour to users and Playwright tests.
 
 1. The employee opens **Slots & tables**.
 2. The employee selects **Repeat weekly schedule**.
-3. The employee chooses the source week and destination week.
+3. The employee chooses the source start date and a destination period.
 4. The employee selects **Repeat schedule** and waits for completion.
 
 **Then**
 
 1. The operation succeeds and the destination is updated without a full page
    reload.
-2. The destination contains one corresponding slot for every source slot on the
-   same weekday.
+2. The destination contains one corresponding slot for every source slot on
+   the same relative day of the seven-day period.
 3. Every copied slot has the recorded source time, table-set assignment, and
    seat total.
 4. The slot without a table set remains without one and has `0` seats.
@@ -103,14 +118,14 @@ following observable behaviour to users and Playwright tests.
 **Given**
 
 1. An employee is logged in.
-2. The source week contains a valid schedule.
-3. The destination week contains at least one **Destination-only slot**, and no
-   destination slot has a reservation.
+2. The source period contains a valid schedule.
+3. The destination period contains at least one **Destination-only slot**, and
+   no destination slot has a reservation.
 
 **When**
 
-1. The employee copies the source week into the destination week.
-2. The employee opens or reloads the destination week after the operation
+1. The employee copies the source period into the destination period.
+2. The employee opens or reloads the destination period after the operation
    completes.
 
 **Then**
@@ -120,22 +135,23 @@ following observable behaviour to users and Playwright tests.
    dates.
 3. **Destination-only slot** is no longer present.
 4. No old destination slot remains in addition to a copied slot.
-5. The source week is unchanged.
+5. The source period is unchanged.
 
 ## Scenario 3: A destination with reservations cannot be replaced
 
 **Given**
 
 1. An employee is logged in.
-2. The source week contains a valid schedule.
-3. The destination week contains at least two slots, and at least one of them
-   has an existing reservation.
+2. The source period contains a valid schedule.
+3. A selected destination period contains at least two slots, and at least one
+   of them has an existing reservation.
 4. The destination slots, reservation, table assignments, and available seats
    are recorded.
 
 **When**
 
-1. The employee selects the source and destination weeks.
+1. The employee selects the source period and the destination interval
+   containing the booked period.
 2. The employee attempts to select **Repeat schedule**.
 3. If the UI allows submission before checking the destination, the employee
    confirms and waits for the response.
@@ -151,39 +167,42 @@ following observable behaviour to users and Playwright tests.
 4. The source schedule is unchanged.
 5. No partial copy is visible, and the employee can choose another destination.
 
-## Scenario 4: The same source can be repeated into more than one week
+## Scenario 4: The same source can be repeated into contiguous and separate periods
 
 **Given**
 
 1. An employee is logged in.
-2. One source week contains a valid schedule.
-3. Two different future destination weeks are empty and have no reservations.
+2. One source period contains a valid schedule.
+3. Two contiguous future destination periods and one later non-consecutive
+   destination period are empty and have no reservations.
 
 **When**
 
-1. The employee repeats the source week into the first destination week.
-2. After the first operation completes, the employee repeats the same source
-   week into the second destination week.
+1. The employee selects the two contiguous periods as one destination interval
+   and the later period as a second, non-consecutive destination interval.
+2. The employee repeats the source period into both intervals in one operation.
 
 **Then**
 
-1. Both operations succeed independently.
-2. Both destination weeks contain the same schedule pattern and slot details,
-   mapped to their own dates.
-3. The two destination schedules are independent records; the copy operation
-   does not link their future changes to the source or to each other. Later slot
-   adjustments are covered by MH-19.
+1. The operation succeeds and updates all selected intervals.
+2. All three destination periods contain the same schedule pattern and slot
+   details, mapped to their own dates.
+3. A contiguous interval and a separate non-consecutive interval are both
+   accepted; the copy operation does not link their future changes to the source
+   or to each other. Later slot adjustments are covered by MH-19.
 
 ## Scenario 5: Invalid selections are rejected
 
 Run these variants independently:
 
-1. The source and destination are the same week.
+1. The source and destination are the same period.
+2. A destination interval is not a complete seven-day period aligned to the
+   selected source date.
 
 **Given**
 
 1. An employee is logged in.
-2. The selected weeks match the variant above.
+2. The selected periods match the variant above.
 
 **When**
 
@@ -195,7 +214,7 @@ Run these variants independently:
 
 1. The operation is rejected with a visible explanation.
 2. No copy request is sent when the invalidity is detectable before submission.
-3. If a request reaches the server, neither week is changed.
+3. If a request reaches the server, neither period is changed.
 
 ## Scenario 6: Only staff can repeat a weekly schedule
 
@@ -203,7 +222,7 @@ Run these variants independently:
 
 1. A hiker account exists and is logged in.
 2. A visitor has no authenticated session.
-3. A source schedule and an empty destination week exist.
+3. A source schedule and empty destination periods exist.
 
 **When**
 
@@ -218,7 +237,7 @@ Run these variants independently:
 
 ## Test data and environment
 
-1. Tests use isolated future weeks, employee credentials, slots, table sets,
+1. Tests use isolated future periods, employee credentials, slots, table sets,
    and reservations. They do not depend on demo data.
 2. Tests record the source and destination values before copying when verifying
    that a refused operation made no changes.
