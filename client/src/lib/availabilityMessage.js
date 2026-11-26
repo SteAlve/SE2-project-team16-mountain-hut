@@ -17,7 +17,7 @@ export function unavailableMessage(answer, partySize) {
     case 409:
       if (freeSeats === 0) return 'This time has no free seats.';
       if (Number.isFinite(freeSeats) && freeSeats > 0 && freeSeats < partySize) {
-        return `This time has ${freeSeats} free seats, not enough for ${partySize} people.`;
+        return `This time has ${freeSeats} free ${freeSeats === 1 ? 'seat' : 'seats'}, not enough for ${partySize} people.`;
       }
       return 'There are not enough free seats for your party. Availability may have changed.';
     default:
