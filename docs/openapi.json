@@ -3,7 +3,7 @@
   "info": {
     "title": "Mountain Hut API",
     "version": "1.14.0",
-    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, and the reservations that the staff makes for a hiker. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, the reservations that the staff makes for a hiker, and the menu of each slot. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -1549,6 +1549,106 @@
         }
       }
     },
+    "/api/slots/{slotId}/menu": {
+      "get": {
+        "tags": [
+          "Slots"
+        ],
+        "summary": "The menu of a slot",
+        "description": "The menu of one slot, as hikers see it on Book a table, Check availability and My bookings (MH-10, MH-11). Public: no login needed. `menu` is null when the slot has no menu yet; the slot can still be booked.",
+        "operationId": "getSlotMenu",
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "description": "Identifier of the slot.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 12
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The menu of the slot, or null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotMenu"
+                },
+                "examples": {
+                  "withMenu": {
+                    "summary": "A slot with a menu",
+                    "value": {
+                      "slotId": 12,
+                      "date": "2026-12-12",
+                      "startsAt": "19:00",
+                      "endsAt": "21:00",
+                      "menu": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+                    }
+                  },
+                  "noMenu": {
+                    "summary": "A slot with no menu yet",
+                    "value": {
+                      "slotId": 12,
+                      "date": "2026-12-12",
+                      "startsAt": "19:00",
+                      "endsAt": "21:00",
+                      "menu": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The slot id is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "slotId must be a positive integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/staff/table-sets": {
       "post": {
         "tags": [
@@ -1844,7 +1944,8 @@
                     ],
                     "totalSeats": 14
                   },
-                  "totalSeats": 14
+                  "totalSeats": 14,
+                  "menu": null
                 }
               }
             }
@@ -2026,7 +2127,8 @@
                       ],
                       "totalSeats": 14
                     },
-                    "totalSeats": 14
+                    "totalSeats": 14,
+                    "menu": null
                   },
                   {
                     "slotId": 13,
@@ -2034,7 +2136,8 @@
                     "startsAt": "13:00",
                     "endsAt": "14:00",
                     "tableSet": null,
-                    "totalSeats": 0
+                    "totalSeats": 0,
+                    "menu": null
                   }
                 ]
               }
@@ -2436,7 +2539,8 @@
                     ],
                     "totalSeats": 14
                   },
-                  "totalSeats": 14
+                  "totalSeats": 14,
+                  "menu": null
                 }
               }
             }
@@ -2519,6 +2623,308 @@
                 "example": {
                   "error": "ConflictError",
                   "message": "Slot 13 already has a different table set"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/slots/{slotId}/menu": {
+      "put": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Write or change the menu of a slot",
+        "description": "Saves the menu of a slot, replacing the one it had: when two employees save the same menu, the last one wins. A menu started from a previous one (`GET /api/staff/menus`) is a copy: saving it changes only this slot. A menu cannot be removed, only changed. The menu is stored as it is answered: after the clean-up described in `SaveMenuRequest`.",
+        "operationId": "saveSlotMenu",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "description": "Identifier of the slot.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 12
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMenuRequest"
+              },
+              "example": {
+                "menu": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The slot with its new menu.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotMenu"
+                },
+                "example": {
+                  "slotId": 12,
+                  "date": "2026-12-12",
+                  "startsAt": "19:00",
+                  "endsAt": "21:00",
+                  "menu": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid, or the menu breaks a rule (see `code`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "empty": {
+                    "summary": "No visible text",
+                    "value": {
+                      "error": "ValidationError",
+                      "code": "MENU_EMPTY",
+                      "message": "Write the menu, or start from a previous one"
+                    }
+                  },
+                  "tooLong": {
+                    "summary": "More than 2000 characters",
+                    "value": {
+                      "error": "ValidationError",
+                      "code": "MENU_TOO_LONG",
+                      "message": "The menu can be at most 2000 characters"
+                    }
+                  },
+                  "format": {
+                    "summary": "A format the editor does not write",
+                    "value": {
+                      "error": "ValidationError",
+                      "code": "MENU_FORMAT",
+                      "message": "The menu can use only bold, italic, items and sub-items"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/menus": {
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "The menus already written",
+        "description": "The menus already written for the slots, so that a new one can start from one of them (\"Start from a previous menu\"). Newest first, by the time each menu was saved. The same text is listed once, with the last slot it was saved for (with `search`, the last one that matches it). `exceptSlotId` leaves out the slot being edited; the same text saved on another slot is still listed.",
+        "operationId": "listPreviousMenus",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exceptSlotId",
+            "in": "query",
+            "required": false,
+            "description": "Leaves out the slot whose menu is being written.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 12
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Finds a dish in the text (letter case does not matter) or a day, written as `2026-12-12`, `Sat 12 Dec` or `Saturday 12 December`. Empty or only spaces: no search.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "polenta"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "How many menus, from 1 to 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "How many menus to skip: \"Show older menus\" asks for the next page.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of menus.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviousMenus"
+                },
+                "example": {
+                  "menus": [
+                    {
+                      "slotId": 12,
+                      "date": "2026-12-12",
+                      "startsAt": "19:00",
+                      "endsAt": "21:00",
+                      "menu": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+                    },
+                    {
+                      "slotId": 9,
+                      "date": "2026-12-11",
+                      "startsAt": "12:00",
+                      "endsAt": "13:00",
+                      "menu": "**Lunch**\n- Vegetable soup\n- Apple strudel"
+                    }
+                  ],
+                  "hasMore": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A query value is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "limit must be an integer from 1 to 50"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
                 }
               }
             }
@@ -2661,7 +3067,7 @@
           "Staff"
         ],
         "summary": "Create a hiker",
-        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The password is never returned: the server stores only its hash and sends it by email to the hiker, so the employee does not see it. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
+        "description": "Creates the hiker a reservation is for, when they are not in the system yet (MH-07). Two cases. With an `email` it is a regular account: the role is `HIKER` and the server generates a random password. The server stores only its hash, sends the password by email to the hiker, and returns it once to the authenticated employee or warden who created the account so it can be handed over at the reservation desk. The hiker has to change it at the first login (`mustChangePassword`), and can later use the web interface like anyone who signed up. The email leaves when the hiker is created, not when a reservation is saved. If it fails, the account still exists and the answer is the same: the hiker can choose a password with `POST /api/auth/password-reset-requests`. Without an `email` the hiker is temporary: only a name and, at most, a phone number are stored, and the hiker cannot log in. Only an employee or the warden can create a hiker.",
         "operationId": "createHiker",
         "security": [
           {
@@ -2699,22 +3105,23 @@
         },
         "responses": {
           "201": {
-            "description": "Hiker created. For a regular account the generated password has been sent by email to the hiker; it is not in the response.",
+            "description": "Hiker created. For a regular account the generated password is sent by email to the hiker and returned once to the authenticated staff member who created the account. A temporary hiker has no password.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Hiker"
+                  "$ref": "#/components/schemas/CreatedHiker"
                 },
                 "examples": {
                   "regular": {
-                    "summary": "A regular account: the password goes to the hiker by email",
+                    "summary": "A regular account: the password is handed to staff and emailed to the hiker",
                     "value": {
                       "id": 21,
                       "firstName": "Marco",
                       "lastName": "Bianchi",
                       "email": "marco.bianchi@example.com",
                       "phone": "+39 340 555 1234",
-                      "temporary": false
+                      "temporary": false,
+                      "password": "generated-password"
                     }
                   },
                   "temporary": {
@@ -3331,9 +3738,12 @@
               "SLOT_OVERLAP",
               "PASSWORD_CHANGE_REQUIRED",
               "RESET_LINK_NOT_VALID",
-              "WEEK_HAS_BOOKINGS"
+              "WEEK_HAS_BOOKINGS",
+              "MENU_EMPTY",
+              "MENU_TOO_LONG",
+              "MENU_FORMAT"
             ],
-            "description": "Present on some 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains bookings. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more."
+            "description": "Present on some 400, 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains any booking row, including a cancelled booking retained as history. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more. 400 on a menu (`PUT /api/staff/slots/{slotId}/menu`): `MENU_EMPTY` the menu has no visible text; `MENU_TOO_LONG` it has more than 2000 characters; `MENU_FORMAT` it uses a format the editor does not write."
           },
           "details": {
             "type": "object",
@@ -3823,7 +4233,8 @@
           "startsAt",
           "endsAt",
           "tableSet",
-          "totalSeats"
+          "totalSeats",
+          "menu"
         ],
         "properties": {
           "slotId": {
@@ -3860,6 +4271,13 @@
             "type": "integer",
             "minimum": 0,
             "description": "Seats of the slot: 0 when it has no table set."
+          },
+          "menu": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "The menu of the slot, or null when it has none yet. Free text with a small subset of Markdown: `**bold**`, `*italic*`, `- ` at the start of a line for an item and two spaces before `- ` for a sub-item. Show it escaped (never as HTML).",
+            "example": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
           }
         }
       },
@@ -3904,6 +4322,23 @@
             "description": "True for a hiker the staff created with a name and, at most, a phone number: it has no email and no password, so it cannot log in or book on the web, and no confirmation email is sent for it. It is only returned by `POST /api/staff/hikers`: the search does not list temporary hikers."
           }
         }
+      },
+      "CreatedHiker": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Hiker"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The generated first password, returned once to the authenticated staff member who created a regular hiker account. It is omitted for temporary hikers."
+              }
+            }
+          }
+        ]
       },
       "CreateHikerRequest": {
         "type": "object",
@@ -4270,6 +4705,83 @@
             "description": "The inclusive deadline for changing the booking, 48 hours before the booked meal starts, as the local date and time of the hut (YYYY-MM-DDTHH:MM)."
           }
         }
+      },
+      "SlotMenu": {
+        "type": "object",
+        "required": [
+          "slotId",
+          "date",
+          "startsAt",
+          "endsAt",
+          "menu"
+        ],
+        "description": "The menu of a slot, with the day and the times of the slot (MH-10).",
+        "properties": {
+          "slotId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the slot."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the slot."
+          },
+          "startsAt": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "description": "Local start time of the slot.",
+            "example": "19:00"
+          },
+          "endsAt": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "description": "Local end time of the slot.",
+            "example": "21:00"
+          },
+          "menu": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000,
+            "description": "The menu of the slot, or null when it has none yet. Free text with a small subset of Markdown: `**bold**`, `*italic*`, `- ` at the start of a line for an item and two spaces before `- ` for a sub-item. Show it escaped (never as HTML).",
+            "example": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+          }
+        }
+      },
+      "SaveMenuRequest": {
+        "type": "object",
+        "required": [
+          "menu"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "menu": {
+            "type": "string",
+            "description": "The menu. Windows line ends become `\\n`, the spaces at the end of each line and the empty lines at the start and at the end are removed before the rules are checked. Rules: at least one visible character (spaces, empty lines, empty items and formatting marks alone count as empty, `MENU_EMPTY`); at most 2000 characters after this cleanup, counted in Unicode code points like `[...text].length` (most emojis count as one, a flag as two, an emoji made of several as more; `MENU_TOO_LONG`); no headings, links, images or HTML tags such as `<b>`, and a sub-item only right under an item or another sub-item (`MENU_FORMAT`). Any other text, also one that looks like other Markdown such as `1. Soup` or `Soup <with bread>`, is kept and shown as plain text. A `menu` that is missing or not a text is a `400` without a code.",
+            "example": "**Dinner**\n- Barley soup\n- Polenta with mushrooms\n  - *with* cheese"
+          }
+        }
+      },
+      "PreviousMenus": {
+        "type": "object",
+        "required": [
+          "menus",
+          "hasMore"
+        ],
+        "properties": {
+          "menus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotMenu"
+            },
+            "description": "The menus, newest first. The same text is listed once, with the last slot it was saved for (with `search`, the last one that matches it). `menu` is never null here."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "True when older menus are left: ask for them with a larger `offset`."
+          }
+        }
       }
     }
   },
@@ -4280,7 +4792,7 @@
     },
     {
       "name": "Slots",
-      "description": "Meal slots and their availability. The availability check is public."
+      "description": "Meal slots, their availability and their menus. The availability and the menu of a slot are public."
     },
     {
       "name": "Bookings",
@@ -4288,7 +4800,7 @@
     },
     {
       "name": "Staff",
-      "description": "Employee and warden: the table sets and the slots of the hut, and the reservations made for a hiker."
+      "description": "Employee and warden: the table sets and the slots of the hut, the menus of the slots, and the reservations made for a hiker."
     }
   ]
 }

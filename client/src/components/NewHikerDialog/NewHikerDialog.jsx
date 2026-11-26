@@ -3,7 +3,7 @@
  * The switch (Figma "Hiker mode") chooses how:
  *   Quick entry   first name, last name and an optional phone: a temporary hiker, who cannot log in
  *   Full profile  the same and an email: a hiker account; the server emails the password to the
- *                 hiker, the employee never sees it
+ *                 hiker and shows it once to the employee after creation
  * The fields are checked here first (lib/hikers.js). `onSave(form)` resolves to { ok } or
  * { ok: false, errors?, alert?, owner? }: `owner` is the hiker who already has that email, and the
  * "Choose <name>" button calls `onChoose(owner)`. Mount it with a new `key` at every opening.

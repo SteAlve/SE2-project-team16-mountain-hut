@@ -42,8 +42,9 @@ export const assignTableSet = (slotId, tableSetId) =>
 // [{ id, firstName, lastName, email, phone, temporary }]. Rejects with ApiError 400 (text too short).
 export const searchHikers = (text) => request(`/staff/hikers?q=${encodeURIComponent(text)}`);
 
-// With an email: a hiker account, whose password the server emails to the hiker. Without one
-// (`email` null): a temporary hiker, who cannot log in. Resolves to the new hiker, as searchHikers.
+// With an email: a hiker account, whose password the server emails to the hiker and returns once
+// to staff. Without one (`email` null): a temporary hiker, who cannot log in. Resolves to the new
+// hiker, as searchHikers, with `password` only for a regular account.
 // Rejects with ApiError 400 (wrong fields) or 409 (an account already has this email).
 export const createHiker = ({ firstName, lastName, email, phone }) =>
   request('/staff/hikers', {
