@@ -100,7 +100,7 @@ describe('slots dao, copying schedule intervals', () => {
     await expect(slots.findById(source.slotId)).resolves.not.toBeNull();
   });
 
-  it('rejects an incomplete or overlapping destination interval before changing data', async () => {
+  it('rejects an incomplete or misaligned destination interval before changing data', async () => {
     await expect(slots.copyScheduleIntervals({
       sourceStart: '2090-05-01',
       destinationIntervals: [{ from: '2090-05-15', to: '2090-05-20' }],
@@ -108,7 +108,7 @@ describe('slots dao, copying schedule intervals', () => {
 
     await expect(slots.copyScheduleIntervals({
       sourceStart: '2090-06-01',
-      destinationIntervals: [{ from: '2090-06-07', to: '2090-06-13' }],
-    })).rejects.toMatchObject({ code: 'OVERLAPPING_WEEKS' });
+      destinationIntervals: [{ from: '2090-06-07', to: '2090-06-12' }],
+    })).rejects.toMatchObject({ code: 'INVALID_DESTINATION_INTERVAL' });
   });
 });
