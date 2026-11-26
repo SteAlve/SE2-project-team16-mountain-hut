@@ -32,6 +32,7 @@ describe('slots dao, creating a slot', () => {
       startsAt: '12:00:00',
       endsAt: '13:00:00',
       tableSetId,
+      menu: null,
     });
     expect(await slots.findById(withoutSet.slotId)).toMatchObject({ startsAt: '19:00:00', tableSetId: null });
   });
@@ -150,9 +151,9 @@ describe('slots dao, listing a period', () => {
     const listed = await slots.findBetween('2090-06-02', '2090-06-03');
 
     expect(listed).toEqual([
-      { slotId: earlyOn2.slotId, serviceDate: '2090-06-02', startsAt: '12:00:00', endsAt: '13:00:00', tableSetId: null },
-      { slotId: lateOn2.slotId, serviceDate: '2090-06-02', startsAt: '19:00:00', endsAt: '21:00:00', tableSetId },
-      { slotId: on3.slotId, serviceDate: '2090-06-03', startsAt: '12:00:00', endsAt: '13:00:00', tableSetId: null },
+      { slotId: earlyOn2.slotId, serviceDate: '2090-06-02', startsAt: '12:00:00', endsAt: '13:00:00', tableSetId: null, menu: null },
+      { slotId: lateOn2.slotId, serviceDate: '2090-06-02', startsAt: '19:00:00', endsAt: '21:00:00', tableSetId, menu: null },
+      { slotId: on3.slotId, serviceDate: '2090-06-03', startsAt: '12:00:00', endsAt: '13:00:00', tableSetId: null, menu: null },
     ]);
   });
 

@@ -103,13 +103,14 @@ export const toTableSetDto = ({ tableSetId, name, tables, totalSeats }) => ({
   totalSeats,
 });
 
-export const toStaffSlotDto = ({ slotId, date, startsAt, endsAt, tableSet, totalSeats }) => ({
+export const toStaffSlotDto = ({ slotId, date, startsAt, endsAt, tableSet, totalSeats, menu }) => ({
   slotId,
   date,
   startsAt: toHourMinute(startsAt),
   endsAt: toHourMinute(endsAt),
   tableSet: tableSet === null ? null : toTableSetDto(tableSet),
   totalSeats,
+  menu,
 });
 
 // A hiker as the staff sees one (MH-07). `temporary` says that there is no account behind it.
