@@ -13,12 +13,14 @@ import { AddSlotDialog } from '../../components/AddSlotDialog/AddSlotDialog.jsx'
 import { Alert } from '../../components/Alert/Alert.jsx';
 import { Button } from '../../components/Button/Button.jsx';
 import { ChooseTablesDialog } from '../../components/ChooseTablesDialog/ChooseTablesDialog.jsx';
+import { CopyWeekDialog } from '../../components/CopyWeekDialog/CopyWeekDialog.jsx';
 import { DayStrip } from '../../components/DayStrip/DayStrip.jsx';
 import { NewTableSetDialog } from '../../components/NewTableSetDialog/NewTableSetDialog.jsx';
 import { SlotRow } from '../../components/SlotRow/SlotRow.jsx';
 import { TableSetsCard } from '../../components/TableSetsCard/TableSetsCard.jsx';
+import { useCopyWeeklySchedule } from '../../hooks/useCopyWeeklySchedule.js';
 import { useSlotsTables } from '../../hooks/useSlotsTables.js';
-import { formatDay, toDay } from '../../lib/bookingDates.js';
+import { formatDay, nextDays, toDay } from '../../lib/bookingDates.js';
 import { seatsLabel } from '../../lib/tableSets.js';
 import styles from './SlotsPage.module.css';
 
@@ -34,6 +36,13 @@ export function SlotsPage() {
   const [choose, setChoose] = useState(null); // { key, slot }
   const [newSet, setNewSet] = useState(null); // { key, from: 'addSlot' | 'choose' | 'card' }
   const [createdSetId, setCreatedSetId] = useState(undefined);
+  const [copyWeek, setCopyWeek] = useState(false);
+  const [copyNotice, setCopyNotice] = useState(null);
+  const copySchedule = useCopyWeeklySchedule({
+    sourceStart: date,
+    onNeedsLogin: page.markNeedsLogin,
+    enabled: copyWeek,
+  });
 
   const open = (setter, value = {}) => {
     setOpened((n) => n + 1);
@@ -68,6 +77,17 @@ export function SlotsPage() {
     setNewSet({ key: opened, from });
   };
 
+  const chooseDate = (day) => {
+    setCopyNotice(null);
+    page.chooseDate(day);
+  };
+
+  const sourcePeriod = nextDays(date, 7);
+  const closeCopyWeek = () => {
+    copySchedule.reset();
+    setCopyWeek(false);
+  };
+
   if (page.needsLogin) {
     return <Navigate to="/login" replace state={{ from: '/slots', page: 'see the slots and tables' }} />;
   }
@@ -86,16 +106,32 @@ export function SlotsPage() {
 
           {page.alert && <Alert>{page.alert}</Alert>}
           {page.notice && <Alert variant="info">{page.notice}</Alert>}
+          {copyNotice && <Alert variant="info">{copyNotice}</Alert>}
 
           <DayStrip
             days={page.days}
             selected={date}
             today={toDay(new Date())}
-            onSelect={page.chooseDate}
+            onSelect={chooseDate}
             onReachEnd={page.showMoreDays}
             labelledBy="day-title"
             pickEmpty
           />
+
+          <div className={styles.weekLine}>
+            <div>
+              <span className={styles.weekLabel}>Selected period</span>
+              <strong>{formatDay(sourcePeriod[0])} – {formatDay(sourcePeriod[6])}</strong>
+            </div>
+            <Button
+              variant="outline"
+              size="small"
+              disabled={slots === null}
+              onClick={() => setCopyWeek(true)}
+            >
+              Copy this week
+            </Button>
+          </div>
 
           <div className={styles.dayHead}>
             <h2 id="day-title" className={styles.dayTitle}>
@@ -175,6 +211,23 @@ export function SlotsPage() {
           isPending={page.isPending}
           onSave={saveTableSet}
           onCancel={() => setNewSet(null)}
+        />
+      )}
+
+      {copyWeek && (
+        <CopyWeekDialog
+          key={date}
+          open
+          {...copySchedule}
+          onToggle={copySchedule.toggle}
+          onShowMore={copySchedule.showMore}
+          onCopy={copySchedule.copy}
+          onCancel={closeCopyWeek}
+          onCopied={({ selectedPeriods }) => {
+            closeCopyWeek();
+            page.reload();
+            setCopyNotice(`Copied ${formatDay(date)} – ${formatDay(sourcePeriod[6])} to ${selectedPeriods.length} continuation period${selectedPeriods.length === 1 ? '' : 's'}.`);
+          }}
         />
       )}
     </div>
