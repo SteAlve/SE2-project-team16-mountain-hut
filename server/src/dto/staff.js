@@ -103,13 +103,14 @@ export const toTableSetDto = ({ tableSetId, name, tables, totalSeats }) => ({
   totalSeats,
 });
 
-export const toStaffSlotDto = ({ slotId, date, startsAt, endsAt, tableSet, totalSeats }) => ({
+export const toStaffSlotDto = ({ slotId, date, startsAt, endsAt, tableSet, totalSeats, menu }) => ({
   slotId,
   date,
   startsAt: toHourMinute(startsAt),
   endsAt: toHourMinute(endsAt),
   tableSet: tableSet === null ? null : toTableSetDto(tableSet),
   totalSeats,
+  menu,
 });
 
 // A hiker as the staff sees one (MH-07). `temporary` says that there is no account behind it.
@@ -120,4 +121,11 @@ export const toHikerDto = ({ id, firstName, lastName, email, phone, temporary })
   email,
   phone,
   temporary,
+});
+
+// A newly created regular hiker also carries the generated password for the one-time staff handoff.
+// Search results continue to use toHikerDto and never expose it.
+export const toCreatedHikerDto = (hiker) => ({
+  ...toHikerDto(hiker),
+  ...(hiker.password === undefined ? {} : { password: hiker.password }),
 });

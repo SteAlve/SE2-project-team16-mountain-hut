@@ -328,7 +328,18 @@ async function addHiker(page, full = true, checkPending = false) {
     page.off('framenavigated', onNavigate);
   }
   expect(created).toMatchObject({ firstName: person.firstName, lastName: person.lastName, email: person.email, temporary: !full });
-  expect(created).not.toHaveProperty('password');
+  if (full) {
+    expect(created.password).toBeTruthy();
+    const confirmation = page.getByRole('dialog', { name: 'Hiker account created', exact: true });
+    await expect(confirmation).toBeVisible();
+    await expect(confirmation).toContainText('Hiker account created');
+    await expect(confirmation).toContainText('Generated password');
+    await expect(confirmation).toContainText(created.password);
+    await confirmation.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(confirmation).toBeHidden();
+  } else {
+    expect(created).not.toHaveProperty('password');
+  }
   return { ...person, ...created };
 }
 async function save(page, person, preview, pending = false) {
@@ -574,7 +585,7 @@ test.describe('MH-07 Reserve for a hiker — definition scenarios', () => {
     await openStaff(page);
     const hiker = await addHiker(page);
     const message = await messageBySubject(request, hiker.email, /^Your QUOTA account$/);
-    expectAccountEmail(message, hiker);
+    expect(expectAccountEmail(message, hiker)).toBe(hiker.password);
     await exactMail(request, hiker.email, 1);
     await page.goto('/');
     await page.reload();
