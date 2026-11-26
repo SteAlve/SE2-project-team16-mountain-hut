@@ -180,9 +180,9 @@ export const findBetween = (from, to) => all(
   [from, to],
 );
 
-// Every complete seven-day period from a day to another, with the slots and bookings needed by
-// the staff schedule-copy picker. Booking history is counted too: a slot with any booking cannot be
-// replaced by copyScheduleIntervals.
+// Every complete seven-day period from a day to another, with the slots and active bookings needed by
+// the staff schedule-copy picker. Cancelled bookings no longer block replacement and are removed when
+// their destination slots are replaced.
 export const findPeriodSummaries = (from, to) => all(
   `
     WITH periods AS (
@@ -215,7 +215,9 @@ export const findPeriodSummaries = (from, to) => all(
       FROM periods
       LEFT JOIN slot
         ON slot.service_date BETWEEN periods.period_from AND periods.period_to
-      LEFT JOIN booking ON booking.slot_id = slot.id
+      LEFT JOIN booking
+        ON booking.slot_id = slot.id
+        AND booking.cancelled_at IS NULL
       GROUP BY periods.period_from
     )
     SELECT
@@ -292,9 +294,9 @@ export const assignTableSet = async (slotId, tableSetId) => {
  * the source schedule twice. Separate non-adjacent continuation intervals can be supplied in the
  * same atomic operation.
  *
- * The destination is replaced only when none of its slots has a booking. Bookings are deliberately
- * not copied: the new slots are independent slots that share only the source time and table-set
- * definitions. The whole replacement is atomic, so a refused copy leaves the destination intact.
+ * The destination is replaced only when none of its slots has an active booking. Cancelled bookings
+ * in the destination are deleted with the old slots; bookings are never copied to the new slots.
+ * The whole replacement is atomic, so a refused copy leaves the destination intact.
  *
  * Returns the number of inserted and replaced slots. Errors have stable codes for the use case:
  *   INVALID_WEEK_START           the source date is not an ISO date
@@ -302,7 +304,7 @@ export const assignTableSet = async (slotId, tableSetId) => {
  *                                not aligned after the source period
  *   OVERLAPPING_WEEKS             source/destination periods overlap
  *   EMPTY_SOURCE_WEEK             the source period contains no slots
- *   WEEK_HAS_BOOKINGS             a destination period contains at least one booking
+ *   WEEK_HAS_BOOKINGS             a destination period contains at least one active booking
  */
 export const copyScheduleIntervals = async ({ sourceStart, destinationIntervals }) => {
   const input = validateCopyIntervals({ sourceStart, destinationIntervals });
@@ -351,14 +353,32 @@ export const copyScheduleIntervals = async ({ sourceStart, destinationIntervals 
         JOIN slot ON slot.id = booking.slot_id
         JOIN destination_intervals
           ON slot.service_date BETWEEN destination_intervals.from_date AND destination_intervals.to_date
+        WHERE booking.cancelled_at IS NULL
         LIMIT 1
       `,
       [intervalJson],
     );
     if (destinationBooking) {
-      throw fail('WEEK_HAS_BOOKINGS', 'The destination week contains bookings.');
+      throw fail('WEEK_HAS_BOOKINGS', 'The destination period contains active bookings.');
     }
 
+    await run(
+      `
+        WITH destination_intervals AS (
+          SELECT "from"::DATE AS from_date, "to"::DATE AS to_date
+          FROM json_to_recordset($1::JSON) AS intervals("from" TEXT, "to" TEXT)
+        )
+        DELETE FROM booking
+        USING slot, destination_intervals
+        WHERE booking.slot_id = slot.id
+          AND slot.service_date BETWEEN destination_intervals.from_date AND destination_intervals.to_date
+          AND booking.cancelled_at IS NOT NULL
+      `,
+      [intervalJson],
+    );
+
+    // booking_table rows are removed by the booking foreign key's ON DELETE CASCADE.
+    // The remaining destination slots can then be deleted without violating booking history FKs.
     if (destinationSlots.length > 0) {
       await run(
         `

@@ -4,7 +4,7 @@
  * The DAO performs the copy atomically and checks the destination again while it is locked, so a
  * booking arriving after the request was validated still prevents the replacement.
  *
- * Errors: 403 not staff; 400 invalid or empty source week; 409 the destination has bookings.
+ * Errors: 403 not staff; 400 invalid or empty source period; 409 the destination has active bookings.
  */
 import { ConflictError, ValidationError } from '../domain/errors.js';
 import { requireStaff } from './requireStaff.js';

@@ -2208,7 +2208,7 @@
           "Staff"
         ],
         "summary": "List schedule period summaries",
-        "description": "Returns complete seven-day periods between `from` and `to`, including the number of slots, the number of bookings, whether the period can be replaced, and the slot count for each day. The first period starts on the selected day in the carousel; subsequent periods continue every seven days. The inclusive range must contain complete seven-day periods. Only an employee or the warden can read these summaries.",
+        "description": "Returns complete seven-day periods between `from` and `to`, including the number of slots, the number of active bookings, whether the period can be replaced, and the slot count for each day. Cancelled bookings are not counted because they no longer block replacement and are deleted when their destination slots are replaced. The first period starts on the selected day in the carousel; subsequent periods continue every seven days. The inclusive range must contain complete seven-day periods. Only an employee or the warden can read these summaries.",
         "operationId": "listStaffPeriodSummaries",
         "security": [
           {
@@ -2336,7 +2336,7 @@
           "Staff"
         ],
         "summary": "Copy a weekly schedule",
-        "description": "Copies every slot from one seven-day source period, beginning on the day selected in the carousel, into one or more continuation intervals. Each destination interval must start on a later continuation period (`sourceStart + 7n` days) and contain one or more whole seven-day periods; the source schedule is repeated in every period. Copied slots keep their relative day offset, times and table-set assignments. Source bookings are never copied. Destination slots are completely replaced only when none of the selected destination intervals has a booking. All destinations are processed atomically, and only an employee or the warden can perform it.",
+        "description": "Copies every slot from one seven-day source period, beginning on the day selected in the carousel, into one or more continuation intervals. Each destination interval must start on a later continuation period (`sourceStart + 7n` days) and contain one or more whole seven-day periods; the source schedule is repeated in every period. Copied slots keep their relative day offset, times and table-set assignments. Source bookings are never copied. Destination slots are completely replaced only when none of the selected destination intervals has an active booking. Cancelled bookings in the selected destinations are deleted together with the replaced slots. All destinations are processed atomically, and only an employee or the warden can perform it.",
         "operationId": "copyWeeklySchedule",
         "security": [
           {
@@ -2436,7 +2436,7 @@
             }
           },
           "409": {
-            "description": "At least one selected destination interval contains a booking, so the operation is rejected and no destination is changed.",
+            "description": "At least one selected destination interval contains an active booking, so the operation is rejected and no destination is changed. Cancelled bookings do not cause this response; they are deleted with the replaced destination slots.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2444,7 +2444,7 @@
                 },
                 "example": {
                   "error": "ConflictError",
-                  "message": "A destination period contains bookings.",
+                  "message": "The destination period contains active bookings.",
                   "code": "WEEK_HAS_BOOKINGS"
                 }
               }
@@ -3743,7 +3743,7 @@
               "MENU_TOO_LONG",
               "MENU_FORMAT"
             ],
-            "description": "Present on some 400, 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains any booking row, including a cancelled booking retained as history. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more. 400 on a menu (`PUT /api/staff/slots/{slotId}/menu`): `MENU_EMPTY` the menu has no visible text; `MENU_TOO_LONG` it has more than 2000 characters; `MENU_FORMAT` it uses a format the editor does not write."
+            "description": "Present on some 400, 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains an active booking. Cancelled bookings do not count for this code and are deleted with replaced destination slots. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more. 400 on a menu (`PUT /api/staff/slots/{slotId}/menu`): `MENU_EMPTY` the menu has no visible text; `MENU_TOO_LONG` it has more than 2000 characters; `MENU_FORMAT` it uses a format the editor does not write."
           },
           "details": {
             "type": "object",
@@ -4133,11 +4133,11 @@
           "bookingCount": {
             "type": "integer",
             "minimum": 0,
-            "description": "Number of bookings in the period."
+            "description": "Number of active bookings in the period. Cancelled bookings are not counted."
           },
           "canReplace": {
             "type": "boolean",
-            "description": "True when the period has no bookings and can be replaced by a copy."
+            "description": "True when the period has no active bookings and can be replaced by a copy. Cancelled bookings do not prevent replacement."
           },
           "days": {
             "type": "array",
