@@ -63,6 +63,7 @@ import { makeListMyBookings } from './usecases/listMyBookings.js';
 import { makeGetSlotMenu } from './usecases/getSlotMenu.js';
 import { makeListPreviousMenus } from './usecases/listPreviousMenus.js';
 import { makeSaveSlotMenu } from './usecases/saveSlotMenu.js';
+import { makeDeleteSlotMenu } from './usecases/deleteSlotMenu.js';
 import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSlotOpen.js';
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
@@ -93,6 +94,7 @@ import {
   makeGetSlotMenuController,
   makeListPreviousMenusController,
   makeSaveSlotMenuController,
+  makeDeleteSlotMenuController,
 } from './controllers/menus.js';
 import {
   makeAssignTableSetController,
@@ -223,7 +225,10 @@ const staffRouter = makeStaffRouter({
   }),
   createStaffBookingController: makeCreateStaffBookingController({ bookTableForHiker }),
   saveSlotMenuController: makeSaveSlotMenuController({
-    saveSlotMenu: makeSaveSlotMenu({ slots, clock }),
+    saveSlotMenu: makeSaveSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
+  }),
+  deleteSlotMenuController: makeDeleteSlotMenuController({
+    deleteSlotMenu: makeDeleteSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
   }),
   listPreviousMenusController: makeListPreviousMenusController({
     listPreviousMenus: makeListPreviousMenus({ slots }),

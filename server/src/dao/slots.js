@@ -186,6 +186,16 @@ export const saveMenu = (slotId, menu, savedAt) => get(
   [slotId, menu, savedAt],
 );
 
+// Deletes the menu of a slot: the slot is left with no menu. Returns false when there is no such slot.
+export const deleteMenu = async (slotId) => (await get(
+  `
+    UPDATE slot SET menu = NULL, menu_saved_at = NULL
+    WHERE id = $1::BIGINT
+    RETURNING id
+  `,
+  [slotId],
+)) !== null;
+
 // The text of a search, safe inside LIKE: % and _ match themselves.
 const likePattern = (text) => `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
