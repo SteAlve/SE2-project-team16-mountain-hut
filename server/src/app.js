@@ -71,8 +71,10 @@ import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSl
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
 import { makeCreateStaffSlot } from './usecases/createStaffSlot.js';
+import { makeCopyWeeklySchedule } from './usecases/copyWeeklySchedule.js';
 import { makeCreateTableSet } from './usecases/createTableSet.js';
 import { makeListSlots } from './usecases/listSlots.js';
+import { makeListStaffPeriodSummaries } from './usecases/listStaffPeriodSummaries.js';
 import { makeListStaffSlots } from './usecases/listStaffSlots.js';
 import { makeListTableSets } from './usecases/listTableSets.js';
 import { makePreviewSeating } from './usecases/previewSeating.js';
@@ -105,7 +107,9 @@ import {
   makeCreateSlotController,
   makeCreateStaffBookingController,
   makeCreateTableSetController,
+  makeCopyWeeklyScheduleController,
   makeListStaffSlotsController,
+  makeListStaffPeriodSummariesController,
   makeListTableSetsController,
   makeSearchHikersController,
   makeStaffSeatingController,
@@ -222,6 +226,12 @@ const staffRouter = makeStaffRouter({
   }),
   listStaffSlotsController: makeListStaffSlotsController({
     listStaffSlots: makeListStaffSlots({ slots, tableSets }),
+  }),
+  listStaffPeriodSummariesController: makeListStaffPeriodSummariesController({
+    listStaffPeriodSummaries: makeListStaffPeriodSummaries({ slots }),
+  }),
+  copyWeeklyScheduleController: makeCopyWeeklyScheduleController({
+    copyWeeklySchedule: makeCopyWeeklySchedule({ slots }),
   }),
   assignTableSetController: makeAssignTableSetController({
     assignTableSet: makeAssignTableSet({ slots, tableSets }),

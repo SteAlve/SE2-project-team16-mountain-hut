@@ -23,9 +23,12 @@ const parseDay = (day) => {
 
 export const toDay = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-// The `count` days starting from the day of `from`.
-export const nextDays = (from, count) =>
-  Array.from({ length: count }, (_, i) => toDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + i)));
+// The `count` days starting from the day of `from`. Accepts either a Date or a 'YYYY-MM-DD' day.
+export const nextDays = (from, count) => {
+  const start = typeof from === 'string' ? parseDay(from) : from;
+  return Array.from({ length: count }, (_, i) =>
+    toDay(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)));
+};
 
 // Days from `from` to `day`, both 'YYYY-MM-DD' (negative when `day` is before); NaN for a bad day.
 export const daysBetween = (from, day) =>

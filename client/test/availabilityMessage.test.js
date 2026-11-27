@@ -40,6 +40,10 @@ test('409 uses refreshed capacity rather than stale free seats', () => {
   assert.equal(unavailableMessage({ error: { status: 409 }, latest: { freeSeats: 3 }, freeSeats: 10 }, 6), 'This time has 3 free seats, not enough for 6 people.');
 });
 
+test('409 uses the singular seat label for one free seat', () => {
+  assert.equal(unavailableMessage({ error: { status: 409 }, freeSeats: 1 }, 2), 'This time has 1 free seat, not enough for 2 people.');
+});
+
 test('409 with zero seats gives the full-slot message', () => {
   assert.equal(unavailableMessage({ error: { status: 409 }, freeSeats: 0 }, 2), 'This time has no free seats.');
 });
