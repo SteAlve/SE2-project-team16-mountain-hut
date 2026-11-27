@@ -5,12 +5,17 @@
  * job of the mailer.
  *
  * The destination, the route and the passage points are typed by the hiker, so they are escaped in
- * the HTML. The times are the local time of the hut: 'YYYY-MM-DDTHH:MM'.
+ * the HTML. The route can have more than one line, and it keeps them in the HTML too. The times are
+ * the local time of the hut: 'YYYY-MM-DDTHH:MM'.
  */
-import { moment } from './bookingConfirmation.js';
-import { closing, detailRow, emailPage, escapeHtml, FONT, INK, paragraph } from './emailLayout.js';
+import {
+  closing, detailRow, emailPage, escapeHtml, FONT, INK, moment, paragraph,
+} from './emailLayout.js';
 
 const END = 'Have a good hike!';
+
+// A text typed by the hiker, safe in the HTML, with its line breaks.
+const linesHtml = (text) => escapeHtml(text).replace(/\r\n|\r|\n/g, '<br>');
 
 export const hikeRegisteredEmail = ({
   email, firstName, lastName, destination, route, passagePoints, departureAt, returnAt, registeredAt,
@@ -48,7 +53,7 @@ export const hikeRegisteredEmail = ({
       heading: 'Your hike is registered',
       bodyHtml: `${paragraph(`Hello ${escapeHtml(name)}, here are the details of the hike you registered.`)}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
-                ${rows.map(([label, value]) => detailRow(label, escapeHtml(value))).join('')}
+                ${rows.map(([label, value]) => detailRow(label, linesHtml(value))).join('')}
               </table>${pointsHtml}${closing(END)}`,
     }),
   };
