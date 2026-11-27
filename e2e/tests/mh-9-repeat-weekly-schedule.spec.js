@@ -220,7 +220,7 @@ const scheduleSnapshot = async (periodStart) => {
      ORDER BY service_date, starts_at`,
     [periodStart],
   );
-  return rows.map((slot) => ({ ...slot, offset: dayOffset(periodStart, slot.date) }));
+  return rows.map(({ date, ...slot }) => ({ ...slot, offset: dayOffset(periodStart, date) }));
 };
 
 const bookingCountInPeriod = (periodStart) => count(

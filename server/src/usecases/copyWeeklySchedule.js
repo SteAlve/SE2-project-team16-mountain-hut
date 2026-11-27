@@ -27,7 +27,7 @@ export const makeCopyWeeklySchedule = ({ slots }) => async ({
     return await slots.copyScheduleIntervals({ sourceStart, destinationIntervals });
   } catch (error) {
     if (INVALID_REQUEST_CODES.has(error.code)) {
-      throw new ValidationError(error.message);
+      throw new ValidationError(error.message, { code: error.code });
     }
     if (error.code === 'WEEK_HAS_BOOKINGS') {
       throw new ConflictError(error.message, { code: error.code });
