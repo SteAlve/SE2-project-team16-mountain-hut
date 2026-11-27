@@ -25,6 +25,7 @@ import * as tokens from './sessionTokens.js';
 
 // the dao
 import * as bookings from './dao/bookings.js';
+import * as hikes from './dao/hikes.js';
 import * as passwordResets from './dao/passwordResets.js';
 import * as sessions from './dao/sessions.js';
 import * as slots from './dao/slots.js';
@@ -60,6 +61,9 @@ import { makeChangeBookingAndNotify } from './usecases/changeBookingAndNotify.js
 import { makeCancelBooking } from './usecases/cancelBooking.js';
 import { makeCancelBookingAndNotify } from './usecases/cancelBookingAndNotify.js';
 import { makeListMyBookings } from './usecases/listMyBookings.js';
+import { makeListMyHikes } from './usecases/listMyHikes.js';
+import { makeRegisterHike } from './usecases/registerHike.js';
+import { makeRegisterHikeAndNotify } from './usecases/registerHikeAndNotify.js';
 import { makeGetSlotMenu } from './usecases/getSlotMenu.js';
 import { makeListPreviousMenus } from './usecases/listPreviousMenus.js';
 import { makeSaveSlotMenu } from './usecases/saveSlotMenu.js';
@@ -68,8 +72,10 @@ import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSl
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
 import { makeCreateStaffSlot } from './usecases/createStaffSlot.js';
+import { makeCopyWeeklySchedule } from './usecases/copyWeeklySchedule.js';
 import { makeCreateTableSet } from './usecases/createTableSet.js';
 import { makeListSlots } from './usecases/listSlots.js';
+import { makeListStaffPeriodSummaries } from './usecases/listStaffPeriodSummaries.js';
 import { makeListStaffSlots } from './usecases/listStaffSlots.js';
 import { makeListTableSets } from './usecases/listTableSets.js';
 import { makePreviewSeating } from './usecases/previewSeating.js';
@@ -89,6 +95,7 @@ import {
   makeCreateBookingController,
   makeListMyBookingsController,
 } from './controllers/bookings.js';
+import { makeListMyHikesController, makeRegisterHikeController } from './controllers/hikes.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
   makeGetSlotMenuController,
@@ -102,7 +109,9 @@ import {
   makeCreateSlotController,
   makeCreateStaffBookingController,
   makeCreateTableSetController,
+  makeCopyWeeklyScheduleController,
   makeListStaffSlotsController,
+  makeListStaffPeriodSummariesController,
   makeListTableSetsController,
   makeSearchHikersController,
   makeStaffSeatingController,
@@ -120,6 +129,7 @@ import {
 // 4. routers
 import { makeAuthRouter } from './routes/auth.js';
 import { makeBookingsRouter } from './routes/bookings.js';
+import { makeHikesRouter } from './routes/hikes.js';
 import { makeSlotsRouter } from './routes/slots.js';
 import { makeStaffRouter } from './routes/staff.js';
 
@@ -189,6 +199,16 @@ const bookingsRouter = makeBookingsRouter({
   requireAuth,
 });
 
+// the hikes that a hiker registers before leaving (MH-20)
+const registerHike = makeRegisterHike({ hikes, clock, hutTimeZone: config.hutTimeZone });
+const registerHikeAndNotify = makeRegisterHikeAndNotify({ registerHike, mailer });
+const listMyHikes = makeListMyHikes({ hikes, clock, hutTimeZone: config.hutTimeZone });
+const hikesRouter = makeHikesRouter({
+  registerHikeController: makeRegisterHikeController({ registerHikeAndNotify }),
+  listMyHikesController: makeListMyHikesController({ listMyHikes }),
+  requireAuth,
+});
+
 // the tables and the slots of the hut, and the reservations for a hiker (staff). The staff can book
 // until the meal starts, not only until 2 hours before it (checkSlotOpenForStaff).
 const checkSlotOpenForStaff = makeCheckSlotOpenForStaff({ clock, hutTimeZone: config.hutTimeZone });
@@ -208,6 +228,12 @@ const staffRouter = makeStaffRouter({
   }),
   listStaffSlotsController: makeListStaffSlotsController({
     listStaffSlots: makeListStaffSlots({ slots, tableSets }),
+  }),
+  listStaffPeriodSummariesController: makeListStaffPeriodSummariesController({
+    listStaffPeriodSummaries: makeListStaffPeriodSummaries({ slots }),
+  }),
+  copyWeeklyScheduleController: makeCopyWeeklyScheduleController({
+    copyWeeklySchedule: makeCopyWeeklySchedule({ slots }),
   }),
   assignTableSetController: makeAssignTableSetController({
     assignTableSet: makeAssignTableSet({ slots, tableSets }),
@@ -242,6 +268,7 @@ app.use(readSessionCookie);
 app.use('/api', authRouter);
 app.use('/api', slotsRouter);
 app.use('/api', bookingsRouter);
+app.use('/api', hikesRouter);
 app.use('/api', staffRouter);
 
 // an /api path no router answers

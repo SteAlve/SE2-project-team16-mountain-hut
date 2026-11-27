@@ -119,7 +119,7 @@ Open http://localhost:3001 and log in with a demo account. The [Docker demo guid
 
 ## Emails
 
-The app emails the hiker: the **confirmation**, the **change** and the **cancellation** of a booking (MH-03, MH-06, MH-08), the **account** made by the staff and the **password reset** (MH-07). The email of a booking leaves right after the booking is saved. If it cannot be sent, the booking still stands; the error is only written to the server log.
+The app emails the hiker: the **confirmation**, the **change** and the **cancellation** of a booking (MH-03, MH-06, MH-08), the **account** made by the staff and the **password reset** (MH-07), and the **registration of a hike** (MH-20). The email of a booking leaves right after the booking is saved. If it cannot be sent, the booking still stands; the error is only written to the server log.
 
 During development no email reaches a real inbox. The demo accounts use `@quota.example` addresses, which do not exist, so the emails are caught on your machine:
 

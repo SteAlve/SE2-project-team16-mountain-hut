@@ -24,23 +24,24 @@ Same QUOTA brand, colours and fonts.
 | Story | A week with slots and no reservations can be copied onto: the copy completely replaces its schedule. |
 | [#45](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/45) | Copied slots can be adjusted later with MH-19. MH-09 adds no way to change a slot. |
 
-## The week strip
+## The selected-day week
 
-With MH-09 the day strip of *Slots & tables* shows one whole week instead of today and the next 6 days, so it is always clear which week is copied:
+The employee first selects a day in the existing day carousel. That day becomes the first day of the source period, and the page then shows the seven-day period from that day through the following six days, so it is always clear which schedule is copied:
 
-- The strip always shows 7 days, from Monday to Sunday. Days before today stay in it, so the week is always complete.
-- Above the strip, the week line shows the dates of the week. The arrows move one whole week (7 days) at a time; on a phone a swipe does the same. The earlier arrow is off on the current week, as in MH-02.
+- The selected-day period always shows 7 days. It is not required to start on Monday.
+- The week line shows the selected day and the following six days. Continuation periods start 7 days later and keep the same seven-day alignment.
 - *Copy this week* sits on the week line, next to the dates it copies.
 
 ## The flow
 
-1. **Copy this week.** On *Slots & tables*, the button on the week line copies the week shown in the strip, Monday to Sunday (screen 1).
-2. **Choose the weeks.** The dialog shows the week being copied and the slots of each day. Below it are the following weeks, and *Show more weeks* adds more of them (screen 2).
+1. **Select a day.** On *Slots & tables*, the employee picks the first day of the source period in the day carousel (screen 1).
+2. **Copy this week.** The button on the week line copies the seven-day period beginning on the selected day.
+3. **Choose the weeks.** The dialog shows the period being copied and the slots of each day. Below it are the continuation periods beginning 7 days later, and *Show more weeks* adds more of them (screen 2).
    - **Empty week:** can be ticked. Nothing is replaced.
    - **Week with slots and no bookings:** can be ticked. Once ticked, the row says in red that its slots will be replaced (screen 3).
    - **Week with bookings:** locked. It cannot be ticked.
-3. **Confirm the replacement.** Only when a ticked week has slots, a second step says how many slots are deleted (screen 4). With only empty weeks ticked, the copy starts at once.
-4. **Week copied.** The dialog closes and an alert on the page names the weeks. The employee stays on the same day (screen 5).
+4. **Confirm the replacement.** Only when a ticked week has slots, a second step says how many slots are deleted (screen 4). With only empty weeks ticked, the copy starts at once.
+5. **Week copied.** The dialog closes and an alert on the page names the periods. The employee stays on the same selected day (screen 5).
 
 Each copied slot keeps its day of the week, its start and end time and its table set. A slot without tables stays without tables. Bookings are never copied.
 
@@ -91,9 +92,9 @@ These belong to other stories: changing a copied slot (MH-19), closing a slot (M
 
 Not asked to the product owner:
 
-- A week runs from Monday to Sunday.
-- Only weeks after the copied one can be chosen.
+- The selected day is the first day of the source period; continuation periods start every 7 days after it.
+- Only continuation periods after the copied one can be chosen.
 - The copy is all or nothing: if one chosen week cannot be copied onto, no week is saved.
-- The endpoints for reading the weeks and copying one are not defined yet, so `docs/openapi.json` is unchanged.
+- The endpoints for reading the periods and copying one are defined in `docs/openapi.json`.
 
 Sample data (hut, names, dates, tables) is invented for the mockup.

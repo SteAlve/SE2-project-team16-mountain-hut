@@ -13,6 +13,26 @@ export const MIST = '#eef2ef';
 export const BLAZE = '#e0352b';
 export const FONT = 'font-family:Helvetica,Arial,sans-serif;';
 
+// The hut, as it is named in the emails (the header writes it in capitals, with the altitude).
+export const HUT_NAME = 'Rifugio Alpe Lunga';
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// The dates of every email, written out. 'YYYY-MM-DD' -> '4 November 2026'
+export const day = (date) => {
+  const [year, month, dayOfMonth] = date.split('-').map(Number);
+  return `${dayOfMonth} ${MONTHS[month - 1]} ${year}`;
+};
+
+// A local date and time of the hut. 'YYYY-MM-DDTHH:MM' -> '10 November 2026, 18:05'
+export const moment = (localDateTime) => {
+  const [date, clockTime] = localDateTime.split('T');
+  return `${day(date)}, ${clockTime}`;
+};
+
 // What a person typed (a name) or what was generated must never be read as HTML.
 export const escapeHtml = (value) => String(value)
   .replaceAll('&', '&amp;')
