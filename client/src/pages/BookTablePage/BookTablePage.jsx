@@ -25,7 +25,7 @@ import { useDietaryNeeds } from '../../hooks/useDietaryNeeds.js';
 import { usePublicAvailability } from '../../hooks/usePublicAvailability.js';
 import { formatTime, toDay } from '../../lib/bookingDates.js';
 import { readBookingSearch, withoutReviewFlag } from '../../lib/availabilitySearch.js';
-import { seats as seatsLabel } from '../../lib/slotAvailability.js';
+import { seatsAtTables } from '../../lib/slotAvailability.js';
 import { ROLE_LABEL, STAFF_ROLES } from '../../lib/roles.js';
 import styles from './BookTablePage.module.css';
 
@@ -228,7 +228,7 @@ export function BookTablePage() {
         partySize={partySize}
         tables={book.tables}
         needs={needs}
-        partyHeading={isSearch && book.tables ? book.tables.map(({ seats }) => seatsLabel(seats)).join(' + ') : undefined}
+        partyHeading={isSearch && book.tables ? seatsAtTables(book.tables) : undefined}
         notice={book.reviewNotice}
         isPending={book.isPending}
         onBack={backFromReview}
