@@ -1,6 +1,7 @@
 /**
- * Use case: a hiker registers a hike before leaving (MH-20): the destination, the route, the passage
- * points in order, the departure and the expected return. The times arrive as the local date and time
+ * Use case: a hiker registers a hike before leaving (MH-20): the start (null: the hut), the
+ * destination, the route, the passage points in order, the departure and the expected return. The
+ * times arrive as the local date and time
  * of the hut ('YYYY-MM-DDTHH:MM') and are saved as instants, so the later stories can compare them
  * with the clock.
  *
@@ -35,7 +36,7 @@ export const makeRegisterHike = ({ hikes, clock, hutTimeZone }) => {
     );
   };
 
-  return async ({ user, destination, route, passagePoints, departureAt, returnAt }) => {
+  return async ({ user, start, destination, route, passagePoints, departureAt, returnAt }) => {
     if (user.role !== ROLES.HIKER) throw new ForbiddenError('Only hikers can register a hike');
 
     const departure = toInstant(departureAt);
@@ -45,7 +46,7 @@ export const makeRegisterHike = ({ hikes, clock, hutTimeZone }) => {
     }
 
     const saved = await hikes.insert({
-      hikerId: user.id, destination, route, passagePoints, departureAt: departure, returnAt: back,
+      hikerId: user.id, start, destination, route, passagePoints, departureAt: departure, returnAt: back,
     });
     if (saved === null) throw await overlapError({ hikerId: user.id, departureAt: departure, returnAt: back });
 

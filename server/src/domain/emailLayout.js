@@ -13,6 +13,9 @@ export const MIST = '#eef2ef';
 export const BLAZE = '#e0352b';
 export const FONT = 'font-family:Helvetica,Arial,sans-serif;';
 
+// The hut, as it is named in the emails (the header writes it in capitals, with the altitude).
+export const HUT_NAME = 'Rifugio Alpe Lunga';
+
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',

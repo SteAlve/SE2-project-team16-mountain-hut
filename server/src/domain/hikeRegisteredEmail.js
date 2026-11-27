@@ -1,15 +1,16 @@
 /**
  * The email after a hiker registered a hike (MH-20): the details of the hike, one line each, and the
- * passage points in order when there are any. Same layout, sender and colours as the other emails
+ * passage points in order when there are any. A hike without a start starts at the hut, and the
+ * email names it. Same layout, sender and colours as the other emails
  * (domain/emailLayout.js, mockup docs/mockups/emails, email 6). A pure function: sending it is the
  * job of the mailer.
  *
- * The destination, the route and the passage points are typed by the hiker, so they are escaped in
- * the HTML. The route can have more than one line, and it keeps them in the HTML too. The times are
- * the local time of the hut: 'YYYY-MM-DDTHH:MM'.
+ * The start, the destination, the route and the passage points are typed by the hiker, so they are
+ * escaped in the HTML. The route can have more than one line, and it keeps them in the HTML too. The
+ * times are the local time of the hut: 'YYYY-MM-DDTHH:MM'.
  */
 import {
-  closing, detailRow, emailPage, escapeHtml, FONT, INK, moment, paragraph,
+  closing, detailRow, emailPage, escapeHtml, FONT, HUT_NAME, INK, moment, paragraph,
 } from './emailLayout.js';
 
 const END = 'Have a good hike!';
@@ -18,11 +19,13 @@ const END = 'Have a good hike!';
 const linesHtml = (text) => escapeHtml(text).replace(/\r\n|\r|\n/g, '<br>');
 
 export const hikeRegisteredEmail = ({
-  email, firstName, lastName, destination, route, passagePoints, departureAt, returnAt, registeredAt,
+  email, firstName, lastName, start, destination, route, passagePoints, departureAt, returnAt,
+  registeredAt,
 }) => {
   const name = `${firstName} ${lastName}`;
   const rows = [
     ['Name', name],
+    ['Start', start ?? HUT_NAME],
     ['Destination', destination],
     ['Route', route],
     ['Departure', moment(departureAt)],

@@ -1,6 +1,7 @@
 /**
  * DTO of the hikes (MH-20): validates the body of POST /api/hikes (wrong input throws a
- * ValidationError, 400) and shapes the hikes that go out.
+ * ValidationError, 400) and shapes the hikes that go out. The start is optional: without it the hike
+ * starts at the hut, and it goes out as null.
  *
  * The departure and the return are the local date and time of the hut: 'YYYY-MM-DDTHH:MM'. Whether
  * the return is after the departure and whether the hike overlaps another one are rules of the hut:
@@ -9,6 +10,7 @@
 import { ValidationError } from '../domain/errors.js';
 import { rejectUnknownFields, requireDate, requireObject, requireTime } from './fields.js';
 
+const MAX_START_LENGTH = 100;
 const MAX_DESTINATION_LENGTH = 100;
 const MAX_ROUTE_LENGTH = 500;
 const MAX_POINT_LENGTH = 100;
@@ -25,6 +27,14 @@ const requireLimitedText = (value, field, maxLength, { oneLine = false } = {}) =
   if (text.length > maxLength) throw new ValidationError(`${field} can be at most ${maxLength} characters`);
   if (oneLine && /[\r\n]/.test(text)) throw new ValidationError(`${field} must be on one line`);
   return text;
+};
+
+// An optional text of one line: null when it is not sent (or null), never blank when it is.
+const optionalLine = (value, field, maxLength) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') throw new ValidationError(`${field} must be a text`);
+  if (value.trim() === '') throw new ValidationError(`${field} cannot be empty`);
+  return requireLimitedText(value, field, maxLength, { oneLine: true });
 };
 
 // The passage points, in order. Optional: nothing, null or [] mean no passage points.
@@ -44,11 +54,13 @@ const requireLocalDateTime = (value, field) => {
   return value;
 };
 
-// POST /api/hikes: destination, route and the two times are required; the passage points are not.
+// POST /api/hikes: destination, route and the two times are required; the start (null: the hut) and
+// the passage points are not.
 export function parseRegisterHike(body) {
   requireObject(body);
-  rejectUnknownFields(body, ['destination', 'route', 'passagePoints', 'departureAt', 'returnAt']);
+  rejectUnknownFields(body, ['start', 'destination', 'route', 'passagePoints', 'departureAt', 'returnAt']);
   return {
+    start: optionalLine(body.start, 'start', MAX_START_LENGTH),
     destination: requireLimitedText(body.destination, 'destination', MAX_DESTINATION_LENGTH, { oneLine: true }),
     route: requireLimitedText(body.route, 'route', MAX_ROUTE_LENGTH),
     passagePoints: requirePassagePoints(body.passagePoints),
@@ -58,6 +70,6 @@ export function parseRegisterHike(body) {
 }
 
 // A hike as the API shows it (the use cases already wrote the times as the local time of the hut).
-export const toHikeDto = ({ id, destination, route, passagePoints, departureAt, returnAt }) => ({
-  id, destination, route, passagePoints, departureAt, returnAt,
+export const toHikeDto = ({ id, start, destination, route, passagePoints, departureAt, returnAt }) => ({
+  id, start, destination, route, passagePoints, departureAt, returnAt,
 });

@@ -1,7 +1,7 @@
 /**
- * The hikes that a hiker registers (MH-20). A hike has a destination, a route (a text), the passage
- * points in order and a departure and an expected return. The hut does not store the start: it is
- * always the hut.
+ * The hikes that a hiker registers (MH-20). A hike has a start, a destination, a route (a text), the
+ * passage points in order and a departure and an expected return. The start is optional: null means
+ * the hut, where a hike usually starts.
  *
  * Pure functions. The times of the database are instants, while the API speaks in the local time of
  * the hut: 'YYYY-MM-DDTHH:MM'. The use cases turn the one into the other with the clock, and hand the
@@ -12,6 +12,7 @@
 // local date and time of the hut.
 export const describeHike = (hike, toLocal) => ({
   id: hike.id,
+  start: hike.start,
   destination: hike.destination,
   route: hike.route,
   passagePoints: hike.passagePoints,
