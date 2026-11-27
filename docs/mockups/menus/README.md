@@ -18,6 +18,8 @@ Mockup for story **MH-10 Define menus**, used by the staff and hiker frontend ta
 
 Same QUOTA brand, colours and fonts.
 
+MH-11 builds on these screens: the first words of each menu on the time cards, and photos in the menus. See the [meal details mockup](../meal-details/README.md).
+
 ## Rules on these screens
 
 | Source | Rule |
