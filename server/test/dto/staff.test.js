@@ -4,6 +4,8 @@ import {
   parseCreateHiker,
   parseCreateSlot,
   parseCreateTableSet,
+  parseCopyWeekSchedule,
+  parseListStaffPeriodSummaries,
   parseListStaffSlots,
   parseSearchHikers,
   toHikerDto,
@@ -82,6 +84,41 @@ describe('parseListStaffSlots', () => {
     ['two values for a date', { from: ['2026-10-01', '2026-10-02'], to: '2026-10-31' }, 'from must be a valid date'],
     ['a to before the from', { from: '2026-10-31', to: '2026-10-01' }, 'to must not be before from'],
   ])('rejects %s', (_name, query, message) => fails(() => parseListStaffSlots(query), message));
+});
+
+describe('parseListStaffPeriodSummaries', () => {
+  it('accepts a range made of complete seven-day periods from the selected day', () => {
+    expect(parseListStaffPeriodSummaries({ from: '2026-10-02', to: '2026-10-15' }))
+      .toEqual({ from: '2026-10-02', to: '2026-10-15' });
+  });
+
+  it.each([
+    ['a missing from', {}, 'from must be a valid date'],
+    ['a missing to', { from: '2026-10-01' }, 'to must be a valid date'],
+    ['a to before the from', { from: '2026-10-15', to: '2026-10-01' }, 'to must not be before from'],
+    ['an incomplete range', { from: '2026-10-01', to: '2026-10-08' }, 'from and to must delimit complete seven-day periods'],
+  ])('rejects %s', (_name, query, message) => fails(() => parseListStaffPeriodSummaries(query), message));
+});
+
+describe('parseCopyWeekSchedule', () => {
+  const valid = {
+    sourceStart: '2026-10-02',
+    destinationIntervals: [{ from: '2026-10-09', to: '2026-10-15' }],
+  };
+
+  it('accepts the selected source day and aligned destination intervals', () => {
+    expect(parseCopyWeekSchedule(valid)).toEqual(valid);
+  });
+
+  it.each([
+    ['a body that is not an object', null, 'Request body must be a JSON object'],
+    ['an unknown body field', { ...valid, source: 'x' }, 'Unknown field: source'],
+    ['no destination intervals', { ...valid, destinationIntervals: [] }, 'destinationIntervals must be a non-empty array'],
+    ['a destination that is not an object', { ...valid, destinationIntervals: [1] }, 'Each destination interval must be an object'],
+    ['an unknown interval field', { ...valid, destinationIntervals: [{ ...valid.destinationIntervals[0], week: true }] }, 'Unknown field in destinationIntervals: week'],
+    ['an invalid source date', { ...valid, sourceStart: 'not-a-date' }, 'sourceStart must be a valid date'],
+    ['an invalid destination date', { ...valid, destinationIntervals: [{ from: '2026-10-09', to: 'not-a-date' }] }, 'to must be a valid date'],
+  ])('rejects %s', (_name, body, message) => fails(() => parseCopyWeekSchedule(body), message));
 });
 
 describe('parseAssignTableSet', () => {

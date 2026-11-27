@@ -67,12 +67,54 @@ export function parseListStaffSlots(query) {
   return { from, to };
 }
 
+const daysBetween = (from, to) => {
+  const toUtcDay = (date) => {
+    const [year, month, day] = date.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  return Math.round((toUtcDay(to) - toUtcDay(from)) / (24 * 60 * 60 * 1000));
+};
+
+// GET /api/staff/slots/weeks?from=2026-10-01&to=2026-10-28. The range contains complete
+// seven-day periods starting at from.
+export function parseListStaffPeriodSummaries(query) {
+  const from = requireDate(query?.from, 'from');
+  const to = requireDate(query?.to, 'to');
+  const days = daysBetween(from, to);
+  if (to < from) throw new ValidationError('to must not be before from');
+  if ((days + 1) % 7 !== 0) {
+    throw new ValidationError('from and to must delimit complete seven-day periods');
+  }
+  return { from, to };
+}
+
 // PUT /api/staff/slots/:slotId/table-set
 export function parseAssignTableSet(params, body) {
   const slotId = requirePositiveIntegerText(params?.slotId, 'slotId');
   requireObject(body);
   rejectUnknownFields(body, ['tableSetId']);
   return { slotId, tableSetId: requirePositiveInteger(body.tableSetId, 'tableSetId') };
+}
+
+// POST /api/staff/slots/copy-week. Each destination interval must contain one or more whole
+// seven-day periods; the DAO repeats the source schedule in every seven-day period.
+export function parseCopyWeekSchedule(body) {
+  requireObject(body);
+  rejectUnknownFields(body, ['sourceStart', 'destinationIntervals']);
+  if (!Array.isArray(body.destinationIntervals) || body.destinationIntervals.length === 0) {
+    throw new ValidationError('destinationIntervals must be a non-empty array');
+  }
+  return {
+    sourceStart: requireDate(body.sourceStart, 'sourceStart'),
+    destinationIntervals: body.destinationIntervals.map((interval) => {
+      requireObject(interval, 'Each destination interval must be an object');
+      rejectUnknownFields(interval, ['from', 'to'], ' in destinationIntervals');
+      return {
+        from: requireDate(interval.from, 'from'),
+        to: requireDate(interval.to, 'to'),
+      };
+    }),
+  };
 }
 
 // GET /api/staff/hikers?q=rossi. The text must be there; whether it is long enough is a rule of the
