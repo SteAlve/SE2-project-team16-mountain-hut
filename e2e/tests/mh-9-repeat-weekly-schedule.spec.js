@@ -28,14 +28,6 @@ const addDays = (day, count) => {
   return toDay(date);
 };
 
-const nextNonMonday = () => {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + 2);
-  while (date.getDay() === 1) date.setDate(date.getDate() + 1);
-  return toDay(date);
-};
-
 const dayLabel = (day) => {
   const date = new Date(`${day}T12:00:00`);
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
@@ -53,6 +45,26 @@ const periodPattern = (from) => new RegExp(
 );
 
 const count = async (sql, params = []) => Number((await get(sql, params)).count);
+
+// The staff day strip initially shows the next 14 days. Pick a visible non-Monday source whose
+// complete five-week test range is empty, instead of colliding with seed data or another spec.
+const nextFreeSource = async () => {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  for (let offset = 2; offset < 14; offset += 1) {
+    const candidate = new Date(today.getTime());
+    candidate.setDate(candidate.getDate() + offset);
+    if (candidate.getDay() === 1) continue;
+    const sourceStart = toDay(candidate);
+    const occupied = await count(
+      `SELECT COUNT(*) FROM slot
+       WHERE service_date BETWEEN $1::DATE AND $2::DATE`,
+      [sourceStart, addDays(sourceStart, 34)],
+    );
+    if (occupied === 0) return sourceStart;
+  }
+  throw new Error('No free five-week range is available in the staff day strip');
+};
 
 async function createUser({ role, label }) {
   const email = `mh9-${RUN_ID}-${fixture.emails.length}@example.com`;
@@ -192,13 +204,45 @@ async function copiedScheduleCount(periodStart) {
   );
 }
 
+const dayOffset = (from, to) => Math.round(
+  (new Date(`${to}T12:00:00Z`).getTime() - new Date(`${from}T12:00:00Z`).getTime()) / 86400000,
+);
+
+// Keep the assertions about the schedule independent of slot ids: copying creates new rows but
+// must preserve the complete slot definition and its relative day.
+const scheduleSnapshot = async (periodStart) => {
+  const rows = await all(
+    `SELECT service_date::TEXT AS date, starts_at::TEXT AS "startsAt", ends_at::TEXT AS "endsAt",
+            table_set_id AS "tableSetId",
+            COALESCE((SELECT SUM(seat_capacity) FROM hut_table WHERE table_set_id = slot.table_set_id), 0)::INTEGER AS "totalSeats"
+     FROM slot
+     WHERE service_date BETWEEN $1::DATE AND ($1::DATE + 6)
+     ORDER BY service_date, starts_at`,
+    [periodStart],
+  );
+  return rows.map((slot) => ({ ...slot, offset: dayOffset(periodStart, slot.date) }));
+};
+
+const bookingCountInPeriod = (periodStart) => count(
+  `SELECT COUNT(*)
+   FROM booking
+   JOIN slot ON slot.id = booking.slot_id
+   WHERE slot.service_date BETWEEN $1::DATE AND ($1::DATE + 6)`,
+  [periodStart],
+);
+
+const expectApiErrorCode = async (response, code) => {
+  expect(response.status()).toBe(400);
+  await expect(response.json()).resolves.toMatchObject({ code });
+};
+
 test.describe('MH-09 Repeat a weekly schedule', () => {
   test.beforeEach(async () => {
     sequence += 1;
     fixture = {
       number: sequence,
       prefix: `E2E-MH9-${RUN_ID}-${sequence}`,
-      sourceStart: nextNonMonday(),
+      sourceStart: await nextFreeSource(),
       days: [],
       times: [],
       emails: [],
@@ -218,18 +262,23 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
 
   test('copies a selected non-Monday period into an empty period', async ({ page }) => {
     await createSourceSchedule();
+    const sourceBefore = await scheduleSnapshot(fixture.sourceStart);
     expect(new Date(`${fixture.sourceStart}T12:00:00`).getDay()).not.toBe(1);
+    const destination = addDays(fixture.sourceStart, 7);
     await openSlots(page);
     await selectSource(page);
     const dialog = await openCopyDialog(page);
-    await tickPeriod(dialog, addDays(fixture.sourceStart, 7));
+    await tickPeriod(dialog, destination);
     await submitCopy(dialog, 1);
     await expectCopied(page, dialog);
-    expect(await copiedScheduleCount(addDays(fixture.sourceStart, 7))).toBe(3);
+    expect(await scheduleSnapshot(destination)).toEqual(sourceBefore);
+    expect(await bookingCountInPeriod(destination)).toBe(0);
+    expect(await scheduleSnapshot(fixture.sourceStart)).toEqual(sourceBefore);
   });
 
   test('replaces an existing destination after confirmation', async ({ page }) => {
     await createSourceSchedule();
+    const sourceBefore = await scheduleSnapshot(fixture.sourceStart);
     const destination = addDays(fixture.sourceStart, 7);
     const oldSlot = await createSlot(destination, '10:00', '11:00');
     await openSlots(page);
@@ -238,12 +287,15 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
     await tickPeriod(dialog, destination);
     await submitCopy(dialog, 1, true);
     await expectCopied(page, dialog);
-    expect(await copiedScheduleCount(destination)).toBe(3);
+    expect(await scheduleSnapshot(destination)).toEqual(sourceBefore);
+    expect(await bookingCountInPeriod(destination)).toBe(0);
+    expect(await scheduleSnapshot(fixture.sourceStart)).toEqual(sourceBefore);
     expect(await count('SELECT COUNT(*) FROM slot WHERE id = $1', [oldSlot.slotId])).toBe(0);
   });
 
   test('copies to contiguous and non-consecutive periods selected one by one', async ({ page }) => {
     await createSourceSchedule();
+    const sourceBefore = await scheduleSnapshot(fixture.sourceStart);
     const destinations = [7, 14, 28].map((offset) => addDays(fixture.sourceStart, offset));
     await openSlots(page);
     await selectSource(page);
@@ -252,8 +304,10 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
     await submitCopy(dialog, 3);
     await expectCopied(page, dialog);
     for (const destination of destinations) {
-      expect(await copiedScheduleCount(destination)).toBe(3);
+      expect(await scheduleSnapshot(destination)).toEqual(sourceBefore);
+      expect(await bookingCountInPeriod(destination)).toBe(0);
     }
+    expect(await scheduleSnapshot(fixture.sourceStart)).toEqual(sourceBefore);
   });
 
   test('does not allow a period with an active booking to be ticked', async ({ page }) => {
@@ -280,7 +334,7 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
         destinationIntervals: [{ from: addDays(fixture.sourceStart, 7), to: addDays(fixture.sourceStart, 13) }],
       },
     });
-    expect(response.status()).toBe(400);
+    await expectApiErrorCode(response, 'EMPTY_SOURCE_WEEK');
   });
 
   test('replaces a destination with only cancelled bookings and deletes them', async ({ page }) => {
@@ -329,14 +383,14 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
         destinationIntervals: [{ from: addDays(fixture.sourceStart, 1), to: addDays(fixture.sourceStart, 7) }],
       },
     });
-    expect(invalid.status()).toBe(400);
+    await expectApiErrorCode(invalid, 'INVALID_DESTINATION_INTERVAL');
     const samePeriod = await page.request.post('/api/staff/slots/copy-week', {
       data: {
         sourceStart: fixture.sourceStart,
         destinationIntervals: [{ from: fixture.sourceStart, to: addDays(fixture.sourceStart, 6) }],
       },
     });
-    expect(samePeriod.status()).toBe(400);
+    await expectApiErrorCode(samePeriod, 'INVALID_DESTINATION_INTERVAL');
     const overlap = await page.request.post('/api/staff/slots/copy-week', {
       data: {
         sourceStart: fixture.sourceStart,
@@ -346,7 +400,7 @@ test.describe('MH-09 Repeat a weekly schedule', () => {
         ],
       },
     });
-    expect(overlap.status()).toBe(400);
+    await expectApiErrorCode(overlap, 'OVERLAPPING_WEEKS');
   });
 
   test('keeps the copy flow staff-only', async ({ page }) => {
