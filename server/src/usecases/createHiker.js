@@ -3,14 +3,16 @@
  * yet (MH-07). Two cases:
  *
  *   with an email     a regular account. The server generates the first password (the role is
- *                     always HIKER), keeps only its hash and sends the password by email to the
- *                     hiker: the employee never sees it. The hiker must change it at the first
- *                     login (mustChangePassword), or choose another with the password reset.
+ *                     always HIKER), keeps only its hash, sends the password by email to the
+ *                     hiker and returns it once to the authenticated staff member who created it.
+ *                     The hiker must change it at the first login (mustChangePassword), or choose
+ *                     another with the password reset.
  *   without an email  a temporary hiker: a name and, at most, a phone number. It cannot log in.
  *
  * The email leaves when the hiker is created. If it fails the account still exists, the failure is
  * only written to the log, and the answer is the same: the hiker can ask for a password reset.
- * Returns the hiker as the staff sees one: { id, firstName, lastName, email, phone, temporary }.
+ * Returns the created hiker and, for a regular account, the generated password for the one-time
+ * staff handoff: { id, firstName, lastName, email, phone, temporary, password? }.
  *
  * Errors: 403 the user is not staff; 409 an account with this email already exists.
  */
@@ -52,5 +54,6 @@ export const makeCreateHiker = ({ users, passwordHasher, passwordGenerator, mail
       email: created.email,
       phone: created.phone,
       temporary: false,
+      password,
     };
   };

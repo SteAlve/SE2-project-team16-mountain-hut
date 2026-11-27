@@ -1,7 +1,7 @@
 /**
  * The email of a hiker account made by the staff (MH-07): it tells the hiker the account exists and
- * gives the first password, which the server generated. The employee never sees it: this email is
- * the only place where it is written. The hiker must choose their own at the first login.
+ * gives the first password, which the server generated. The hiker must choose their own at the
+ * first login; the creating staff member also sees the password once in the account confirmation.
  *
  * A pure function: sending it is the job of the mailer.
  */

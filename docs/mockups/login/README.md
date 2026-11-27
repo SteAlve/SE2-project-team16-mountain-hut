@@ -38,7 +38,7 @@ The app is called **QUOTA**. In Italian *quota* is altitude (huts are signed "qu
 
 Login and sign-up are split screens: the **brand panel** on the left (hut name and altitude on a contour map), the form on the right.
 
-The navbar shows only the pages that exist in sprint 1: *The hut* and *Book a table* for hikers, *The hut* and *Slots & tables* ([slots mockup](../slots/README.md)) for employees and the warden. Pages of later stories are added to the navbar with their story.
+The navbar shows only the pages of the role, as in `NAV_PAGES` (`client/src/lib/roles.js`): *The hut*, *Book a table* and *My bookings* ([hiker booking page mockup](../hiker-booking-page/README.md)) for hikers; *The hut*, *Slots & tables* ([slots mockup](../slots/README.md)) and *Reservations* ([reservation mockup](../reservation-for-a-hiker/README.md)) for employees and the warden. In Figma, *Navbar / Logged in* has the properties `Role` (Hiker, Employee, Warden) and `Page` (the active link). Pages of later stories are added to the navbar with their story.
 
 ## On a phone
 
@@ -87,8 +87,9 @@ On a phone, Check your email, Reset link not valid, Password changed and the two
   4. *Save password* goes back to the login with a blue note (screen 14). The email is already written only when the page knows it, as above; otherwise the field is empty.
   5. The page cannot check the link before the form: the API has no call for it. A link that has expired, was already used or was replaced by a newer one is found out at *Save password*: the server answers `422` (`RESET_LINK_NOT_VALID`) and the page shows screen 13. *Send a new link* opens screen 10, with the email already written only when the page knows it.
 
-  Passwords are still stored only as hashes: nobody, the hut staff included, can read them.
-- **Change the password at the first login** (screen 15). An employee can create a full hiker account for someone at the hut or on the phone (MH-07, [reservation for a hiker mockup](../reservation-for-a-hiker/README.md)). Its password is generated at random and emailed to the hiker (email 5 of the [emails mockup](../emails/README.md)): the employee never sees it.
+  Passwords are still stored only as hashes: nobody can retrieve them from storage. The creating
+  staff member sees the generated value only once, in the account-created confirmation.
+- **Change the password at the first login** (screen 15). An employee can create a full hiker account for someone at the hut or on the phone (MH-07, [reservation for a hiker mockup](../reservation-for-a-hiker/README.md)). Its password is generated at random, shown once to the creating employee and emailed to the hiker (email 5 of the [emails mockup](../emails/README.md)).
   - When that hiker logs in with it, the login goes to *Choose your password* and no other page opens until a new password is saved. The page asks for the **current password** (the one we emailed) and the new one twice (`POST /api/auth/change-password`).
   - If the current password is wrong, or the new one is the same as the current one, the server answers `422` (screens 16 and 17).
   - Then the hiker goes on as after any login (*Book a table*, or the page they came from).

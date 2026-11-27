@@ -13,7 +13,7 @@ A party arrives at the hut some time before the meal and asks for seats, or some
 - *Icon / Search*.
 - A `Search icon` option on *Text field*. It is off by default, so the other mockups are unchanged.
 
-The employee navbar gets a third link, **Reservations**. The navbar component has no property for links, so on these screens it is detached from the component.
+The employee navbar gets a third link, **Reservations**. On these screens the navbar is *Navbar / Logged in* with `Role=Employee, Page=Reservations`.
 
 Same QUOTA brand, colours and fonts.
 
@@ -29,7 +29,7 @@ Everything shown comes from the story or from the product owner's clarifications
 | Team decision | The search lists **only full hiker accounts**, never temporary hikers, so each quick entry makes a new temporary hiker. `GET /api/staff/hikers` leaves them out, and the staff accounts too, so the limit of 20 results counts only hiker accounts. |
 | Clarification | A hiker who is missing can also be entered with a **full profile**: first name, last name, email and an optional phone. This makes a regular hiker account, which can later use the website. |
 | Clarification | For a full profile the password is generated at random. The hiker must change it at the next login, and can always recover it by email. |
-| Team decision | **The employee never sees the password.** The server generates it when the account is created (*Add hiker*), sends it to the hiker by email (email 5 of the [emails mockup](../emails/README.md)) and keeps only its hash. |
+| Team decision | The server generates the password when the account is created (*Add hiker*), sends it to the hiker by email (email 5 of the [emails mockup](../emails/README.md)), keeps only its hash and shows it once to the creating employee in an account-created confirmation. |
 | Clarification | The only time limit for the staff is the start of the time slot: no reservation after it starts. The 2-hour limit of hikers ([#7](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/7)) does not apply. |
 | MH-01 | The party must fit in the free seats of that time. The system chooses the tables, as when a hiker books ([booking mockup](../booking/README.md)). |
 
@@ -38,9 +38,9 @@ Everything shown comes from the story or from the product owner's clarifications
 1. **Find the hiker.** The page opens with an empty search, today's date already chosen and 1 person (screen 1). The search starts as the employee types, from the second character. It matches name, phone or email among **full hiker accounts only** (screen 2). Each result shows name, email and phone. Picking a result chooses that hiker. The chosen hiker card has a *Change* button to go back to the search.
 2. **New hiker.** The *+ New hiker* button is there from the start: under the search, or next to "Not in the list?" under the results. It opens a dialog with a switch:
    - **Quick entry** (screen 4): first name, last name and optional phone. *Add hiker* creates a temporary hiker.
-   - **Full profile** (screen 5): first name, last name, email and optional phone. There is no password field. *Add hiker* creates the account: the server generates the password and emails it to the hiker straight away (email 5 of the [emails mockup](../emails/README.md)). The employee never sees it.
+   - **Full profile** (screen 5): first name, last name, email and optional phone. There is no password field. *Add hiker* creates the account: the server generates the password, emails it to the hiker straight away (email 5 of the [emails mockup](../emails/README.md)) and shows it once to the employee in the **Hiker account created** confirmation.
 
-   After *Add hiker* the dialog closes and the new hiker is chosen in step 1. The account stays even if no reservation is saved afterwards. If the email does not arrive, the hiker can choose a password with *Forgot password?* on the login.
+   After *Add hiker* the dialog closes, the **Hiker account created** confirmation shows the email and generated password, and the new hiker is chosen in step 1. *Continue* closes the confirmation. The account stays even if no reservation is saved afterwards. If the email does not arrive, the hiker can choose a password with *Forgot password?* on the login.
 3. **Day, how many people, time** (screen 3). These work as on Book a table, and they stay locked until the hiker is chosen. A time that has already started cannot be picked and says "Started at *HH:MM*". A time that cannot fit the party says so, as in MH-01.
 4. **Save reservation** saves the reservation for the hiker, who then sees it as their own. A new full profile already has its account: it was created at *Add hiker*.
 5. **Reservation saved** (screen 7) shows the hiker, day, time, people and the tables the system chose. For a new full profile a blue note also says where the password was sent. Other hikers get the same dialog without the note.

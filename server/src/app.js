@@ -8,7 +8,7 @@
  * Wired so far: the authentication (sign up, login, logout, who am I, the change of the password
  * and the password reset by email), the slots, the seating preview, the booking of a table, its
  * confirmation email, the bookings of a hiker and their changes (with an email), the table sets and
- * slots of the staff, and the reservations that the staff makes for a hiker.
+ * slots of the staff, the reservations that the staff makes for a hiker, and the menus of the slots.
  * A story adds its own lines in each step.
  */
 
@@ -25,6 +25,7 @@ import * as tokens from './sessionTokens.js';
 
 // the dao
 import * as bookings from './dao/bookings.js';
+import * as hikes from './dao/hikes.js';
 import * as passwordResets from './dao/passwordResets.js';
 import * as sessions from './dao/sessions.js';
 import * as slots from './dao/slots.js';
@@ -60,6 +61,13 @@ import { makeChangeBookingAndNotify } from './usecases/changeBookingAndNotify.js
 import { makeCancelBooking } from './usecases/cancelBooking.js';
 import { makeCancelBookingAndNotify } from './usecases/cancelBookingAndNotify.js';
 import { makeListMyBookings } from './usecases/listMyBookings.js';
+import { makeListMyHikes } from './usecases/listMyHikes.js';
+import { makeRegisterHike } from './usecases/registerHike.js';
+import { makeRegisterHikeAndNotify } from './usecases/registerHikeAndNotify.js';
+import { makeGetSlotMenu } from './usecases/getSlotMenu.js';
+import { makeListPreviousMenus } from './usecases/listPreviousMenus.js';
+import { makeSaveSlotMenu } from './usecases/saveSlotMenu.js';
+import { makeDeleteSlotMenu } from './usecases/deleteSlotMenu.js';
 import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSlotOpen.js';
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
@@ -87,7 +95,14 @@ import {
   makeCreateBookingController,
   makeListMyBookingsController,
 } from './controllers/bookings.js';
+import { makeListMyHikesController, makeRegisterHikeController } from './controllers/hikes.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
+import {
+  makeGetSlotMenuController,
+  makeListPreviousMenusController,
+  makeSaveSlotMenuController,
+  makeDeleteSlotMenuController,
+} from './controllers/menus.js';
 import {
   makeAssignTableSetController,
   makeCreateHikerController,
@@ -114,6 +129,7 @@ import {
 // 4. routers
 import { makeAuthRouter } from './routes/auth.js';
 import { makeBookingsRouter } from './routes/bookings.js';
+import { makeHikesRouter } from './routes/hikes.js';
 import { makeSlotsRouter } from './routes/slots.js';
 import { makeStaffRouter } from './routes/staff.js';
 
@@ -173,12 +189,23 @@ const cancelBookingAndNotify = makeCancelBookingAndNotify({
 const slotsRouter = makeSlotsRouter({
   listSlotsController: makeListSlotsController({ listSlots }),
   seatingController: makeSeatingController({ previewSeating }),
+  getSlotMenuController: makeGetSlotMenuController({ getSlotMenu: makeGetSlotMenu({ slots }) }),
 });
 const bookingsRouter = makeBookingsRouter({
   createBookingController: makeCreateBookingController({ bookTable }),
   listMyBookingsController: makeListMyBookingsController({ listMyBookings }),
   changeBookingController: makeChangeBookingController({ changeBookingAndNotify }),
   cancelBookingController: makeCancelBookingController({ cancelBookingAndNotify }),
+  requireAuth,
+});
+
+// the hikes that a hiker registers before leaving (MH-20)
+const registerHike = makeRegisterHike({ hikes, clock, hutTimeZone: config.hutTimeZone });
+const registerHikeAndNotify = makeRegisterHikeAndNotify({ registerHike, mailer });
+const listMyHikes = makeListMyHikes({ hikes, clock, hutTimeZone: config.hutTimeZone });
+const hikesRouter = makeHikesRouter({
+  registerHikeController: makeRegisterHikeController({ registerHikeAndNotify }),
+  listMyHikesController: makeListMyHikesController({ listMyHikes }),
   requireAuth,
 });
 
@@ -223,6 +250,15 @@ const staffRouter = makeStaffRouter({
     previewStaffSeating: makePreviewStaffSeating({ slots, checkSlotOpen: checkSlotOpenForStaff }),
   }),
   createStaffBookingController: makeCreateStaffBookingController({ bookTableForHiker }),
+  saveSlotMenuController: makeSaveSlotMenuController({
+    saveSlotMenu: makeSaveSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
+  }),
+  deleteSlotMenuController: makeDeleteSlotMenuController({
+    deleteSlotMenu: makeDeleteSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
+  }),
+  listPreviousMenusController: makeListPreviousMenusController({
+    listPreviousMenus: makeListPreviousMenus({ slots }),
+  }),
   requireAuth,
 });
 
@@ -232,6 +268,7 @@ app.use(readSessionCookie);
 app.use('/api', authRouter);
 app.use('/api', slotsRouter);
 app.use('/api', bookingsRouter);
+app.use('/api', hikesRouter);
 app.use('/api', staffRouter);
 
 // an /api path no router answers
