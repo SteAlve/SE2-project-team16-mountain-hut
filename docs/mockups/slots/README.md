@@ -24,7 +24,7 @@ A **table set** is a named list of tables (e.g. *Lunch, main room*: tables 1–5
 
 1. **Pick a day** in the strip. Every day can be picked, also the ones with no slots. The strip always shows one whole week, from Monday to Sunday, with its dates above it (`‹ Mon 12 – Sun 18 Jul ›`); the arrows move one week (7 days) at a time and the strip has no end. Days before today stay in the strip, so the week is always complete. Working by weeks keeps the page aligned with MH-09, which copies the week shown ([mockup](../copy-week/README.md)). *Book a table* keeps its own strip, starting at today.
 2. **The slots of the day** are listed in order of time, each with its table set, its tables (`T3 · 4` = table 3, 4 seats) and its total seats (`GET /api/staff/slots`).
-3. **Add a slot**: day, start, end, and one of the table sets (`POST /api/staff/slots`). *No tables for now* saves a slot with 0 seats, which hikers cannot book yet.
+3. **Add a slot**: day, start, end, and one of the table sets (`POST /api/staff/slots`). *No tables for now* saves a slot with 0 seats, which hikers cannot book yet. After saving, *Write the menu* opens for the new slot; it can be skipped ([menus mockup](../menus/README.md), screen 12).
 4. **+ New table set** (in the Add a slot dialog or in the Table sets card): a name and the tables. *Copy the tables of* fills the list from a set already made, so only what differs is changed. After saving, the new set is chosen in the Add a slot dialog it came from.
 
    The tables are edited in one table made to stay readable with many tables. The column titles (*Table*, *Seats*) are written once on top. Each table is a separate cell, with its number, its seats and the remove button (×). On desktop there are 3 cells per line, read left to right (1 2 3, 4 5 6). On a phone there is 1 cell per line. **Adding a table:** the last cell is always empty, with a dashed border and the next number already written in grey. The cursor is in *Seats*, so the employee types the seats and presses Enter. The table is added and a new empty cell opens with the next number. Under the table, *By size* counts the tables by seats (`3 × 2 seats · 2 × 4 · 1 × 6`), so a long list can be checked at a glance.
@@ -98,7 +98,7 @@ All the rules above are checked in the browser before sending, and checked again
 | Day with no slots | **No slots on *Fri 16 Jul*.** Hikers cannot book this day. Add a slot and give it its tables. |
 | Slot without tables | **No tables yet.** 0 seats: hikers cannot book this time. Button: Choose tables |
 | Table sets card | A set is the tables a slot has. Make it once and give it to as many slots as you want. |
-| Slot saved (`201`) | The dialog closes; the slot appears in the list, in order of time. |
+| Slot saved (`201`) | The dialog closes; the slot appears in the list, in order of time, and *Write the menu* opens for it ([menus mockup](../menus/README.md), screen 12). *Skip for now* leaves it with no menu. |
 | Table set saved (`201`) | Back to the dialog it came from, with the new set chosen; the Table sets card shows it. |
 | Tables given to a slot (`200`) | The dialog closes; the slot shows its table set and seats. |
 | Same start time on that day (`409`) | Alert in the dialog: "A slot starting at *HH:MM* already exists on *day*. The day was reloaded: choose another start time." Under Starts at: "Already used." The other choices are kept. |

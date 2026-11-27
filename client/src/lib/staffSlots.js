@@ -6,7 +6,7 @@
  * Days are 'YYYY-MM-DD' and times 'HH:MM', in the hut's time: the staff work at the hut, so the
  * clock of their browser is the clock of the hut.
  */
-import { formatDay, formatTime, toDay } from './bookingDates.js';
+import { formatDay, formatTime, formatTimeRange, toDay } from './bookingDates.js';
 import { seats } from './slotAvailability.js';
 
 // The instant the slot starts.
@@ -38,3 +38,10 @@ export const dayLabel = (day, now) => (day === toDay(now) ? `Today, ${formatDay(
 
 // '13:00 today' or '13:00 on Sat 17 Jul': until when the time can be entered, its start.
 export const enterUntil = (day, startsAt, now) => `${formatTime(startsAt)} ${onDay(day, now)}`;
+
+// 'Sun 18 Jul · 19:00 – 21:00 · Dinner, main room': the slot under the title of the menu dialogs (MH-10).
+export const slotLabel = (slot) =>
+  [formatDay(slot.date), formatTimeRange(slot.startsAt, slot.endsAt), slot.tableSet?.name].filter(Boolean).join(' · ');
+
+// 'Thu 15 Jul · 19:00 – 21:00': the slot of a previous menu.
+export const slotWhen = (slot) => `${formatDay(slot.date)} · ${formatTimeRange(slot.startsAt, slot.endsAt)}`;

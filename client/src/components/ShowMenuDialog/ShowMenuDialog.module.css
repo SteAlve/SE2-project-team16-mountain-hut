@@ -1,0 +1,19 @@
+/* The menu in a box; a long menu scrolls inside it. */
+.box {
+  max-height: 420px;
+  padding: 16px 20px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--snow);
+}
+
+.delete {
+  color: var(--error);
+}
+
+@media (max-width: 991.98px) {
+  .box {
+    max-height: none;
+  }
+}

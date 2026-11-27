@@ -5,6 +5,11 @@
  * and back here after it.
  * Dialogs: Add a slot, Choose tables (a slot without tables) and New table set, which opens over
  * the first two or from the Table sets card; the set saved there is chosen in the dialog it came from.
+ * The menus (MH-10, mockup docs/mockups/menus): each slot shows its menu; Show menu opens it (with
+ * Edit menu and Delete menu), Write the menu opens the editor, and Start from a previous menu opens
+ * over the editor and copies the chosen menu into it. A slot that has started keeps its menu as it is.
+ * A slot just saved in Add a slot goes straight on to Write the menu (screen 12), where Skip for now leaves it
+ * without a menu (it can be written later from the slot).
  * The navbar and Log out come from AppLayout; RequireRole keeps hikers and visitors out.
  */
 import { useState } from 'react';
@@ -15,12 +20,17 @@ import { Button } from '../../components/Button/Button.jsx';
 import { ChooseTablesDialog } from '../../components/ChooseTablesDialog/ChooseTablesDialog.jsx';
 import { CopyWeekDialog } from '../../components/CopyWeekDialog/CopyWeekDialog.jsx';
 import { DayStrip } from '../../components/DayStrip/DayStrip.jsx';
+import { MenuDialog } from '../../components/MenuDialog/MenuDialog.jsx';
 import { NewTableSetDialog } from '../../components/NewTableSetDialog/NewTableSetDialog.jsx';
+import { PreviousMenusDialog } from '../../components/PreviousMenusDialog/PreviousMenusDialog.jsx';
+import { ShowMenuDialog } from '../../components/ShowMenuDialog/ShowMenuDialog.jsx';
 import { SlotRow } from '../../components/SlotRow/SlotRow.jsx';
 import { TableSetsCard } from '../../components/TableSetsCard/TableSetsCard.jsx';
 import { useCopyWeeklySchedule } from '../../hooks/useCopyWeeklySchedule.js';
+import { usePreviousMenus } from '../../hooks/usePreviousMenus.js';
 import { useSlotsTables } from '../../hooks/useSlotsTables.js';
 import { formatDay, nextDays, toDay } from '../../lib/bookingDates.js';
+import { hasStarted } from '../../lib/staffSlots.js';
 import { seatsLabel } from '../../lib/tableSets.js';
 import styles from './SlotsPage.module.css';
 
@@ -38,6 +48,14 @@ export function SlotsPage() {
   const [createdSetId, setCreatedSetId] = useState(undefined);
   const [copyWeek, setCopyWeek] = useState(false);
   const [copyNotice, setCopyNotice] = useState(null);
+  const [showMenu, setShowMenu] = useState(null); // { key, slot }
+  const [editMenu, setEditMenu] = useState(null); // { key, slot, editing, justAdded, copied: { menu, slot } | null }
+  const [choosingMenu, setChoosingMenu] = useState(false);
+  const previousMenus = usePreviousMenus({
+    exceptSlotId: editMenu?.slot.slotId ?? null,
+    enabled: editMenu !== null,
+    onNeedsLogin: page.markNeedsLogin,
+  });
   const copySchedule = useCopyWeeklySchedule({
     sourceStart: date,
     onNeedsLogin: page.markNeedsLogin,
@@ -50,9 +68,14 @@ export function SlotsPage() {
     setter({ key: opened, ...value });
   };
 
+  // A slot just added goes on to Write the menu, which can be skipped; a slot that has already
+  // started cannot have a menu, so it stops here.
   const saveSlot = async (form) => {
     const result = await page.addSlot(form);
-    if (result.ok) setAddSlot(null);
+    if (result.ok) {
+      setAddSlot(null);
+      if (!menuLocked(result.slot)) openEditor(result.slot, false, true);
+    }
     return result;
   };
 
@@ -75,6 +98,33 @@ export function SlotsPage() {
   const openNewSet = (from) => {
     setOpened((n) => n + 1);
     setNewSet({ key: opened, from });
+  };
+
+  // The menus (MH-10). The browser's clock is the hut's: the staff work at the hut (lib/staffSlots.js).
+  const now = new Date();
+  const menuLocked = (slot) => hasStarted(slot.date, slot.startsAt, now);
+
+  const openEditor = (slot, editing, justAdded = false) => {
+    setShowMenu(null);
+    previousMenus.setSearch('');
+    open(setEditMenu, { slot, editing, justAdded, copied: null });
+  };
+
+  const saveMenu = async (text) => {
+    const result = await page.saveMenu(editMenu.slot, text);
+    if (result.ok || result.closed) setEditMenu(null);
+    return result;
+  };
+
+  const deleteMenu = async () => {
+    const result = await page.deleteMenu(showMenu.slot);
+    if (result.ok || result.closed) setShowMenu(null);
+    return result;
+  };
+
+  const usePrevious = (entry) => {
+    setEditMenu((current) => ({ ...current, copied: { menu: entry.menu, slot: entry } }));
+    setChoosingMenu(false);
   };
 
   const chooseDate = (day) => {
@@ -152,7 +202,14 @@ export function SlotsPage() {
           ) : slots.length > 0 ? (
             <ul className={styles.slots} aria-labelledby="day-title">
               {slots.map((slot) => (
-                <SlotRow key={slot.slotId} slot={slot} onChooseTables={() => open(setChoose, { slot })} />
+                <SlotRow
+                  key={slot.slotId}
+                  slot={slot}
+                  menuLocked={menuLocked(slot)}
+                  onChooseTables={() => open(setChoose, { slot })}
+                  onShowMenu={() => open(setShowMenu, { slot })}
+                  onWriteMenu={() => openEditor(slot, false)}
+                />
               ))}
             </ul>
           ) : (
@@ -211,6 +268,46 @@ export function SlotsPage() {
           isPending={page.isPending}
           onSave={saveTableSet}
           onCancel={() => setNewSet(null)}
+        />
+      )}
+
+      {showMenu && (
+        <ShowMenuDialog
+          key={showMenu.key}
+          open
+          slot={showMenu.slot}
+          locked={menuLocked(showMenu.slot)}
+          isPending={page.isPending}
+          onEdit={() => openEditor(showMenu.slot, true)}
+          onDelete={deleteMenu}
+          onClose={() => setShowMenu(null)}
+        />
+      )}
+
+      {editMenu && (
+        <MenuDialog
+          key={editMenu.key}
+          open={!choosingMenu}
+          slot={editMenu.slot}
+          editing={editMenu.editing}
+          justAdded={editMenu.justAdded}
+          initialMenu={editMenu.slot.menu ?? ''}
+          copied={editMenu.copied}
+          hasPrevious={previousMenus.hasAny === true}
+          isPending={page.isPending}
+          onChoosePrevious={() => setChoosingMenu(true)}
+          onSave={saveMenu}
+          onCancel={() => setEditMenu(null)}
+        />
+      )}
+
+      {editMenu && choosingMenu && (
+        <PreviousMenusDialog
+          open
+          slot={editMenu.slot}
+          previous={previousMenus}
+          onUse={usePrevious}
+          onBack={() => setChoosingMenu(false)}
         />
       )}
 

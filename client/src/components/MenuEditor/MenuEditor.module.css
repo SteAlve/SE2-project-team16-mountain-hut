@@ -1,0 +1,208 @@
+/* Figma "Menu editor": the label, a box with the toolbar on top and a writing area of fixed height,
+   the counter under it on the right (and the error on the left). */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.required {
+  color: var(--error);
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--snow);
+}
+
+.box:focus-within {
+  border-color: var(--pine);
+  box-shadow: 0 0 0 4px var(--moss-soft);
+}
+
+.invalid .box {
+  border-color: var(--error);
+}
+
+.invalid .box:focus-within {
+  box-shadow: 0 0 0 4px var(--error-soft);
+}
+
+/* Figma "Menu toolbar" */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px 6px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--mist);
+}
+
+/* Figma "Format button": 32px, pressed = moss background and pine colour. */
+.format {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.format:hover {
+  background: var(--moss-soft);
+}
+
+.format:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+}
+
+.active {
+  background: var(--moss-soft);
+  color: var(--pine);
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.italic {
+  font-style: italic;
+  font-weight: 600;
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.hint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--stone);
+  white-space: nowrap;
+}
+
+/* The writing area keeps its height: a long menu scrolls inside it. */
+.content {
+  position: relative;
+  height: 300px;
+  overflow-y: auto;
+}
+
+.invalid .content {
+  background: var(--error-soft);
+}
+
+.placeholder {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  margin: 0;
+  font-size: 15px;
+  color: var(--stone);
+  pointer-events: none;
+}
+
+.editable {
+  min-height: 100%;
+  padding: 14px 16px;
+  font-size: 16px; /* at least 16px, or iPhones zoom in when the field is tapped */
+  line-height: 1.45;
+  color: var(--ink);
+  outline: none;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.editable b,
+.editable strong {
+  font-weight: 700;
+}
+
+.editable ul {
+  margin: 2px 0;
+  padding-left: 22px;
+}
+
+.editable ul ul {
+  list-style-type: circle;
+}
+
+.editable li::marker {
+  color: var(--stone);
+}
+
+.footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--error);
+}
+
+.counter {
+  margin: 0 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--stone);
+  white-space: nowrap;
+}
+
+.over {
+  color: var(--error);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* On a phone the toolbar keeps its five buttons; the keyboard hint is hidden. */
+@media (max-width: 991.98px) {
+  .field {
+    gap: 6px;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .content {
+    height: 240px;
+  }
+
+  .error {
+    font-size: 14px;
+  }
+}

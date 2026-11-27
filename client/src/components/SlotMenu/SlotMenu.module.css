@@ -1,0 +1,68 @@
+/* The columns of the slot row above it: the label under the time, the words under the tables. */
+.line {
+  display: grid;
+  grid-template-columns: 174px minmax(0, 1fr) auto;
+  grid-template-areas: 'label text action';
+  align-items: center;
+  gap: 8px 20px;
+  padding: 10px 14px 10px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.label {
+  grid-area: label;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.72px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.summary,
+.empty {
+  grid-area: text;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  font-style: italic;
+  color: var(--stone);
+}
+
+.action {
+  grid-area: action;
+}
+
+@media (max-width: 991.98px) {
+  .line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'label action'
+      'text text';
+    padding: 12px 16px 14px;
+  }
+
+  /* With no button the message sits next to the label. */
+  .line:not(:has(.action)) {
+    grid-template-areas:
+      'label label'
+      'text text';
+  }
+
+  .summary,
+  .empty {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .empty {
+    -webkit-line-clamp: 2;
+  }
+}
