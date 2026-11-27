@@ -64,11 +64,10 @@ import { makeListMyBookings } from './usecases/listMyBookings.js';
 import { makeListMyHikes } from './usecases/listMyHikes.js';
 import { makeRegisterHike } from './usecases/registerHike.js';
 import { makeRegisterHikeAndNotify } from './usecases/registerHikeAndNotify.js';
-import { makeCheckMenuOpen } from './usecases/checkMenuOpen.js';
-import { makeDeleteSlotMenu } from './usecases/deleteSlotMenu.js';
 import { makeGetSlotMenu } from './usecases/getSlotMenu.js';
 import { makeListPreviousMenus } from './usecases/listPreviousMenus.js';
 import { makeSaveSlotMenu } from './usecases/saveSlotMenu.js';
+import { makeDeleteSlotMenu } from './usecases/deleteSlotMenu.js';
 import { makeCheckSlotOpen, makeCheckSlotOpenForStaff } from './usecases/checkSlotOpen.js';
 import { makeCreateHiker } from './usecases/createHiker.js';
 import { makeCreateStaffBooking } from './usecases/createStaffBooking.js';
@@ -99,10 +98,10 @@ import {
 import { makeListMyHikesController, makeRegisterHikeController } from './controllers/hikes.js';
 import { makeListSlotsController, makeSeatingController } from './controllers/slots.js';
 import {
-  makeDeleteSlotMenuController,
   makeGetSlotMenuController,
   makeListPreviousMenusController,
   makeSaveSlotMenuController,
+  makeDeleteSlotMenuController,
 } from './controllers/menus.js';
 import {
   makeAssignTableSetController,
@@ -213,8 +212,6 @@ const hikesRouter = makeHikesRouter({
 // the tables and the slots of the hut, and the reservations for a hiker (staff). The staff can book
 // until the meal starts, not only until 2 hours before it (checkSlotOpenForStaff).
 const checkSlotOpenForStaff = makeCheckSlotOpenForStaff({ clock, hutTimeZone: config.hutTimeZone });
-// the menu of a slot can be written, changed or deleted until the slot starts (MH-10)
-const checkMenuOpen = makeCheckMenuOpen({ clock, hutTimeZone: config.hutTimeZone });
 const createStaffBooking = makeCreateStaffBooking({
   users, slots, bookings, checkSlotOpen: checkSlotOpenForStaff,
 });
@@ -254,10 +251,10 @@ const staffRouter = makeStaffRouter({
   }),
   createStaffBookingController: makeCreateStaffBookingController({ bookTableForHiker }),
   saveSlotMenuController: makeSaveSlotMenuController({
-    saveSlotMenu: makeSaveSlotMenu({ slots, clock, checkMenuOpen }),
+    saveSlotMenu: makeSaveSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
   }),
   deleteSlotMenuController: makeDeleteSlotMenuController({
-    deleteSlotMenu: makeDeleteSlotMenu({ slots, checkMenuOpen }),
+    deleteSlotMenu: makeDeleteSlotMenu({ slots, clock, hutTimeZone: config.hutTimeZone }),
   }),
   listPreviousMenusController: makeListPreviousMenusController({
     listPreviousMenus: makeListPreviousMenus({ slots }),

@@ -34,13 +34,15 @@ export function parseSaveSlotMenu(params, body) {
   return { slotId, menu: body.menu };
 }
 
+// DELETE /api/staff/slots/:slotId/menu
+export function parseDeleteSlotMenu(params) {
+  return { slotId: requirePositiveIntegerText(params?.slotId, 'slotId') };
+}
+
 // GET /api/slots/:slotId/menu
 export function parseGetSlotMenu(params) {
   return { slotId: requirePositiveIntegerText(params?.slotId, 'slotId') };
 }
-
-// DELETE /api/staff/slots/:slotId/menu
-export const parseDeleteSlotMenu = parseGetSlotMenu;
 
 // GET /api/staff/menus?exceptSlotId=12&search=polenta&limit=10&offset=0. All optional.
 export function parseListPreviousMenus(query) {

@@ -1,9 +1,9 @@
-// The menu of a slot can be written, changed or deleted only until the slot starts (MH-10, product
-// owner SE2-Polito/AY26-27-Mountain-Hut#59): checkMenuOpen, saveSlotMenu and deleteSlotMenu.
+// The menu of a slot can be written, changed or deleted only before the slot starts (MH-10, product
+// owner, PO issue 59 of the requirements repository): requireMenuOpen, saveSlotMenu and deleteSlotMenu.
 import { describe, expect, it, vi } from 'vitest';
 import { ForbiddenError, NotFoundError, UnprocessableError, ValidationError } from '../../src/domain/errors.js';
-import { makeCheckMenuOpen } from '../../src/usecases/checkMenuOpen.js';
 import { makeDeleteSlotMenu } from '../../src/usecases/deleteSlotMenu.js';
+import { requireMenuOpen } from '../../src/usecases/requireMenuOpen.js';
 import { makeSaveSlotMenu } from '../../src/usecases/saveSlotMenu.js';
 
 const zone = 'Europe/Rome';
@@ -15,25 +15,20 @@ const savedAt = new Date('2090-07-10T08:00:00Z');
 
 const clockAt = (now) => ({ at: vi.fn(() => startsAt), now: vi.fn(() => now) });
 
-describe('checkMenuOpen', () => {
-  it('lets the menu change before the slot starts, and at its start', () => {
-    const clock = clockAt(startsAt);
-    const check = makeCheckMenuOpen({ clock, hutTimeZone: zone });
+describe('requireMenuOpen', () => {
+  it('lets the menu change before the slot starts', () => {
+    const clock = clockAt(new Date(startsAt.getTime() - 1));
 
-    expect(() => check(slot)).not.toThrow();
+    expect(() => requireMenuOpen(slot, { clock, hutTimeZone: zone })).not.toThrow();
     expect(clock.at).toHaveBeenCalledWith(slot.serviceDate, slot.startsAt, zone);
-    expect(() => makeCheckMenuOpen({ clock: clockAt(new Date(startsAt.getTime() - 1)), hutTimeZone: zone })(slot))
-      .not.toThrow();
   });
 
-  it('keeps the menu fixed once the slot has started', () => {
-    const check = makeCheckMenuOpen({ clock: clockAt(new Date(startsAt.getTime() + 1)), hutTimeZone: zone });
+  it('keeps the menu fixed from the start of the slot on (422 MENU_LOCKED)', () => {
+    for (const now of [startsAt, new Date(startsAt.getTime() + 1)]) {
+      const check = () => requireMenuOpen(slot, { clock: clockAt(now), hutTimeZone: zone });
 
-    expect(() => check(slot)).toThrow(UnprocessableError);
-    try {
-      check(slot);
-    } catch (error) {
-      expect(error.code).toBe('MENU_LOCKED');
+      expect(check).toThrow(UnprocessableError);
+      expect(check).toThrow(expect.objectContaining({ code: 'MENU_LOCKED' }));
     }
   });
 });
@@ -44,15 +39,16 @@ function setup({ found = slot, locked = false } = {}) {
     saveMenu: vi.fn(async (slotId, menu) => ({ ...slot, slotId, menu })),
     deleteMenu: vi.fn().mockResolvedValue(true),
   };
-  const checkMenuOpen = vi.fn(() => {
-    if (locked) throw new UnprocessableError('The slot has started', { code: 'MENU_LOCKED' });
-  });
-  const clock = { now: vi.fn(() => savedAt) };
+  // the slot starts after savedAt, or has already started when locked
+  const clock = {
+    now: vi.fn(() => savedAt),
+    at: vi.fn(() => (locked ? new Date(savedAt.getTime() - 1) : startsAt)),
+  };
   return {
     slots,
-    checkMenuOpen,
-    save: makeSaveSlotMenu({ slots, clock, checkMenuOpen }),
-    remove: makeDeleteSlotMenu({ slots, checkMenuOpen }),
+    clock,
+    save: makeSaveSlotMenu({ slots, clock, hutTimeZone: zone }),
+    remove: makeDeleteSlotMenu({ slots, clock, hutTimeZone: zone }),
   };
 }
 
@@ -63,7 +59,7 @@ describe('saveSlotMenu', () => {
     await expect(t.save({ user: employee, slotId: 12, menu: '**Dinner**  \r\n- Soup\n\n' })).resolves.toEqual({
       slotId: 12, date: '2090-07-18', startsAt: '19:00:00', endsAt: '21:00:00', menu: '**Dinner**\n- Soup',
     });
-    expect(t.checkMenuOpen).toHaveBeenCalledExactlyOnceWith(slot);
+    expect(t.clock.at).toHaveBeenCalledExactlyOnceWith(slot.serviceDate, slot.startsAt, zone);
     expect(t.slots.saveMenu).toHaveBeenCalledExactlyOnceWith(12, '**Dinner**\n- Soup', savedAt);
   });
 

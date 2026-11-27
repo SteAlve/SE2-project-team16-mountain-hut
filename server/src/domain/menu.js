@@ -15,18 +15,11 @@
  *   MENU_EMPTY      only spaces, empty lines, empty items or formatting marks
  *   MENU_TOO_LONG   more than MENU_MAX_LENGTH characters
  *   MENU_FORMAT     a heading, a link, an image, an HTML tag, or a sub-item not under an item
- * and isMenuOpen says until when a menu can still be changed or deleted (MENU_LOCKED, 422, in the use
- * cases).
+ * Until when a menu can still be changed or deleted is in slotMenu.js (isMenuOpen).
  */
 import { ValidationError } from './errors.js';
 
 export const MENU_MAX_LENGTH = 2000;
-
-// When the staff can still write, change or delete the menu of a slot: until the slot starts, that
-// instant included, as the reservations of the staff (bookingWindow.js, isOpenForStaff). Once the slot
-// has started its menu stays as it is (product owner, SE2-Polito/AY26-27-Mountain-Hut#59). The times
-// arrive as parameters: domain/ never reads the clock.
-export const isMenuOpen = (slotStartsAt, now) => now.getTime() <= slotStartsAt.getTime();
 
 const ITEM = /^- /;
 const SUB_ITEM = /^ {2}- /;
