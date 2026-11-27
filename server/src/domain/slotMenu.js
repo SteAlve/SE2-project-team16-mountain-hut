@@ -7,3 +7,9 @@ export const describeSlotMenu = ({ slotId, serviceDate, startsAt, endsAt, menu }
   endsAt,
   menu,
 });
+
+// When the staff can still change or delete the menu of a slot (product owner, PO issue 59 of the
+// requirements repository): only before the slot starts. From its start on, the menu is the one the
+// hikers had for that meal and stays as it is. The times arrive as parameters: domain/ never reads
+// the clock.
+export const isMenuOpen = (slotStartsAt, now) => now.getTime() < slotStartsAt.getTime();

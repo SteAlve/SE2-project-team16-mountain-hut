@@ -2893,7 +2893,7 @@
           "Staff"
         ],
         "summary": "Write or change the menu of a slot",
-        "description": "Saves the menu of a slot, replacing the one it had: when two employees save the same menu, the last one wins. A menu started from a previous one (`GET /api/staff/menus`) is a copy: saving it changes only this slot. A menu cannot be removed, only changed. The menu is stored as it is answered: after the clean-up described in `SaveMenuRequest`.",
+        "description": "Saves the menu of a slot, replacing the one it had: when two employees save the same menu, the last one wins. A menu started from a previous one (`GET /api/staff/menus`) is a copy: saving it changes only this slot, also when other slots have the same text. Only before the slot starts: from its start on, the menu stays as it is. The menu is stored as it is answered: after the clean-up described in `SaveMenuRequest`.",
         "operationId": "saveSlotMenu",
         "security": [
           {
@@ -3019,6 +3019,136 @@
                 "example": {
                   "error": "NotFoundError",
                   "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot has started: its menu can no longer be changed or deleted (product owner, PO issue 59 of the requirements repository).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "message": "The slot has started: its menu can no longer be changed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Delete the menu of a slot",
+        "description": "Deletes the menu of a slot: the slot is left with no menu (`menu: null`), and the menu is no longer listed among the previous menus unless another slot has the same text. Only before the slot starts: the menus of the slots that have started stay as they are (product owner, PO issue 59 of the requirements repository). Deleting the menu of a slot that has none is not an error.",
+        "operationId": "deleteSlotMenu",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "description": "Identifier of the slot.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 12
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The menu is deleted (or the slot had none)."
+          },
+          "400": {
+            "description": "The slot id is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "slotId must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot has started: its menu can no longer be changed or deleted (product owner, PO issue 59 of the requirements repository).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "message": "The slot has started: its menu can no longer be changed"
                 }
               }
             }

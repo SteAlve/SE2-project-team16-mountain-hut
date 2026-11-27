@@ -3,7 +3,8 @@
 -- rules are checked by the server before saving (domain/menu.js). The database only keeps the limits
 -- that must never be broken: not empty, at most 2000 characters.
 -- menu_saved_at orders the previous menus, newest first, when the staff starts from one of them.
--- A slot with no menu has both columns NULL; a menu is changed, never removed (mockup "Left out").
+-- A slot with no menu has both columns NULL. A menu can be changed or deleted only before its slot
+-- starts (PO issue 59 of the requirements repository): the server checks it, not the database.
 
 ALTER TABLE slot
     ADD COLUMN menu TEXT,
