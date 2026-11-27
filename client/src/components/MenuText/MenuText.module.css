@@ -1,0 +1,64 @@
+/* Figma "Menu text": 15px lines 6px apart, • for an item and ◦ for a sub-item, in grey. */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+}
+
+.title {
+  font-size: 16px;
+}
+
+.menu strong {
+  font-weight: 700;
+}
+
+.blank {
+  height: 4px;
+}
+
+.items,
+.subItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subItems {
+  margin: 6px 0 0 -18px;
+  padding-left: 22px;
+}
+
+.items > li,
+.subItems > li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.items > li::before,
+.subItems > li::before {
+  position: absolute;
+  left: 0;
+  width: 10px;
+  font-weight: 700;
+  color: var(--stone);
+}
+
+.items > li::before {
+  content: '•';
+}
+
+.subItems > li::before {
+  content: '◦';
+}

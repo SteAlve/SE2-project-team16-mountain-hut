@@ -4,7 +4,7 @@
  * menu is no longer listed among the previous menus, unless another slot has the same text.
  * Deleting the menu of a slot that has none is not an error: the result is the same.
  *
- * Errors: 403 the user is not staff; 404 the slot does not exist; 422 the slot has started.
+ * Errors: 403 the user is not staff; 404 the slot does not exist; 422 MENU_LOCKED the slot has started.
  */
 import { NotFoundError } from '../domain/errors.js';
 import { requireMenuOpen } from './requireMenuOpen.js';

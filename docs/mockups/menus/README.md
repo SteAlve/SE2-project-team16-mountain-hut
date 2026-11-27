@@ -47,6 +47,7 @@ Same QUOTA brand, colours and fonts.
 5. **Start from a previous menu.** *Choose a menu* opens the menus already written for other slots, newest first (screen 3). The same text is listed once, with the last slot it was given to. On the left, each menu shows its slot and its first two lines, so it can be recognised; *Search the menus* finds a dish or a day, and *Show older menus* loads more. On the right, the **preview** shows the chosen menu whole, formatted as hikers see it (bold, italic, items and sub-items); a long menu scrolls inside the preview. On a phone there is no room for two columns: tapping a menu opens it inside its card, formatted, and the sheet scrolls (phone screen 3). *Use this menu* copies it into the editor and replaces what was there; *Back* returns to the editor as it was.
 6. **Change the copied menu.** The copied menu is in the editor, with its bold, italic and lists, and can be changed like any text; here a starter was changed. An info alert says where it was copied from (screen 4). *Start from a previous menu*, at the bottom left, goes back to step 5 to pick another menu.
 7. **Save menu.** The dialog closes, an alert names the slot, and the slot shows the first words of its new menu and *Show menu* (screen 5). Hikers see the menu from now on.
+8. **Right after Add a slot.** *Add slot* ([slots mockup](../slots/README.md)) saves the slot, and *Write the menu* opens at once for it (screen 12). An info alert says "Slot added. Write its menu now, or skip and write it later from the slot." Everything works as in steps 4–7; *Cancel* becomes *Skip for now*, which closes the dialog and leaves the slot with no menu (it shows *Write the menu*, as in screen 1). A slot that has already started (added for an earlier time today, or a past day) cannot have a menu, so the dialog does not open.
 
 On a phone the slots look the same (phone screen 1), and *Show menu* opens the menu in a sheet from the bottom, with *Edit menu* and *Close* (phone screen 5). *Edit menu* opens *Edit the menu* in a sheet, with *Start from a previous menu* under the editor (phone screen 6).
 
@@ -70,12 +71,13 @@ On a phone the slots look the same (phone screen 1), and *Show menu* opens the m
 | 9 | A hiker sees the menu on Book a table | ![A hiker sees the menu](09-hiker-sees-the-menu.png) |
 | 10 | Check availability: the menu of the time | ![Check availability](10-check-availability.png) |
 | 11 | My bookings: the menu of each booking | ![My bookings](11-my-bookings.png) |
+| 12 | Write the menu right after Add a slot | ![Write the menu after Add a slot](12-write-the-menu-after-add-a-slot.png) |
 
-Screen 11 is taller than 800 px: the page scrolls.
+Screens 11 and 12 are taller than 800 px: the page scrolls (on screen 12, the dialog).
 
 ### On a phone
 
-The same website in a phone browser. Below 992 px (react-bootstrap `lg`) the dialogs become sheets from the bottom, with *Save menu* (or *Use this menu*) as the first button at the bottom. The toolbar keeps its five buttons; the keyboard hint is hidden. On *Slots & tables* each slot shows its menu as on a desktop (phone screen 1); *Show menu* opens it in a sheet, with *Edit menu* as the first button at the bottom (phone screen 5). In *Start from a previous menu* the chosen menu opens inside its card (phone screen 3). On *Book a table* the *Menu* box is under the times, with the same fixed height and scrollbar as on a desktop. On *Check availability* the answer sits in the bar at the bottom ([availability mockup](../availability/README.md)), so the menu is there too, closed like on *My bookings*: the first words and *Show menu*.
+The same website in a phone browser. Below 992 px (react-bootstrap `lg`) the dialogs become sheets from the bottom, with *Save menu* (or *Use this menu*) as the first button at the bottom. The toolbar keeps its five buttons; the keyboard hint is hidden. On *Slots & tables* each slot shows its menu as on a desktop (phone screen 1); *Show menu* opens it in a sheet, with *Edit menu* as the first button at the bottom (phone screen 5). In *Start from a previous menu* the chosen menu opens inside its card (phone screen 3). After *Add slot* the *Write the menu* sheet opens at once, with the info alert on top and *Skip for now* under *Save menu* (phone screen 10). On *Book a table* the *Menu* box is under the times, with the same fixed height and scrollbar as on a desktop. On *Check availability* the answer sits in the bar at the bottom ([availability mockup](../availability/README.md)), so the menu is there too, closed like on *My bookings*: the first words and *Show menu*.
 
 | # | Screen | Image |
 |---|---|---|
@@ -88,6 +90,7 @@ The same website in a phone browser. Below 992 px (react-bootstrap `lg`) the dia
 | 7 | A hiker sees the menu on Book a table (scrolled to step 3) | ![A hiker sees the menu on a phone](phone/07-hiker-sees-the-menu.png) |
 | 8 | Check availability: the menu in the bar | ![Check availability on a phone](phone/08-check-availability.png) |
 | 9 | My bookings: the menu of each booking | ![My bookings on a phone](phone/09-my-bookings.png) |
+| 10 | Write the menu right after Add a slot | ![Write the menu after Add a slot on a phone](phone/10-write-the-menu-after-add-a-slot.png) |
 
 ## Fields and rules
 
@@ -111,6 +114,7 @@ The formatting is kept as text the server can store and check, for example a sma
 | Slot with a menu (phone) | **MENU** · button *Show menu*, the first words under them. *Show menu* opens the sheet **Menu** · *day* · *start – end* · *table set*, then the whole menu, formatted. Buttons: Edit menu, Close |
 | Slot with no menu | **MENU** · No menu yet. Hikers see only the time. · button *Write the menu* |
 | Dialog title | Write the menu (a slot with no menu) or Edit the menu (from *Edit menu*) · under it: *day* · *start – end* · *table set* |
+| Right after Add a slot | *Write the menu* for the new slot, with the info alert: Slot added. Write its menu now, or skip and write it later from the slot. Buttons: Skip for now, Save menu |
 | Start from a previous menu (box) | **Start from a previous menu** Copy a menu you already wrote, then change what is different. Button: Choose a menu |
 | Previous menus | Left: each menu with its slot and its first two lines. Right: **PREVIEW** · *day* · *start – end*, then the chosen menu, formatted. Note: The menu you choose replaces what is in the editor. You can change it before saving. A long menu scrolls inside the preview. Buttons: Show older menus, Back, Use this menu |
 | No previous menus yet | The box *Start from a previous menu* is not shown. |

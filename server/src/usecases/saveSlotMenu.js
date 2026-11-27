@@ -6,7 +6,7 @@
  * The menu can be written or changed only before the slot starts (PO issue 59).
  *
  * Errors: 403 the user is not staff; 400 the menu breaks a rule (domain/menu.js); 404 the slot does
- * not exist; 422 the slot has started.
+ * not exist; 422 MENU_LOCKED the slot has started.
  */
 import { NotFoundError } from '../domain/errors.js';
 import { normalizeMenu } from '../domain/menu.js';

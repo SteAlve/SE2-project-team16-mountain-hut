@@ -15,6 +15,7 @@
  *   MENU_EMPTY      only spaces, empty lines, empty items or formatting marks
  *   MENU_TOO_LONG   more than MENU_MAX_LENGTH characters
  *   MENU_FORMAT     a heading, a link, an image, an HTML tag, or a sub-item not under an item
+ * Until when a menu can still be changed or deleted is in slotMenu.js (isMenuOpen).
  */
 import { ValidationError } from './errors.js';
 

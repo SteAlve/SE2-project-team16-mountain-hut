@@ -1,5 +1,6 @@
 /**
- * API: the table sets and the slots of the staff (MH-02, MH-09) and the reservations for a hiker (MH-07),
+ * API: the table sets and the slots of the staff (MH-02, MH-09), the reservations for a hiker (MH-07)
+ * and the menus of the slots (MH-10),
  * one function per endpoint (see docs/openapi.json, tag "Staff"). Needs a logged-in employee or
  * warden: the session cookie is sent by the browser.
  * Every function rejects with ApiError 401 (not logged in) or 403 (not staff), besides the ones listed.
@@ -14,7 +15,7 @@ export const createTableSet = ({ name, tables }) =>
   request('/staff/table-sets', { method: 'POST', body: JSON.stringify({ name, tables }) });
 
 // The slots from `from` to `to` ('YYYY-MM-DD', both included), also the ones without tables, in
-// order of day and time. Resolves to [{ slotId, date, startsAt, endsAt, tableSet, totalSeats }].
+// order of day and time. Resolves to [{ slotId, date, startsAt, endsAt, tableSet, totalSeats, menu }].
 export const getStaffSlots = (from, to) =>
   request(`/staff/slots?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
 
@@ -80,3 +81,31 @@ export const createStaffBooking = ({ hikerId, slotId, partySize, tables }) =>
     method: 'POST',
     body: JSON.stringify({ hikerId, slotId, partySize, tables }),
   });
+
+// The menus of the slots (MH-10). A menu is text with **bold**, *italic*, "- " items and "  - " sub-items.
+
+// Writes or changes the menu of a slot. Resolves to { slotId, date, startsAt, endsAt, menu }. Rejects
+// with ApiError 400 (code MENU_EMPTY, MENU_TOO_LONG or MENU_FORMAT), 404 (no such slot) or 422 (code
+// MENU_LOCKED: the slot has started, its menu can no longer change).
+export const saveSlotMenu = (slotId, menu) =>
+  request(`/staff/slots/${encodeURIComponent(slotId)}/menu`, {
+    method: 'PUT',
+    body: JSON.stringify({ menu }),
+  });
+
+// Deletes the menu of a slot. Resolves to null. Rejects with ApiError 404 (no such slot) or 422 (code
+// MENU_LOCKED: the slot has started).
+export const deleteSlotMenu = (slotId) =>
+  request(`/staff/slots/${encodeURIComponent(slotId)}/menu`, { method: 'DELETE' });
+
+// The menus already written, newest first, the same text once (its last slot). `exceptSlotId` leaves
+// out the slot being written; `search` finds a dish or a day. Resolves to
+// { menus: [{ slotId, date, startsAt, endsAt, menu }], hasMore }.
+export const getPreviousMenus = ({ exceptSlotId, search, limit, offset }) => {
+  const query = new URLSearchParams();
+  if (exceptSlotId !== undefined && exceptSlotId !== null) query.set('exceptSlotId', exceptSlotId);
+  if (search) query.set('search', search);
+  query.set('limit', limit);
+  query.set('offset', offset);
+  return request(`/staff/menus?${query}`);
+};

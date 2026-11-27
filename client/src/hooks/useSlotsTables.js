@@ -15,6 +15,11 @@
  *   createTableSet(form)     { name, tables } -> { ok, tableSet } or { ok: false, alert?, errors? }
  *   assignTableSet(id, set)  gives a table set to a slot without tables -> { ok } or { ok: false };
  *                            a failure is said by `alert`
+ *   saveMenu(slot, text)     writes or changes the menu of a slot (MH-10) -> { ok } or { ok: false,
+ *                            error? (the message under the field), alert? (on top of the dialog),
+ *                            closed? (the slot is gone or has started: the page says it, the dialog closes) }
+ *   deleteMenu(slot)         deletes the menu of a slot that has not started -> { ok } or { ok: false,
+ *                            alert?, closed? }
  *   isPending                true while saving
  *   alert                    the message on top of the page, or null
  *   notice                   an information on top of the page (a slot added on a past day), or null
@@ -25,10 +30,13 @@ import {
   assignTableSet as putTableSet,
   createSlot,
   createTableSet as postTableSet,
+  deleteSlotMenu,
   getStaffSlots,
   getTableSets,
+  saveSlotMenu,
 } from '../api/staff.js';
-import { daysBetween, formatLongDay, nextDays } from '../lib/bookingDates.js';
+import { daysBetween, formatDay, formatLongDay, formatTimeRange, nextDays } from '../lib/bookingDates.js';
+import { MENU_EMPTY_MESSAGE, MENU_FORMAT_MESSAGE, MENU_TOO_LONG_MESSAGE } from '../lib/menuText.js';
 import { slotConflict } from '../lib/slotConflict.js';
 import { byStart } from '../lib/tableSets.js';
 
@@ -36,6 +44,16 @@ const DAYS_PER_PAGE = 14;
 const GENERIC_ERROR = 'Something went wrong on our side. Try again in a minute.';
 const STAFF_ONLY = 'Only the staff can see and change the slots and tables.';
 const GONE = 'That slot or table set no longer exists.';
+const SLOT_GONE = 'That slot no longer exists.';
+const MENU_LOCKED = 'This slot has started: its menu can no longer be changed.';
+const MENU_ERRORS = {
+  MENU_EMPTY: MENU_EMPTY_MESSAGE,
+  MENU_TOO_LONG: MENU_TOO_LONG_MESSAGE,
+  MENU_FORMAT: MENU_FORMAT_MESSAGE,
+};
+
+// "Sun 18 Jul, 19:00 – 21:00", in the alerts of the menus.
+const slotWhen = (slot) => `${formatDay(slot.date)}, ${formatTimeRange(slot.startsAt, slot.endsAt)}`;
 
 export function useSlotsTables() {
   const [start] = useState(() => new Date());
@@ -192,6 +210,53 @@ export function useSlotsTables() {
       }
     });
 
+  // The menu of a slot (MH-10). The slot shows the new menu at once; the day is read again after.
+  const setSlotMenu = (slotId, menu) => setLoaded((current) => current && {
+    ...current,
+    slots: current.slots.map((s) => (s.slotId === slotId ? { ...s, menu } : s)),
+  });
+
+  // What a menu save or delete does with the answers that close the dialog.
+  const menuFailure = (error) => {
+    if (error.status === 404 || (error.status === 422 && error.code === 'MENU_LOCKED')) {
+      reloadSlots();
+      setNotice(null);
+      setAlert(error.status === 404 ? SLOT_GONE : MENU_LOCKED);
+      return { ok: false, closed: true };
+    }
+    const message = commonFailure(error);
+    return message === null ? { ok: false, closed: true } : { ok: false, alert: message };
+  };
+
+  const saveMenu = (slot, text) =>
+    run(async () => {
+      try {
+        const saved = await saveSlotMenu(slot.slotId, text);
+        setSlotMenu(slot.slotId, saved.menu);
+        reloadSlots();
+        setAlert(null);
+        setNotice(`Menu saved for ${slotWhen(slot)}. Hikers see it when they choose this time.`);
+        return { ok: true };
+      } catch (error) {
+        if (error.status === 400) return { ok: false, error: MENU_ERRORS[error.code] ?? error.message };
+        return menuFailure(error);
+      }
+    });
+
+  const deleteMenu = (slot) =>
+    run(async () => {
+      try {
+        await deleteSlotMenu(slot.slotId);
+        setSlotMenu(slot.slotId, null);
+        reloadSlots();
+        setAlert(null);
+        setNotice(`Menu deleted for ${slotWhen(slot)}. Hikers see only the time.`);
+        return { ok: true };
+      } catch (error) {
+        return menuFailure(error);
+      }
+    });
+
   const markNeedsLogin = useCallback(() => setNeedsLogin(true), []);
 
   return {
@@ -205,6 +270,8 @@ export function useSlotsTables() {
     addSlot,
     createTableSet,
     assignTableSet,
+    saveMenu,
+    deleteMenu,
     isPending,
     alert,
     notice,
