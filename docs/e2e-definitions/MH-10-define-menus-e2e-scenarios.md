@@ -1,9 +1,8 @@
 # MH-10 - Define menus
 
-These end-to-end scenarios cover how staff write, read, reuse, edit and delete
-the menu of a meal slot, and how hikers and visitors see the saved result. They
-use Given/When/Then form for translation into Playwright tests. This definition
-covers the work requested in MH-190.
+These Given/When/Then scenarios define Playwright coverage for MH-190. They
+cover staff menu management and how hikers and visitors see a slot's saved
+menu.
 
 The product owner confirmed free-text menus that staff can reuse and change
 (#39). MH-10 requires bold, italic, list items and sub-items. Clarification #59
@@ -18,19 +17,19 @@ Selected-slot menu display and the effects of staff changes are in scope.
 MH-11 covers comparing menus across time-slot cards and choosing a meal from
 those previews. PO clarification #55 leaves menus out of a default weekly
 schedule copy and permits an optional inclusion. Schedule-copy coverage belongs
-to MH-09. The existing slot, booking, dietary needs and booking-change suites
-cover their respective flows. This definition covers text menus only.
+to MH-09. Slot creation, bookings, dietary needs and booking changes have
+their own suites.
 
 > **Implementation note:** Review the scenarios after the relevant frontend and
 > backend changes are integrated and before writing executable E2E tests. The
 > local QA baseline includes backend PRs #163 and #173. PR #176
 > (`feature/frontend-story-10`, inspected at `1399703`) adds the staff UI,
 > the post-add editor and the `MENU_LOCKED` error code. Both revisions expose
-> the public menu endpoint. Menu rendering in **Book a table**,
-> **Check availability** and **My bookings** remains planned on those revisions.
-> PR #179 defines backend coverage for validation, permissions, reuse,
-> independence and started-slot rejection. The staff time comparison and the
-> E2E server clock limitations are recorded below.
+> the public menu endpoint. Both lack frontend menu rendering in **Book a
+> table**, **Check availability** and **My bookings**. That integration is
+> required for the visualization assertions in Scenarios 2 and 13–18.
+> PR #179 covers backend validation, permissions, reuse, independence and
+> started-slot rejection.
 
 ## Frontend contract for E2E testability
 
@@ -85,7 +84,7 @@ cover their respective flows. This definition covers text menus only.
    menu** opens for it and **Skip for now** closes the editor.
 2. **Delete menu** in the reader opens confirmation for that slot.
    **Keep the menu** backs out. **Delete menu** at confirmation submits the
-   removal. The deletion leaves the slot and its reservations in place.
+   removal.
 3. PR #176 disables the submitting action while pending and uses
    **Saving…** or **Deleting…**. Success closes the dialog, updates the row and
    shows a notice naming the affected date and time.
@@ -106,9 +105,11 @@ cover their respective flows. This definition covers text menus only.
    writes and deletes with `422`. QA has no `MENU_LOCKED` code on that
    response. PR #176 adds it and uses it to close stale dialogs, refresh the
    day and show “This slot has started: its menu can no longer be changed.”
-4. The PR #176 staff UI uses the browser's local time and a strict `>` check
-   for the start comparison. It can still show management actions at exact
-   equality. Scenario 9 specifies the inclusive lock expected in the UI.
+4. The PR #176 staff UI checks `now > start` using the browser's local time.
+   The backend converts the hut-local start to an instant and allows writes
+   only while `now < start`.
+   At exact equality the UI can still show actions the backend rejects.
+   Scenario 9 requires the UI to lock at that instant.
 
 ### Hiker and visitor visualization
 
@@ -125,8 +126,8 @@ cover their respective flows. This definition covers text menus only.
    table**. Menu reading requires no login. Use the integrated control names
    and empty-state wording when implementing these checks.
 4. The public `GET /api/slots/{slotId}/menu` returns the slot's current
-   menu or `menu: null` for a slot without one. Use it to complement browser
-   checks. A working endpoint alone does not demonstrate menu rendering.
+   menu or `menu: null` for a slot without one. Use it to complement the
+   required browser checks.
 
 ## Shared constraints
 
@@ -139,8 +140,7 @@ cover their respective flows. This definition covers text menus only.
    can read published slot menus. Staff listing and write operations require
    a staff session.
 4. A missing menu has no effect on the slot's capacity, reservations or
-   eligibility for booking. Use slots with the required seating and booking
-   window when demonstrating bookability.
+   eligibility for booking.
 5. Each scenario and variant starts from its own fixture. When verifying
    persistence, reload or revisit the relevant date and slot and wait for the
    corresponding data to load.
@@ -181,15 +181,16 @@ cover their respective flows. This definition covers text menus only.
    **Sub-item (Tab)** to nest another item under the first bullet. Use
    **Up a level (Shift+Tab)** to return to the top level as needed.
 2. Save the menu, open **Show menu**, then reload and reopen it.
-3. Where the hiker menu UI is integrated, open **Book a table** in a separate
-   authenticated hiker context and select the same slot.
+3. In a separate authenticated hiker context, open **Book a table** and
+   select the same slot.
 
 **Then**
 
 1. The full menu is present and the intended text is visibly bold and italic
    in the staff reader before and after reload.
 2. The two bullets are peers and the sub-item is nested under the first one.
-   The hiker view preserves that structure and emphasis when available.
+   **Book a table** displays the same full menu with its emphasis and list
+   structure intact.
 
 ## Scenario 3: An employee edits an existing menu
 
@@ -278,40 +279,53 @@ Run both variants independently.
 
 ## Scenario 6: An employee deletes only the target slot's menu
 
+Run independently with and without another slot that has identical menu text.
+
 **Given**
 
-1. An employee is logged in. A future slot and a different slot have
-   identical menus. The target has an assigned table set, a confirmed
-   reservation and remaining seats.
+1. An employee is logged in. The future target has a menu with a distinctive
+   dish, an assigned table set, a confirmed reservation and remaining seats.
 2. Record the target slot's identity, table set, booking reference, assigned
    tables and availability for a fixed additional party size.
+3. A separate future slot without a menu will be used to open the selector.
+   Keep an unrelated menu available in both variants so the selector stays
+   accessible. In the identical-text variant, another slot holds the same
+   text, and the target's copy was saved most recently.
 
 **When**
 
-1. Open the target's **Show menu** dialog, select **Delete menu**, and select
+1. From the separate slot's editor, search for the distinctive dish with
+   **Search the menus**. Verify the result identifies the target, then
+   close the selector and editor.
+2. Open the target's **Show menu** dialog, select **Delete menu**, and select
    **Delete menu** again in the confirmation state.
-2. After the deletion notice, reload and inspect both slots, the existing
-   reservation and the target's availability.
-3. Use **Write the menu** to assign a different menu to the original target.
-   Reload and reopen it.
+3. After the deletion notice, reload and inspect the affected slots, the
+   existing reservation and the target's availability. Repeat the selector
+   search from the same separate slot.
+4. Close the selector and editor, then use **Write the menu** to assign a
+   different menu to the original target. Reload and reopen it.
 
 **Then**
 
 1. The target shows a no-menu state after deletion and reload. It still has
    the same slot identity, schedule and table set.
-2. The other slot retains the original menu. The confirmed reservation, its
-   table assignments and the target's available seats are unchanged.
-3. The same future slot accepts the new menu and displays it after reload.
+2. Other slots retain their menus. The target's confirmed reservation,
+   table assignments and available seats are unchanged.
+3. The post-deletion search finds no match when the target held the only
+   copy. When an identical copy survives, exactly one result is available
+   for reuse. It identifies the surviving slot and previews the original
+   menu in full.
+4. The target accepts the new menu and displays it after reload.
 
 ## Scenario 7: Invalid menus are rejected and the length boundary is accepted
 
-Run each creation variant with a fresh future slot. Repeat the overlong
-variant in edit mode to check protection of an existing saved menu.
+Run each creation variant with a fresh future slot. Run empty and overlong
+submissions as separate edit variants.
 
 **Given**
 
-1. An employee is logged in. The creation target has no menu. The edit
-   variant has a distinct saved menu.
+1. An employee is logged in. Each creation target has no menu. Each edit
+   target has a distinct saved menu.
 2. The creation inputs are empty text, whitespace only, an empty bullet or
    formatting with no visible text, normalized text of 2001 code points, and
    normalized text of exactly 2000 code points. For the last two, use
@@ -321,18 +335,20 @@ variant in edit mode to check protection of an existing saved menu.
 
 **When**
 
-1. Open the appropriate editor and enter the input. Use the **List** button
-   for the empty-bullet variant. In edit mode replace the original draft.
-2. Select **Save menu**. Observe the feedback, then reload and inspect the
-   same slot.
+1. Open the editor and enter the variant's input. Use **List** for the
+   empty-bullet variant. For the empty edit, clear the entire prefilled
+   menu. For the overlong edit, replace it with the 2001-code-point input.
+2. Select **Save menu**, observe the result, then reload and inspect the
+   target slot.
 
 **Then**
 
 1. Empty, whitespace-only and format-only input show the visible-text
    validation message. Empty editor list items contribute no visible text.
-2. The overlong input displays the length validation message. After reload,
-   every invalid creation target is still empty. The invalid edit leaves the
-   original saved menu intact.
+2. Overlong input shows the length validation message. The empty edit is
+   blocked before a write request is sent. After reload, invalid creation
+   targets still have no menu, and each edit target shows its original saved
+   content in full.
 3. The valid boundary shows `2000 / 2000`, saves successfully and reopens
    with the complete normalized text, including the final `Z`.
 
@@ -398,8 +414,12 @@ Run separate sets of fixtures for slots with and without menus.
 
 ## Scenario 10: A slot starts while a menu action is open
 
-Run independent create, edit and delete variants. The stale browser flow
-requires control of the running server's clock.
+Run independent create, edit and delete variants.
+
+**Implementation dependency:** The current Playwright launcher has no clock
+control for the running server. This scenario requires a test harness that
+can advance the real server to the slot's exact start instant while the
+browser remains in the open menu flow.
 
 **Given**
 
@@ -635,13 +655,10 @@ Run independent variants for first creation and for editing.
    `page.clock.setFixedTime` to hold the browser's date at the chosen instant
    while timers still run. Derive that instant from the hut-local slot date
    and time with the project's `clock.at` convention.
-4. The existing Playwright launcher starts a separate server process with a
-   real clock and has no test clock control. The menu use cases already accept
-   an injected clock, as exercised in PRs #176 and #179. Keep the exact server
-   boundary at that layer until the running test server can be controlled.
-   Scenario 10's full stale browser flow remains pending that capability.
-   Browser clock mocking alone cannot establish a server rejection at
-   equality. A mocked response can check UI feedback only.
+4. Use the injected clock in the menu use cases (PRs #176 and #179) for
+   the exact server boundary until Scenario 10's server clock dependency
+   is met. Browser clock or response mocks can check UI feedback.
+   Scenario 10 requires a rejection from the running backend.
 5. Use accessible roles, labels and stable visible text rather than layout
    positions or CSS classes. Wait for the visible result of saves, reloads
    and debounced searches or their correlated completed requests. Use no
