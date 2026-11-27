@@ -11,12 +11,8 @@
  * purpose. Guests with exactly the same needs are shown once, with how many they are, as on the
  * Table booked screen.
  */
+import { day, moment } from './emailLayout.js';
 import { toHourMinute } from './time.js';
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 const PINE = '#1d4a3a';
 const INK = '#10201a';
@@ -25,12 +21,6 @@ const LINE = '#d8dfda';
 const MIST = '#eef2ef';
 const BLAZE = '#e0352b';
 const FONT = "font-family:Helvetica,Arial,sans-serif;";
-
-// 'YYYY-MM-DD' -> '4 November 2026'
-const day = (date) => {
-  const [year, month, dayOfMonth] = date.split('-').map(Number);
-  return `${dayOfMonth} ${MONTHS[month - 1]} ${year}`;
-};
 
 const reference = (bookingId) => `QUOTA-${String(bookingId).padStart(5, '0')}`;
 
@@ -200,12 +190,6 @@ export const bookingConfirmationEmail = ({ email, ...booking }) => {
       needs,
     }),
   };
-};
-
-// 'YYYY-MM-DDTHH:MM' -> '10 November 2026, 18:05'
-const moment = (localDateTime) => {
-  const [date, clockTime] = localDateTime.split('T');
-  return `${day(date)}, ${clockTime}`;
 };
 
 /**

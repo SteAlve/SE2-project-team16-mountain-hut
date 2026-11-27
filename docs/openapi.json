@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.14.0",
-    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, the reservations that the staff makes for a hiker, and the menu of each slot. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
+    "version": "1.15.0",
+    "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, registering a hike, the reservations that the staff makes for a hiker, and the menu of each slot. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
     "/api/auth/register": {
@@ -1343,6 +1343,249 @@
                 "example": {
                   "error": "UnprocessableError",
                   "message": "This booking was already cancelled"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hikes": {
+      "post": {
+        "tags": [
+          "Hikes"
+        ],
+        "summary": "Register a hike",
+        "description": "A hiker registers a planned hike before leaving (MH-20), so that the hut has the information if the hiker does not come back as expected. A hike has a `start`, a `destination` (a name), a `route` (a text description, for example \"via the Chiaretto lake\"), the `passagePoints` between the start and the destination, in the order of the route and optional, and the planned `departureAt` and the expected `returnAt`. The `start` is optional: without it the hike starts at the hut, where a hike usually starts (a team decision: the product owner lists only the destination, the route and the passage points). The two times are the local date and time of the hut (`YYYY-MM-DDTHH:MM`, the same as the rest of the API) and the return must be after the departure. A hiker can register more than one hike, but the times of two hikes of the same hiker cannot overlap: a hike that starts when the other ends is fine. A departure in the past is not refused (the product owner has not said). A hike is considered started at its departure time ([issue #53](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/53)). After the hike is saved, the hiker receives an email with its details; if the email fails, the hike stands and the response is the same. A refused registration saves nothing and sends no email. Only a hiker can register a hike.",
+        "operationId": "registerHike",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterHikeRequest"
+              },
+              "example": {
+                "start": "Pian del Re",
+                "destination": "Passo Alpe Lunga",
+                "route": "Ridge path, then down the south valley",
+                "passagePoints": [
+                  "Colle Basso",
+                  "Pian dei Fiori"
+                ],
+                "departureAt": "2027-07-17T07:30",
+                "returnAt": "2027-07-17T17:00"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The hike is registered. The answer is the saved hike.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hike"
+                },
+                "example": {
+                  "id": 12,
+                  "start": "Pian del Re",
+                  "destination": "Passo Alpe Lunga",
+                  "route": "Ridge path, then down the south valley",
+                  "passagePoints": [
+                    "Colle Basso",
+                    "Pian dei Fiori"
+                  ],
+                  "departureAt": "2027-07-17T07:30",
+                  "returnAt": "2027-07-17T17:00"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is invalid: a wrong or unknown field, a start that is blank, too long or on more than one line, a destination or a route that is missing, blank or too long, a passage point that is blank, too long or on more than one line, a time that is not `YYYY-MM-DDTHH:MM` or a day that does not exist, or a return that is not after the departure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingInformation": {
+                    "summary": "The destination is missing",
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "destination is required"
+                    }
+                  },
+                  "returnNotAfterDeparture": {
+                    "summary": "The return is not after the departure",
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "The return must be after the departure"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not a hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only hikers can register a hike"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The times overlap another hike of the same hiker, so nothing is saved. The `code` is `HIKE_OVERLAP` and `details.hike` says which hike is in the way, so the client can name it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ConflictError",
+                  "code": "HIKE_OVERLAP",
+                  "message": "The times overlap your hike to Lago Chiaretto, from 2027-07-15T08:00 to 2027-07-15T16:30",
+                  "details": {
+                    "hike": {
+                      "destination": "Lago Chiaretto",
+                      "departureAt": "2027-07-15T08:00",
+                      "returnAt": "2027-07-15T16:30"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Hikes"
+        ],
+        "summary": "List my hikes",
+        "description": "The hikes of the logged-in hiker (MH-20, the page \"My hikes\"), in order of departure. All of them, the past ones too: a hike has no status here (marking a hike as finished is another story). Only a hiker has hikes.",
+        "operationId": "listMyHikes",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The hikes, maybe none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Hike"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 11,
+                    "start": null,
+                    "destination": "Lago Chiaretto",
+                    "route": "Via the Chiaretto lake and back",
+                    "passagePoints": [],
+                    "departureAt": "2027-07-15T08:00",
+                    "returnAt": "2027-07-15T16:30"
+                  },
+                  {
+                    "id": 12,
+                    "start": "Pian del Re",
+                    "destination": "Passo Alpe Lunga",
+                    "route": "Ridge path, then down the south valley",
+                    "passagePoints": [
+                      "Colle Basso",
+                      "Pian dei Fiori"
+                    ],
+                    "departureAt": "2027-07-17T07:30",
+                    "returnAt": "2027-07-17T17:00"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not a hiker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only hikers have hikes"
                 }
               }
             }
@@ -3736,6 +3979,7 @@
               "TABLES_CHANGED",
               "BOOKING_CHANGED",
               "SLOT_OVERLAP",
+              "HIKE_OVERLAP",
               "PASSWORD_CHANGE_REQUIRED",
               "RESET_LINK_NOT_VALID",
               "WEEK_HAS_BOOKINGS",
@@ -3743,11 +3987,11 @@
               "MENU_TOO_LONG",
               "MENU_FORMAT"
             ],
-            "description": "Present on some 400, 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains an active booking. Cancelled bookings do not count for this code and are deleted with replaced destination slots. 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more. 400 on a menu (`PUT /api/staff/slots/{slotId}/menu`): `MENU_EMPTY` the menu has no visible text; `MENU_TOO_LONG` it has more than 2000 characters; `MENU_FORMAT` it uses a format the editor does not write."
+            "description": "Present on some 400, 403, 409 and 422 answers only, so the client can tell the cases apart. 409: `NO_SEATS` the party does not fit in the free seats of the slot (choose another slot); `TABLES_CHANGED` the party still fits, but not at the tables sent (ask for a new preview); `BOOKING_CHANGED` another change of the same booking was saved at the same moment (reload the booking and try again). `SLOT_OVERLAP` the new slot overlaps another slot of that day (choose other times); `WEEK_HAS_BOOKINGS` the destination schedule cannot be replaced because it contains an active booking. Cancelled bookings do not count for this code and are deleted with replaced destination slots. `HIKE_OVERLAP` the hike overlaps another hike of the same hiker (choose other times). 403: `PASSWORD_CHANGE_REQUIRED` the user has to change the password first (`POST /api/auth/change-password`). 422: `RESET_LINK_NOT_VALID` the link of a password reset email does not work any more. 400 on a menu (`PUT /api/staff/slots/{slotId}/menu`): `MENU_EMPTY` the menu has no visible text; `MENU_TOO_LONG` it has more than 2000 characters; `MENU_FORMAT` it uses a format the editor does not write."
           },
           "details": {
             "type": "object",
-            "description": "Present on some answers only, with data the client can show. 409 `SLOT_OVERLAP`: `slot`, the times of the slot in the way.",
+            "description": "Present on some answers only, with data the client can show. 409 `SLOT_OVERLAP`: `slot`, the times of the slot in the way. 409 `HIKE_OVERLAP`: `hike`, the hike in the way.",
             "properties": {
               "slot": {
                 "type": "object",
@@ -3765,6 +4009,30 @@
                     "type": "string",
                     "pattern": "^\\d{2}:\\d{2}$",
                     "example": "13:00"
+                  }
+                }
+              },
+              "hike": {
+                "type": "object",
+                "required": [
+                  "destination",
+                  "departureAt",
+                  "returnAt"
+                ],
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "example": "Lago Chiaretto"
+                  },
+                  "departureAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+                    "example": "2027-07-15T08:00"
+                  },
+                  "returnAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+                    "example": "2027-07-15T16:30"
                   }
                 }
               }
@@ -4782,6 +5050,121 @@
             "description": "True when older menus are left: ask for them with a larger `offset`."
           }
         }
+      },
+      "RegisterHikeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "destination",
+          "route",
+          "departureAt",
+          "returnAt"
+        ],
+        "description": "A hike to register (MH-20). Without `start` it starts at the hut.",
+        "properties": {
+          "start": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Where the hike starts, on one line. Optional: not sent or null means the hut, the usual start. A blank text is refused.",
+            "example": "Pian del Re"
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The name of the destination, on one line.",
+            "example": "Passo Alpe Lunga"
+          },
+          "route": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "A text description of the route.",
+            "example": "Ridge path, then down the south valley"
+          },
+          "passagePoints": {
+            "type": "array",
+            "maxItems": 100,
+            "description": "The passage points between the start and the destination, in the order of the route. Optional: none, null or an empty list mean no passage points.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "One point, on one line."
+            },
+            "example": [
+              "Colle Basso",
+              "Pian dei Fiori"
+            ]
+          },
+          "departureAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+            "description": "The planned departure: the local date and time of the hut.",
+            "example": "2027-07-17T07:30"
+          },
+          "returnAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+            "description": "The expected return: the local date and time of the hut. It must be after the departure.",
+            "example": "2027-07-17T17:00"
+          }
+        }
+      },
+      "Hike": {
+        "type": "object",
+        "required": [
+          "id",
+          "start",
+          "destination",
+          "route",
+          "passagePoints",
+          "departureAt",
+          "returnAt"
+        ],
+        "description": "A hike registered by the logged-in hiker (MH-20).",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "description": "Identifier of the hike."
+          },
+          "start": {
+            "type": "string",
+            "nullable": true,
+            "description": "Where the hike starts. null: the hut, where a hike starts when the hiker did not choose another start."
+          },
+          "destination": {
+            "type": "string",
+            "description": "The name of the destination."
+          },
+          "route": {
+            "type": "string",
+            "description": "The text description of the route."
+          },
+          "passagePoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The passage points, in the order of the route. Empty when there are none."
+          },
+          "departureAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+            "description": "The planned departure: the local date and time of the hut.",
+            "example": "2027-07-17T07:30"
+          },
+          "returnAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+            "description": "The expected return: the local date and time of the hut.",
+            "example": "2027-07-17T17:00"
+          }
+        }
       }
     }
   },
@@ -4797,6 +5180,10 @@
     {
       "name": "Bookings",
       "description": "Table bookings."
+    },
+    {
+      "name": "Hikes",
+      "description": "The hikes that a hiker registers before leaving, so that the hut has the information if the hiker does not come back as expected."
     },
     {
       "name": "Staff",
