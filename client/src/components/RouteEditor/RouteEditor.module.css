@@ -1,0 +1,319 @@
+.route {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--snow);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--stone);
+}
+
+/* Each point of the route is a row with its icon on the left and the line that joins it to the next one. */
+.item {
+  --icon-top: 9px; /* the icon is centred on a 46px field */
+  position: relative;
+  min-width: 0;
+  padding: 0 0 12px 40px;
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 13px;
+  width: 2px;
+  background: var(--line);
+}
+
+.icon {
+  position: absolute;
+  top: var(--icon-top);
+  left: 0;
+  z-index: 1;
+}
+
+/* A row with a label above its field: the icon sits lower. */
+.start,
+.destination {
+  --icon-top: 37px;
+}
+
+.start::before {
+  top: calc(var(--icon-top) + 14px);
+}
+
+.destination {
+  padding-bottom: 0;
+}
+
+.destination::before {
+  bottom: auto;
+  height: calc(var(--icon-top) + 14px);
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.required {
+  color: var(--error);
+}
+
+
+/* Up to about four points the list grows; then it keeps its height and scrolls. */
+.list {
+  max-height: 232px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.point {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--snow);
+}
+
+.point:focus-within {
+  border-color: var(--pine);
+  box-shadow: 0 0 0 1px var(--pine);
+}
+
+.dragging .point {
+  border: 2px solid var(--pine);
+  background: var(--moss-soft);
+  box-shadow: 0 6px 16px rgb(16 32 26 / 0.18);
+}
+
+/* The line that shows where the dragged point lands. */
+.list [data-drop]::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: 0;
+  left: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.list [data-drop='before'].first::after {
+  top: -2px;
+}
+
+.list [data-drop='after']::after {
+  top: auto;
+  bottom: 3px;
+}
+
+.grip,
+.remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.grip {
+  cursor: grab;
+  touch-action: none; /* a finger on the handle drags, it does not scroll the page */
+  user-select: none;
+}
+
+.grip:active {
+  cursor: grabbing;
+}
+
+.grip:focus-visible,
+.remove:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+
+.grip:disabled,
+.remove:disabled {
+  cursor: default;
+}
+
+.pointInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.pointInput:focus {
+  outline: none;
+}
+
+.pointInput::placeholder {
+  color: #8a958f;
+}
+
+.add {
+  --icon-top: 4px;
+  padding-bottom: 12px;
+}
+
+.addIcon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.addIcon:hover:not(:disabled) {
+  box-shadow: 0 0 0 3px var(--moss-soft);
+}
+
+.addIcon:disabled {
+  cursor: default;
+}
+
+.addButton {
+  display: block;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pine);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addButton:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.addButton:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.addButton:disabled {
+  color: var(--stone);
+  cursor: default;
+}
+
+.textInput {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--snow);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.textInput::placeholder {
+  color: #8a958f;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--pine);
+  box-shadow:
+    0 0 0 1px var(--pine),
+    0 0 0 4px var(--moss-soft);
+}
+
+.invalid {
+  border-color: var(--error);
+  background: var(--error-soft);
+  box-shadow: 0 0 0 0.5px var(--error);
+}
+
+.invalid:focus {
+  border-color: var(--error);
+  box-shadow:
+    0 0 0 1px var(--error),
+    0 0 0 4px var(--error-soft);
+}
+
+.error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--error);
+}
+
+/* On a phone the route is not a card, and the list grows with the sheet: it has no scroll of its own. */
+@media (max-width: 991.98px) {
+  .route {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .point,
+  .textInput {
+    height: 52px;
+  }
+
+  .item {
+    --icon-top: 12px;
+  }
+
+  .start,
+  .destination {
+    --icon-top: 40px;
+  }
+
+  .add {
+    --icon-top: 4px;
+  }
+
+  .error {
+    font-size: 14px;
+  }
+}

@@ -14,6 +14,10 @@
   width: 760px;
 }
 
+.medium {
+  width: 960px;
+}
+
 .wider {
   width: 1100px; /* as Check your booking, so the dietary needs editor has the same room */
 }
@@ -75,6 +79,7 @@
 @media (max-width: 991.98px) {
   .dialog,
   .wide,
+  .medium,
   .wider {
     width: 100%;
     max-width: 100%;

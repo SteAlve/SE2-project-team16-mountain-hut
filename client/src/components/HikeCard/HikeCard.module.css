@@ -1,0 +1,139 @@
+.card {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--snow);
+  box-shadow: 0 2px 6px rgb(16 32 26 / 0.05);
+}
+
+.day {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  min-height: 116px;
+  border-radius: 12px;
+  background: var(--mist);
+}
+
+.weekday,
+.month {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.88px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.number {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.destination {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.start {
+  margin: 0;
+  color: var(--stone);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.route {
+  margin: 0;
+  color: var(--stone);
+  overflow-wrap: anywhere;
+}
+
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 40px;
+  margin: 0;
+}
+
+.time dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.time dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.points {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pine);
+  overflow-wrap: anywhere;
+}
+
+.points img {
+  flex: none;
+  margin-top: 1px;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+  .card {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .day {
+    width: 72px;
+  }
+
+  .destination {
+    font-size: 26px;
+  }
+
+  /* The departure and the return one under the other. */
+  .times {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
