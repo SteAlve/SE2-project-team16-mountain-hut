@@ -9,11 +9,11 @@ One new page, **My hikes**, lists the hikes registered by the hiker who is logge
 **Figma (source of truth):** page *MH-20 Register a hike* in [Mountain Hut – Mockups (Team 16)](https://www.figma.com/design/VlTombwHX1DQ7yB2x4U5Yx?node-id=663-520). The email is on the page *Emails*, see the [emails mockup](../emails/README.md). Every element is an instance from the *Components* page. Most of them are already used by the [hiker booking page](../hiker-booking-page/README.md), [booking](../booking/README.md) and [login](../login/README.md) mockups: step heading, button, alert, text field and the phone bars. This story adds:
 
 - *Navbar* with the link **My hikes** after *My bookings* (the hiker navbar, `Role=Hiker, Tab=My hikes`). It is a separate navbar for this page: the shared *Navbar / Logged in* is not changed.
-- *Hike card*: one hike of the list. Variants: `Size` (Desktop, Phone).
+- *Hike card*: one hike of the list. Variants: `Size` (Desktop, Phone) and `State` (Collapsed, Expanded). The card shows the *planned route*: the start, the destination and, between them, a line *Show N passage points* that opens the list (Expanded: *Hide N passage points*). The [active hikes mockup](../active-hikes/README.md) uses the same planned route on its own card.
 - *Hike option*: a popular hike to start from. Variants: `State` (Default, Selected).
 - *Route point*: one point of the route. Variants: Start, Passage point, Passage point dragging, Add, Destination.
 - *Date and time field*: the day and the time of the departure or the return. Variants: Empty, Filled, Error.
-- Six icons: start, passage point, destination, add, grip (drag handle) and remove.
+- Six icons: start, passage point, destination, add, grip (drag handle) and remove, and a chevron for the *Show passage points* line.
 
 Same QUOTA brand, colours and fonts.
 
@@ -31,19 +31,22 @@ Everything shown comes from the story or from the product owner's clarifications
 | Product owner, [#51](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/51) | The hike has a planned **departure** and an expected **return** (day and time), both required. The product owner agreed with the team's reading that the return must be after the departure. |
 | Team decision (not yet confirmed by the product owner) | A hiker can register more than one hike, but two hikes of the same hiker cannot overlap in time. |
 | Team decision (not yet confirmed by the product owner) | The passage points are in order: the hiker moves them by dragging. The start and the destination keep their place. |
+| Team decision | A hiker cannot register a hike in the past: the departure must be in the future. |
+| Team decision (not yet confirmed by the product owner) | In the list, a hike shows its **planned route**: the start (the hut), the destination and, between them, a line *Show N passage points*. The passage points are hidden until the hiker opens the line, so a hike with many points stays short. The employee sees the same route on the [active hikes](../active-hikes/README.md) page. |
 | Team decision (not yet confirmed by the product owner) | The list of passage points has no fixed limit. It grows with each point up to a maximum height (about four points), then it scrolls inside *Your route*, as a long menu does in the MH-10 menus mockup. The start, *Add a passage point* and the destination stay in view. |
 | Team decision (not yet confirmed by the product owner) | The saved hike is emailed to the hiker, as the bookings are ([emails mockup](../emails/README.md), email 6). A refused registration sends no email. |
 | Team decision | Only a logged in hiker can register a hike. A table booking is not needed. The page is reached from the new navbar link *My hikes*. |
 
 ## The flow
 
-1. **My hikes** (screen 1) lists the hikes registered by the hiker, in departure date order. Each hike shows the day, the destination, the route, the departure, the return and, when there are any, the passage points in order. The hikes have no buttons: marking a hike as completed (MH-22) and updating it (MH-27) are other stories. A hiker with no registered hikes sees a message and a *Register a hike* button (screen 2).
+1. **My hikes** (screen 1) lists the hikes registered by the hiker, in departure date order. Each hike shows the day, the destination, the route, the departure, the return and its planned route (start, passage points, destination). The hikes have no buttons: marking a hike as completed (MH-22) and updating it (MH-27) are other stories. A hiker with no registered hikes sees a message and a *Register a hike* button (screen 2).
 2. **Register a hike** opens the dialog on top of the list, empty (screen 3). It has three steps: **Start from a popular hike** (optional), **When** (departure and expected return) and **Route description** (the route, then the points of the route). Nothing is saved until *Register hike*.
 3. **A popular hike** (screen 4) is a card to press: it fills the route description, the passage points and the destination. The times stay empty for the hiker. Everything can be changed afterwards.
 4. **The route** is a list, one point under the other, with a line that joins them: the **start** (the hut, it cannot be changed or moved), the **passage points**, and the **destination** (required, it cannot be moved). *Add a passage point* adds one before the destination. Each passage point has a handle to move it and a button to remove it. While one is dragged, a line shows where it will land (screen 5). With many passage points the list keeps its height and scrolls (screen 9, see [Many passage points](#many-passage-points)).
 5. **Register hike** sends the hike. It works, or it is refused and nothing is saved:
    - Missing information (screen 6): a message sits under each field that needs attention. The return must be after the departure.
-   - Overlap (screen 7): the times overlap another registered hike of the same hiker. A red note says which one. The hiker can change the times or close the dialog.
+   - Departure in the past (screen 10): the departure is earlier than now. A message sits under the departure. The hiker chooses a later time or closes the dialog.
+  - Overlap (screen 7): the times overlap another registered hike of the same hiker. A red note says which one. The hiker can change the times or close the dialog.
 6. When the hike is registered, the dialog closes and the list shows the new hike in its place, with a green note (screen 8). The hiker is emailed the confirmation.
 
 ## Screens
@@ -59,6 +62,7 @@ Everything shown comes from the story or from the product owner's clarifications
 | 7 | The hike overlaps another one | ![Hike overlaps another](07-hike-overlaps-another.png) |
 | 8 | Hike registered | ![Hike registered](08-hike-registered.png) |
 | 9 | Many passage points: the list scrolls inside *Your route* | ![Many passage points](09-many-passage-points.png) |
+| 10 | Departure in the past | ![Departure in the past](10-departure-in-the-past.png) |
 
 ### On a phone
 
@@ -87,7 +91,7 @@ The sheet has the same steps and rules as desktop screens 3 to 7. With many pass
 | Day | The day of the departure (*THU 15 Jul*). |
 | Destination, route | The destination as the title, the route description under it. |
 | Departure, return | Day and time (*Thu 15 Jul · 08:00*). |
-| Passage points | In order, separated by an arrow (*Colle Basso → Pian dei Fiori*). A hike without passage points shows none. |
+| Planned route | A line *Show N passage points* between the start and the destination, closed by default; pressing it opens the list, in order, and the line says *Hide N passage points*. The start is the hut (*Rifugio Alpe Lunga*, *Starting point*) and the destination is the one the hiker entered (*Destination*). A hike without passage points has no such line. |
 | Buttons | None. |
 
 ### Register a hike
@@ -125,6 +129,7 @@ On a phone the sheet scrolls and the list grows with it.
 | Dialog | **Register a hike.** "Tell the hut where you are going and when you plan to be back. Nothing is saved until Register hike." Buttons: *Close*, *Register hike*. |
 | Footer of the dialog | "Nothing is saved yet." After a refusal: "Nothing has been saved." |
 | Route | "Drag a passage point to move it. The start and the destination keep their place." |
+| Departure in the past | Under the departure, in red: "The departure cannot be in the past." Nothing is saved ("Nothing has been saved."). |
 | Missing information | Under the field: "Describe your route." · "Enter a destination." · "The return must be after the departure." The empty field keeps its placeholder (*Describe the route, e.g. via the Chiaretto lake*, *e.g. Lago Chiaretto*, *Choose a day*). |
 | Overlap | Red note: "These times overlap your hike to *Lago Chiaretto* (*Thu 15 Jul, 08:00 – 16:30*). Choose other times. Nothing has been saved." Every choice is kept. |
 | Registered | Green note on the list: "Your hike to *Passo Alpe Lunga* is registered. We emailed the confirmation to *giulia.rossi@example.com*." |
@@ -147,7 +152,6 @@ These are for the product owner. Until they are answered, the mockup follows the
 
 - **Start and end.** Is the start always the hut, and does the hike always end back at the hut? The mockup assumes both: the start is read only and "return" means back at the hut.
 - **Which hikes are listed.** Does *My hikes* also list the past hikes (finished hikes, MH-22), or only the ones to come and the ones in progress? The mockup lists them all, with no status.
-- **A departure in the past.** Can a hike be registered with a departure already past?
 - **Overlap.** Two hikes overlap when their times cross. Do two hikes where one starts exactly when the other ends overlap? Is a margin needed between two hikes?
 - **Confirmation email.** The specifications do not ask for it. The team added it to be consistent with the bookings.
 - **Popular hikes.** The product owner accepts a few predefined hikes as long as the UX is smooth. The team made a fixed list. Are the destination, the route and the passage points editable after choosing one? The mockup says yes.
