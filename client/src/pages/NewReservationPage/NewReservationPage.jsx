@@ -2,7 +2,8 @@
  * NEW RESERVATION (story MH-07, mockup docs/mockups/reservation-for-a-hiker): an employee or the
  * warden enters a reservation for a hiker who is at the hut, phones or writes.
  *   1. Hiker: found by name, phone or email (hooks/useHikerSearch.js), or added with "New hiker"
- *      (a temporary hiker, or a hiker account whose password the server emails to the hiker).
+ *      (a temporary hiker, or a hiker account whose password the server emails to the hiker and
+ *      shows once to the employee after creation).
  *   2-4. Day, how many people and time, locked until the hiker is chosen. A time can be entered
  *      until it starts.
  * Save reservation books the tables the server proposes (hooks/useStaffReservation.js), then
@@ -16,6 +17,7 @@ import { Navigate } from 'react-router-dom';
 import { Button } from '../../components/Button/Button.jsx';
 import { DayStrip } from '../../components/DayStrip/DayStrip.jsx';
 import { HikerOption } from '../../components/HikerOption/HikerOption.jsx';
+import { HikerAccountCreatedDialog } from '../../components/HikerAccountCreatedDialog/HikerAccountCreatedDialog.jsx';
 import { NewHikerDialog } from '../../components/NewHikerDialog/NewHikerDialog.jsx';
 import { PeopleStepper } from '../../components/PeopleStepper/PeopleStepper.jsx';
 import { ReservationBar, ReservationSummary } from '../../components/ReservationSummary/ReservationSummary.jsx';
@@ -201,6 +203,14 @@ function ReservationForm({ onNew }) {
           onSave={saveHiker}
           onChoose={chooseOwner}
           onCancel={() => setNewHiker(null)}
+        />
+      )}
+
+      {page.newAccountPassword && hiker && (
+        <HikerAccountCreatedDialog
+          hiker={hiker}
+          password={page.newAccountPassword}
+          onClose={page.clearNewAccountPassword}
         />
       )}
 

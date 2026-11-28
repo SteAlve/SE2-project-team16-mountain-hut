@@ -30,6 +30,8 @@ the following observable behaviour to users and Playwright tests.
    - **Quick entry**
    - **Full profile**
    - **Add hiker**
+   - **Hiker account created**
+   - **Continue**
    - **Change**
    - **Save reservation**
    - **+ New reservation**
@@ -46,7 +48,9 @@ the following observable behaviour to users and Playwright tests.
 2. Search remains editable while requests are pending, so staff can refine the query.
    While hiker creation or reservation is pending, the submit control is disabled
    and a visible pending state is shown.
-3. A successful hiker creation selects the new hiker without a page reload.
+3. A successful hiker creation selects the new hiker without a page reload and,
+   for a full profile, opens **Hiker account created** with the generated
+   password.
 4. A successful reservation shows **Reservation saved** and the saved details.
 5. A failed request leaves the hiker, day, people and time choices in a state
    that the employee can correct and retry.
@@ -77,9 +81,10 @@ the following observable behaviour to users and Playwright tests.
 5. A temporary hiker has a name and optional phone, no email and no password;
    they cannot log in or book through the public hiker flow.
 6. A full profile has a name, email and optional phone. It creates a regular
-   hiker account and generates a password that is communicated to the hiker.
-   The E2E environment uses the account email for this handoff; the employee
-   does not enter a password in the form.
+   hiker account and generates a password. The password is emailed to the hiker
+   and returned once to the creating staff member, who sees it in the
+   **Hiker account created** confirmation. The employee does not enter a
+   password in the form.
 7. The staff time limit is the start of the slot. A slot is bookable before its
    start, including less than two hours before it; it is not bookable at or
    after its start. The hiker's two-hour rule does not apply.
@@ -185,21 +190,24 @@ the same product rule to the reset link.
 2. The employee enters a first name, last name, unique email and optional
    phone.
 3. The employee selects **Add hiker**.
-4. The test waits for the account email in Mailpit.
+4. The test waits for the account email in Mailpit and observes the
+   **Hiker account created** confirmation.
 
 **Then**
 
 1. The regular hiker account is created successfully.
 2. The dialog closes and the new hiker is selected.
-3. The form has no password field; the generated password is communicated to
-   the hiker through the configured handoff channel.
+3. The form has no password field. The **Hiker account created** confirmation
+   shows the generated password to the employee, and the same password is
+   emailed to the hiker.
 4. Exactly one account email is sent to the new hiker.
 5. In the E2E environment, the account email contains the hiker's name, email,
    generated password and the instruction to change the password at first
    login.
 6. The email contains a login link and a fallback **Forgot password?**
    instruction.
-7. The account remains available even if the employee does not save a
+7. After **Continue** closes the confirmation, the account remains available
+   even if the employee does not save a
    reservation afterwards.
 
 ## Scenario 5: Staff saves a reservation for an existing regular hiker
@@ -395,8 +403,8 @@ the same product rule to the reset link.
    booking use.
 3. The password-change operation succeeds.
 4. The hiker can use protected booking pages after changing the password.
-5. The generated password is never entered or edited by the employee in the
-   reservation flow.
+5. The generated password is shown once in the account-creation confirmation;
+   it is never entered or edited by the employee in the reservation flow.
 
 ## Scenario 13: A hiker can recover a newly created account by email
 

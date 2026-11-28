@@ -1,6 +1,7 @@
 /**
  * Routes of the staff: the table sets and the slots of the hut (MH-02) and the reservations for a
- * hiker (MH-07): find or create the hiker, ask where the party would sit, book. Every one needs a
+ * hiker (MH-07): find or create the hiker, ask where the party would sit, book; the menus of the
+ * slots (MH-10): write, change or delete one, list the previous ones. Every one needs a
  * logged-in user; the use cases answer 403 unless it is an employee or the warden.
  */
 import { Router } from 'express';
@@ -10,11 +11,16 @@ export const makeStaffRouter = ({
   listTableSetsController,
   createSlotController,
   listStaffSlotsController,
+  listStaffPeriodSummariesController,
   assignTableSetController,
+  copyWeeklyScheduleController,
   searchHikersController,
   createHikerController,
   staffSeatingController,
   createStaffBookingController,
+  saveSlotMenuController,
+  deleteSlotMenuController,
+  listPreviousMenusController,
   requireAuth,
 }) => {
   const router = Router();
@@ -23,10 +29,15 @@ export const makeStaffRouter = ({
   router.get('/staff/table-sets', listTableSetsController);
   router.post('/staff/slots', createSlotController);
   router.get('/staff/slots', listStaffSlotsController);
+  router.get('/staff/slots/weeks', listStaffPeriodSummariesController);
+  router.post('/staff/slots/copy-week', copyWeeklyScheduleController);
   router.put('/staff/slots/:slotId/table-set', assignTableSetController);
   router.get('/staff/slots/:slotId/seating', staffSeatingController);
   router.get('/staff/hikers', searchHikersController);
   router.post('/staff/hikers', createHikerController);
   router.post('/staff/bookings', createStaffBookingController);
+  router.put('/staff/slots/:slotId/menu', saveSlotMenuController);
+  router.delete('/staff/slots/:slotId/menu', deleteSlotMenuController);
+  router.get('/staff/menus', listPreviousMenusController);
   return router;
 };

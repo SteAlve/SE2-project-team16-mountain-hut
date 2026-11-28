@@ -12,11 +12,12 @@ export const describeTableSet = ({ tableSetId, name, tables }) => ({
 });
 
 // A slot as the staff sees it (a row of the slot dao). `tableSet` is the described table set, or null when the slot has none.
-export const describeStaffSlot = ({ slotId, serviceDate, startsAt, endsAt }, tableSet) => ({
+export const describeStaffSlot = ({ slotId, serviceDate, startsAt, endsAt, menu = null }, tableSet) => ({
   slotId,
   date: serviceDate,
   startsAt,
   endsAt,
   tableSet,
   totalSeats: tableSet === null ? 0 : tableSet.totalSeats,
+  menu,
 });

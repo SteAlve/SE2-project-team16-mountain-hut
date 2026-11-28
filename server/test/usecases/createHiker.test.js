@@ -43,7 +43,7 @@ describe('createHiker use case', () => {
     expect(t.mailer.send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
       to: 'ada@example.com', subject: 'Your QUOTA account', text: expect.stringContaining('Password: generated-password'),
     }));
-    expect(result).toEqual(createdAccount);
+    expect(result).toEqual({ ...createdAccount, password: 'generated-password' });
   });
 
   it('creates a temporary hiker without generating a password or sending email', async () => {
@@ -85,7 +85,7 @@ describe('createHiker use case', () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await expect(t.create({ user: employee, firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com', phone: null }))
-      .resolves.toEqual(createdAccount);
+      .resolves.toEqual({ ...createdAccount, password: 'generated-password' });
 
     expect(log).toHaveBeenCalledExactlyOnceWith('The account email of hiker 8 was not sent:', error);
   });

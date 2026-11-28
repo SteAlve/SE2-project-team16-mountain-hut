@@ -10,6 +10,10 @@ test('exact capacity fits, including seats distributed across several tables', (
   assert.deepEqual(slotAvailability(slot, day, 6, now), { bookable: true, label: '6 seats free' });
 });
 
+test('uses the singular seat label when one seat is available', () => {
+  assert.deepEqual(slotAvailability({ ...slot, freeSeats: 1 }, day, 1, now), { bookable: true, label: '1 seat free' });
+});
+
 test('a party above capacity is unavailable without being silently reduced', () => {
   const partySize = 1000000;
   assert.deepEqual(slotAvailability(slot, day, partySize, now), { bookable: false, label: 'Only 6 seats free' });

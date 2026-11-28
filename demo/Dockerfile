@@ -14,9 +14,10 @@ FROM axllent/mailpit:v1.29 AS mailpit
 FROM ${APP_IMAGE}
 
 # The app image runs as node; this one starts as root to prepare PostgreSQL, and su-exec gives each
-# process to its own user.
+# process to its own user. Alpine keeps the extensions of PostgreSQL in postgresql16-contrib: the
+# migrations need btree_gist (the rule that two hikes of a hiker cannot overlap, 006_hike.sql).
 USER root
-RUN apk add --no-cache postgresql16 su-exec \
+RUN apk add --no-cache postgresql16 postgresql16-contrib su-exec \
     && mkdir -p /run/postgresql /var/lib/postgresql/data \
     && chown postgres:postgres /run/postgresql /var/lib/postgresql/data
 COPY --from=mailpit /mailpit /usr/local/bin/mailpit

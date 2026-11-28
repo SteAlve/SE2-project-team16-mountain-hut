@@ -139,6 +139,6 @@ Not asked to the product owner; the mockup works either way:
 - A menu is at most 2000 characters.
 - *Copy a week* (MH-09) copies the slots without their menus, so a copied week starts with no menus.
 - Two employees editing the same menu: the last *Save menu* wins.
-- The endpoints for reading, saving and listing the previous menus are not defined yet, so `docs/openapi.json` is unchanged.
+- The endpoints for reading, saving and listing the previous menus are in `docs/openapi.json` (version 1.11.0): `GET /api/slots/{slotId}/menu`, `PUT /api/staff/slots/{slotId}/menu` and `GET /api/staff/menus`.
 
 Sample data (hut, names, dates, tables, dishes) is invented for the mockup.

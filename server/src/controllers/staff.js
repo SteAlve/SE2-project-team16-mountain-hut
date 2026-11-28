@@ -11,11 +11,14 @@ import {
 } from '../dto/bookings.js';
 import {
   parseAssignTableSet,
+  parseCopyWeekSchedule,
   parseCreateHiker,
   parseCreateSlot,
   parseCreateTableSet,
+  parseListStaffPeriodSummaries,
   parseListStaffSlots,
   parseSearchHikers,
+  toCreatedHikerDto,
   toHikerDto,
   toStaffSlotDto,
   toTableSetDto,
@@ -42,9 +45,19 @@ export const makeListStaffSlotsController = ({ listStaffSlots }) => async (req, 
   res.status(200).json(slots.map(toStaffSlotDto));
 };
 
+export const makeListStaffPeriodSummariesController = ({ listStaffPeriodSummaries }) => async (req, res) => {
+  const input = parseListStaffPeriodSummaries(req.query);
+  res.status(200).json(await listStaffPeriodSummaries({ user: req.user, ...input }));
+};
+
 export const makeAssignTableSetController = ({ assignTableSet }) => async (req, res) => {
   const input = parseAssignTableSet(req.params, req.body);
   res.status(200).json(toStaffSlotDto(await assignTableSet({ user: req.user, ...input })));
+};
+
+export const makeCopyWeeklyScheduleController = ({ copyWeeklySchedule }) => async (req, res) => {
+  const input = parseCopyWeekSchedule(req.body);
+  res.status(200).json(await copyWeeklySchedule({ user: req.user, ...input }));
 };
 
 // GET /api/staff/hikers?q=: the regular accounts that match (MH-07).
@@ -54,11 +67,11 @@ export const makeSearchHikersController = ({ searchHikers }) => async (req, res)
   res.status(200).json(hikers.map(toHikerDto));
 };
 
-// POST /api/staff/hikers: a regular account (with an email, the password goes to the hiker by email)
-// or a temporary hiker (without one). The password is never in the answer.
+// POST /api/staff/hikers: a regular account (with an email, the password goes to the hiker by email
+// and is returned once to the creating staff member) or a temporary hiker (without one).
 export const makeCreateHikerController = ({ createHiker }) => async (req, res) => {
   const input = parseCreateHiker(req.body);
-  res.status(201).json(toHikerDto(await createHiker({ user: req.user, ...input })));
+  res.status(201).json(toCreatedHikerDto(await createHiker({ user: req.user, ...input })));
 };
 
 // GET /api/staff/slots/:slotId/seating?partySize=: the seating preview, with the time limit of the staff.
