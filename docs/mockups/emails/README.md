@@ -30,7 +30,7 @@ Each email is shown inside a generic email app: subject, sender, recipient. The 
 | Product owner, [#44](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/44) | The reset link works for 24 hours. |
 | Login, screen 11 | A reset email is sent only if the email has an account. The page answers the same in both cases, so nobody can find out which emails are registered. |
 | MH-07, team decision | When an employee adds a hiker with a full profile, the server generates the password, sends it with the hiker account email and returns it once to the creating staff member for the account-created confirmation. The server keeps only its hash after creation. |
-| MH-20, team decision (not yet confirmed by the product owner) | A registered hike is emailed to the hiker, with its destination, route, passage points and times. A refused registration (missing information, overlap) sends no email ([register a hike mockup](../register-a-hike/README.md)). |
+| MH-20, team decision (not yet confirmed by the product owner) | A registered hike is emailed to the hiker, with its start, destination, route, passage points and times. A refused registration (missing information, overlap) sends no email ([register a hike mockup](../register-a-hike/README.md)). |
 | Server | Sender: `QUOTA <no-reply@quota.example>` (`MAIL_FROM` in `server/src/config.js`). Every email has an HTML version, with tables and inline styles because that is what email apps support, and a plain text version for the apps that do not show HTML. |
 
 ## How they look
@@ -293,11 +293,11 @@ See you at the hut!
 |---|---|
 | Title | Your hike is registered |
 | Text | Hello *first name last name*, here are the details of the hike you registered. |
-| Rows | Name · **Destination** · **Route** · **Departure** (*17 July 2027, 07:30*) · **Expected return** (*17 July 2027, 17:00*) · **Registered on** (*14 July 2027, 11:20*) |
+| Rows | Name · **Start** (the one the hiker entered, *Rifugio Alpe Lunga* for a hike from the hut) · **Destination** · **Route** · **Departure** (*17 July 2027, 07:30*) · **Expected return** (*17 July 2027, 17:00*) · **Registered on** (*14 July 2027, 11:20*) |
 | Passage points | When the hike has passage points: the title **Passage points** (as **Dietary needs** in the confirmation, [Dietary needs](#dietary-needs-mh-05)), then one row *In order* with the points, each on its own line, in the order of the route. A hike without passage points has no such part. |
 | End | Have a good hike! |
 
-**Plain text** (proposed: the email is not written on the server yet):
+**Plain text** (as the server sends it):
 
 ```
 Hello Giulia Rossi,
@@ -305,6 +305,7 @@ Hello Giulia Rossi,
 Your hike is registered. These are the details:
 
 Name: Giulia Rossi
+Start: Rifugio Alpe Lunga
 Destination: Passo Alpe Lunga
 Route: Ridge path, then down the south valley
 Departure: 17 July 2027, 07:30
@@ -318,7 +319,7 @@ Passage points, in order:
 Have a good hike!
 ```
 
-The name comes from the account and the other texts are typed by the hiker (destination, route, passage points): they are escaped in the HTML, like the name in the confirmation.
+The name comes from the account and the other texts are typed by the hiker (start, destination, route, passage points): they are escaped in the HTML, like the name in the confirmation.
 
 ## Left out on purpose
 

@@ -1,0 +1,78 @@
+/* The columns and the red note of a refusal under them. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+/* The steps in a fieldset, so that all of them are disabled together while the hike is being sent. */
+.steps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.optional {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--moss-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.popular {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.side {
+  flex: none;
+  width: 324px;
+}
+
+.footer {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--stone);
+}
+
+@media (max-width: 991.98px) {
+  .columns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .popular {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .side {
+    width: 100%;
+  }
+}

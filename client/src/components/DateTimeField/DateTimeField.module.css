@@ -1,0 +1,122 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.required {
+  color: var(--error);
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--snow);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.day {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The time picker of the home page (TimeField), drawn as a box of the same height. */
+.time {
+  display: flex;
+  flex: none;
+  width: 140px;
+}
+
+.box:focus-within {
+  border-color: var(--pine);
+  box-shadow:
+    0 0 0 1px var(--pine),
+    0 0 0 4px var(--moss-soft);
+}
+
+.invalid {
+  border-color: var(--error);
+  background: var(--error-soft);
+  box-shadow: 0 0 0 0.5px var(--error);
+}
+
+.invalid:focus-within {
+  border-color: var(--error);
+  box-shadow:
+    0 0 0 1px var(--error),
+    0 0 0 4px var(--error-soft);
+}
+
+.value {
+  color: var(--ink);
+}
+
+.placeholder {
+  color: #8a958f;
+}
+
+/* The real input covers the whole box and is not seen. */
+.native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* at least 16px, or iPhones zoom in */
+}
+
+.native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+
+.native:disabled {
+  cursor: default;
+}
+
+.error {
+  margin: -2px 0 0;
+  font-size: 13px;
+  color: var(--error);
+}
+
+@media (max-width: 991.98px) {
+  .box {
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .time {
+    width: 120px;
+  }
+
+  .error {
+    margin: 0;
+    font-size: 14px;
+  }
+}

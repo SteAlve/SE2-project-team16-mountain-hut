@@ -23,11 +23,12 @@ export const PAGES = Object.freeze({
   slots: { path: '/slots', label: 'Slots & tables' },
   reservations: { path: '/reservations/new', label: 'Reservations' },
   bookings: { path: '/bookings', label: 'My bookings' },
+  hikes: { path: '/hikes', label: 'My hikes' },
 });
 
 // Only the pages that exist so far: later stories add theirs.
 export const NAV_PAGES = Object.freeze({
-  [ROLES.HIKER]: [PAGES.hut, PAGES.book, PAGES.bookings],
+  [ROLES.HIKER]: [PAGES.hut, PAGES.book, PAGES.bookings, PAGES.hikes],
   [ROLES.EMPLOYEE]: [PAGES.hut, PAGES.slots, PAGES.reservations],
   [ROLES.WARDEN]: [PAGES.hut, PAGES.slots, PAGES.reservations],
 });

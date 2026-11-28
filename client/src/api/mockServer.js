@@ -20,6 +20,10 @@
  * DELETE /bookings/:id cancels one (MH-08) at any time: its seats are free again and it leaves the list; a booking
  * already cancelled answers 422.
  *
+ * My hikes (MH-20): the hiker starts with two hikes (today + 14 and today + 24). POST /hikes checks the data like the
+ * server (400, also a departure before the current minute), and answers 409 HIKE_OVERLAP, with the hike in the way, when the times cross another hike of the hiker
+ * (one that starts when the other ends is fine). GET /hikes lists them in order of departure.
+ *
  * Logged in as a hiker at start. "Log out" makes you a guest (booking then answers 401) until
  * POST /auth/login or a reload. Bookings take the seats until the page is reloaded.
  */
@@ -270,6 +274,72 @@ function checkOpen(slot, slotId) {
   return null;
 }
 
+// The hikes of the hiker (MH-20): { id, userId, start, destination, route, passagePoints, departureAt, returnAt }.
+const hikes = [];
+let nextHikeId = 1;
+const MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const HIKE_FIELDS = ['start', 'destination', 'route', 'passagePoints', 'departureAt', 'returnAt'];
+
+const hutDayAfter = (offset) => nextDays(offset + 1)[offset];
+for (const [offset, start, destination, route, passagePoints, from, to] of [
+  [14, null, 'Lago Chiaretto', 'Via the Chiaretto lake', ['Viso Mozzo'], '08:00', '16:30'],
+  [24, 'Pian del Re', 'Cima Rossa', 'Normal route, same way back', ['Bivacco Nord'], '06:30', '15:00'],
+]) {
+  const day = hutDayAfter(offset);
+  hikes.push({ id: nextHikeId++, userId: HIKER.id, start, destination, route, passagePoints, departureAt: `${day}T${from}`, returnAt: `${day}T${to}` });
+}
+
+const toHike = ({ userId, ...hike }) => hike; // eslint-disable-line no-unused-vars
+
+const needText = (value, name, max) => {
+  if (typeof value !== 'string' || value.trim() === '') return `${name} is required`;
+  return value.trim().length > max ? `${name} must have at most ${max} characters` : null;
+};
+
+// POST /hikes, like the server (docs/openapi.json, registerHike).
+function registerMyHike(body) {
+  if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
+  if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers can register a hike');
+  const unknown = Object.keys(body ?? {}).find((key) => !HIKE_FIELDS.includes(key));
+  if (unknown) return fail(400, 'ValidationError', `Unknown field: ${unknown}`);
+  const { start, destination, route, passagePoints = [], departureAt, returnAt } = body ?? {};
+  const wrong =
+    (start === undefined || start === null ? null : needText(start, 'start', 100)) ??
+    needText(destination, 'destination', 100) ??
+    needText(route, 'route', 500) ??
+    (!Array.isArray(passagePoints) || passagePoints.length > 100 || passagePoints.some((p) => needText(p, 'passagePoints', 100))
+      ? 'passagePoints must be a list of at most 100 short lines'
+      : null) ??
+    (!MOMENT.test(departureAt ?? '') ? 'departureAt must be YYYY-MM-DDTHH:MM' : null) ??
+    (!MOMENT.test(returnAt ?? '') ? 'returnAt must be YYYY-MM-DDTHH:MM' : null) ??
+    (departureAt < toMoment(new Date()) ? 'The departure cannot be in the past' : null) ??
+    (returnAt <= departureAt ? 'The return must be after the departure' : null);
+  if (wrong) return fail(400, 'ValidationError', wrong);
+
+  const other = hikes.find((h) => h.userId === user.id && departureAt < h.returnAt && h.departureAt < returnAt);
+  if (other) {
+    const range = `from ${other.departureAt} to ${other.returnAt}`;
+    return json(409, {
+      error: 'ConflictError',
+      code: 'HIKE_OVERLAP',
+      message: `The times overlap your hike to ${other.destination}, ${range}`,
+      details: { hike: { destination: other.destination, departureAt: other.departureAt, returnAt: other.returnAt } },
+    });
+  }
+  const hike = {
+    id: nextHikeId++,
+    userId: user.id,
+    start: typeof start === 'string' ? start.trim() : null, // null: the hut
+    destination: destination.trim(),
+    route: route.trim(),
+    passagePoints: passagePoints.map((p) => p.trim()),
+    departureAt,
+    returnAt,
+  };
+  hikes.push(hike);
+  return json(201, toHike(hike));
+}
+
 function route(method, url, body) {
   const path = url.pathname.replace(/^\/api/, '');
 
@@ -358,6 +428,19 @@ function route(method, url, body) {
   const change = path.match(/^\/bookings\/(\d+)$/);
   if (method === 'PATCH' && change) return changeMyBooking(Number(change[1]), body);
   if (method === 'DELETE' && change) return cancelMyBooking(Number(change[1]));
+
+  if (path === '/hikes') {
+    if (method === 'POST') return registerMyHike(body);
+    if (method === 'GET') {
+      if (!user) return fail(401, 'UnauthorizedError', 'Authentication required');
+      if (user.role !== 'HIKER') return fail(403, 'ForbiddenError', 'Only hikers have hikes');
+      const list = hikes
+        .filter((h) => h.userId === user.id)
+        .sort((a, b) => a.departureAt.localeCompare(b.departureAt))
+        .map(toHike);
+      return json(200, list);
+    }
+  }
 
   return fail(404, 'NotFoundError', `No mock for ${method} ${path}`);
 }

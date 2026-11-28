@@ -18,6 +18,7 @@ import { HomePage } from './pages/HomePage/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage/LoginPage.jsx';
 import { NewReservationPage } from './pages/NewReservationPage/NewReservationPage.jsx';
 import { MyBookingsPage } from './pages/MyBookingsPage/MyBookingsPage.jsx';
+import { MyHikesPage } from './pages/MyHikesPage/MyHikesPage.jsx';
 import { RequireRole } from './pages/RequireRole.jsx';
 import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage.jsx';
 import { SignUpPage } from './pages/SignUpPage/SignUpPage.jsx';
@@ -50,6 +51,15 @@ export default function App() {
               element={
                 <RequireRole roles={[ROLES.HIKER]} page="see your bookings">
                   <MyBookingsPage />
+                </RequireRole>
+              }
+            />
+            {/* Only hikers have hikes (MH-20): the staff goes back to its start page. */}
+            <Route
+              path="/hikes"
+              element={
+                <RequireRole roles={[ROLES.HIKER]} page="see your hikes">
+                  <MyHikesPage />
                 </RequireRole>
               }
             />

@@ -33,6 +33,9 @@ const hutWallAsUtc = (ms) => {
 // The day ('YYYY-MM-DD') it is at the hut at this instant.
 export const hutDay = (date) => new Date(hutWallAsUtc(date.getTime())).toISOString().slice(0, 10);
 
+// The moment ('YYYY-MM-DDTHH:MM') it is at the hut at this instant, as the API writes the times of a hike (MH-20).
+export const hutMoment = (date) => new Date(hutWallAsUtc(date.getTime())).toISOString().slice(0, 16);
+
 // The instant of 'HH:MM' of `day` at the hut.
 export function hutInstant(day, hhmm) {
   const [y, m, d] = day.split('-').map(Number);
