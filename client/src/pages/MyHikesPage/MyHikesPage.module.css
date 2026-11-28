@@ -1,0 +1,186 @@
+/* Under the navbar of AppLayout, which already gives the full height and the background. */
+.screen {
+  flex: 1;
+}
+
+.page {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 64px 40px;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.register {
+  flex: none;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--pine);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--stone);
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--stone);
+}
+
+.retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  color: inherit;
+  cursor: pointer;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--snow);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.registerEmpty {
+  margin-top: 6px;
+}
+
+.know {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--snow);
+}
+
+.knowTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.knowList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.knowItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--mist);
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.blaze {
+  flex: none;
+  width: 22px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--blaze);
+}
+
+@media (max-width: 991.98px) {
+  .page {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .main,
+  .know {
+    width: 100%;
+  }
+
+  /* Register a hike above the list, as wide as the page. */
+  .intro {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 36px;
+  }
+
+  .know {
+    padding: 18px;
+  }
+}
