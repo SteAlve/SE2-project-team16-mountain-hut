@@ -7,6 +7,12 @@ import { formatClosingTime, isClosed } from './bookingDates.js';
 // '1 seat', '3 seats'
 export const seats = (n) => `${n} ${n === 1 ? 'seat' : 'seats'}`;
 
+// Where a party sits, the seats at each table: '2 + 3 + 1 seats' (MH-04 clarifications), '1 seat'
+// at one table. More than one table means at least 2 seats, so the word is plural.
+export const seatsAtTables = (tables) => (tables.length === 1
+  ? seats(tables[0].seats)
+  : `${tables.map((table) => table.seats).join(' + ')} seats`);
+
 // Server DTOs are authoritative in the hut's time zone. Local calculation is only for legacy data
 // without bookingOpen; the page refreshes server slots every 30 seconds and before confirmation.
 const isOpen = (slot, day, now) => typeof slot.bookingOpen === 'boolean' ? slot.bookingOpen : !isClosed(day, slot.startsAt, now);

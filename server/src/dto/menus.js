@@ -1,5 +1,5 @@
 /**
- * DTO of the menus (MH-10): the staff saves the menu of a slot and lists the previous menus, anybody
+ * DTO of the menus (MH-10): the staff saves or deletes the menu of a slot and lists the previous menus, anybody
  * reads the menu of a slot. The rules of the menu itself (not empty, at most 2000 characters, only
  * the formatting of the editor) are in domain/menu.js; here only the shape of the request.
  */
@@ -32,6 +32,11 @@ export function parseSaveSlotMenu(params, body) {
   rejectUnknownFields(body, ['menu']);
   if (typeof body.menu !== 'string') throw new ValidationError('menu must be a text');
   return { slotId, menu: body.menu };
+}
+
+// DELETE /api/staff/slots/:slotId/menu
+export function parseDeleteSlotMenu(params) {
+  return { slotId: requirePositiveIntegerText(params?.slotId, 'slotId') };
 }
 
 // GET /api/slots/:slotId/menu

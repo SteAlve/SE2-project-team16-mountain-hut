@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Mountain Hut API",
-    "version": "1.15.0",
+    "version": "1.16.0",
     "description": "API endpoints for authentication (with the password reset by email), defining the tables of each slot, repeating a weekly schedule, checking meal-slot availability, booking a table, changing and cancelling a booking, registering a hike, the reservations that the staff makes for a hiker, and the menu of each slot. Authentication uses a server-side session identified by the `sid` cookie. An id that does not exist, in the path or in the body, is a 404; a rule of the hut that is not met is a 422; a request that conflicts with what is stored is a 409. A hiker whose account was created by the staff has `mustChangePassword` true until the first password is changed or reset: meanwhile only `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` work for them, and any other request is a 403 with the `code` `PASSWORD_CHANGE_REQUIRED`."
   },
   "paths": {
@@ -1370,7 +1370,7 @@
           "Hikes"
         ],
         "summary": "Register a hike",
-        "description": "A hiker registers a planned hike before leaving (MH-20), so that the hut has the information if the hiker does not come back as expected. A hike has a `start`, a `destination` (a name), a `route` (a text description, for example \"via the Chiaretto lake\"), the `passagePoints` between the start and the destination, in the order of the route and optional, and the planned `departureAt` and the expected `returnAt`. The `start` is optional: without it the hike starts at the hut, where a hike usually starts (a team decision: the product owner lists only the destination, the route and the passage points). The two times are the local date and time of the hut (`YYYY-MM-DDTHH:MM`, the same as the rest of the API) and the return must be after the departure. A hiker can register more than one hike, but the times of two hikes of the same hiker cannot overlap: a hike that starts when the other ends is fine. A departure in the past is not refused (the product owner has not said). A hike is considered started at its departure time ([issue #53](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/53)). After the hike is saved, the hiker receives an email with its details; if the email fails, the hike stands and the response is the same. A refused registration saves nothing and sends no email. Only a hiker can register a hike.",
+        "description": "A hiker registers a planned hike before leaving (MH-20), so that the hut has the information if the hiker does not come back as expected. A hike has a `start`, a `destination` (a name), a `route` (a text description, for example \"via the Chiaretto lake\"), the `passagePoints` between the start and the destination, in the order of the route and optional, and the planned `departureAt` and the expected `returnAt`. The `start` is optional: without it the hike starts at the hut, where a hike usually starts (a team decision: the product owner lists only the destination, the route and the passage points). The two times are the local date and time of the hut (`YYYY-MM-DDTHH:MM`, the same as the rest of the API) and the return must be after the departure. A hiker can register more than one hike, but the times of two hikes of the same hiker cannot overlap: a hike that starts when the other ends is fine. The departure cannot be in the past, since the hike is registered before leaving; the times have no seconds, so a departure in the current minute is accepted. A hike is considered started at its departure time ([issue #53](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/53)). After the hike is saved, the hiker receives an email with its details; if the email fails, the hike stands and the response is the same. A refused registration saves nothing and sends no email. Only a hiker can register a hike.",
         "operationId": "registerHike",
         "security": [
           {
@@ -1422,7 +1422,7 @@
             }
           },
           "400": {
-            "description": "The request body is invalid: a wrong or unknown field, a start that is blank, too long or on more than one line, a destination or a route that is missing, blank or too long, a passage point that is blank, too long or on more than one line, a time that is not `YYYY-MM-DDTHH:MM` or a day that does not exist, or a return that is not after the departure.",
+            "description": "The request body is invalid: a wrong or unknown field, a start that is blank, too long or on more than one line, a destination or a route that is missing, blank or too long, a passage point that is blank, too long or on more than one line, a time that is not `YYYY-MM-DDTHH:MM` or a day that does not exist, a departure in the past, or a return that is not after the departure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1434,6 +1434,13 @@
                     "value": {
                       "error": "ValidationError",
                       "message": "destination is required"
+                    }
+                  },
+                  "departureInThePast": {
+                    "summary": "The departure is in the past",
+                    "value": {
+                      "error": "ValidationError",
+                      "message": "The departure cannot be in the past"
                     }
                   },
                   "returnNotAfterDeparture": {
@@ -2893,7 +2900,7 @@
           "Staff"
         ],
         "summary": "Write or change the menu of a slot",
-        "description": "Saves the menu of a slot, replacing the one it had: when two employees save the same menu, the last one wins. A menu started from a previous one (`GET /api/staff/menus`) is a copy: saving it changes only this slot. A menu cannot be removed, only changed. The menu is stored as it is answered: after the clean-up described in `SaveMenuRequest`.",
+        "description": "Saves the menu of a slot, replacing the one it had: when two employees save the same menu, the last one wins. A menu started from a previous one (`GET /api/staff/menus`) is a copy: saving it changes only this slot, also when other slots have the same text. Only before the slot starts: from its start on, the menu stays as it is. The menu is stored as it is answered: after the clean-up described in `SaveMenuRequest`.",
         "operationId": "saveSlotMenu",
         "security": [
           {
@@ -3019,6 +3026,136 @@
                 "example": {
                   "error": "NotFoundError",
                   "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot has started: its menu can no longer be changed or deleted (product owner, PO issue 59 of the requirements repository).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "message": "The slot has started: its menu can no longer be changed"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "InternalServerError",
+                  "message": "Unexpected error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Staff"
+        ],
+        "summary": "Delete the menu of a slot",
+        "description": "Deletes the menu of a slot: the slot is left with no menu (`menu: null`), and the menu is no longer listed among the previous menus unless another slot has the same text. Only before the slot starts: the menus of the slots that have started stay as they are (product owner, PO issue 59 of the requirements repository). Deleting the menu of a slot that has none is not an error.",
+        "operationId": "deleteSlotMenu",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "required": true,
+            "description": "Identifier of the slot.",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 12
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The menu is deleted (or the slot had none)."
+          },
+          "400": {
+            "description": "The slot id is not a positive integer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ValidationError",
+                  "message": "slotId must be a positive integer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The request has no valid authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnauthorizedError",
+                  "message": "Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not an employee or the warden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ForbiddenError",
+                  "message": "Only the staff can do this"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The slot does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "NotFoundError",
+                  "message": "Slot 12 not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The slot has started: its menu can no longer be changed or deleted (product owner, PO issue 59 of the requirements repository).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "UnprocessableError",
+                  "message": "The slot has started: its menu can no longer be changed"
                 }
               }
             }
