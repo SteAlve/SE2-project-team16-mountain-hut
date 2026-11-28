@@ -27,7 +27,8 @@ Everything shown comes from the story or from the product owner's clarifications
 | Product owner, [#49](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/49) | The hike has a **destination** (a name), a **route** (a text description, e.g. "via the Chiaretto lake") and **intermediate passage points** (e.g. "Viso Mozzo"). |
 | Product owner, [#49](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/49) | The hiker can also select one of a few predefined or popular hikes, as long as the UX is smooth. |
 | Team decision (not yet confirmed by the product owner) | The popular hikes are a fixed list, written by the team. There is no algorithm that updates it. Choosing one only fills the form: the hiker can change everything before registering. |
-| Team decision (not yet confirmed by the product owner) | Destination and route are required. The passage points are optional, with no fixed limit. |
+| Team decision (not yet confirmed by the product owner) | Start, destination and route are required. The passage points are optional, with no fixed limit. |
+| Team decision (not yet confirmed by the product owner) | The route description has a maximum of 500 characters, because the server keeps at most 500. A counter under the field shows how many are used (e.g. *38 / 500*). The limit is the team's choice: the specifications do not give one. |
 | Team decision (not yet confirmed by the product owner) | The hike starts at the hut unless the hiker says otherwise: the start is filled with the hut and the hiker can change it (e.g. *Pian del Re*). The product owner lists only the destination, the route and the passage points ([#49](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/49)). |
 | Product owner, [#51](https://github.com/SE2-Polito/AY26-27-Mountain-Hut/issues/51) | The hike has a planned **departure** and an expected **return** (day and time), both required. The product owner agreed with the team's reading that the return must be after the departure. |
 | Team decision (not yet confirmed by the product owner) | A hiker can register more than one hike, but two hikes of the same hiker cannot overlap in time. |
@@ -48,7 +49,7 @@ Everything shown comes from the story or from the product owner's clarifications
    - Missing information (screen 6): a message sits under each field that needs attention. The return must be after the departure.
    - Departure in the past (screen 10): the departure is earlier than now. A message sits under the departure. The hiker chooses a later time or closes the dialog.
   - Overlap (screen 7): the times overlap another registered hike of the same hiker. A red note says which one. The hiker can change the times or close the dialog.
-6. When the hike is registered, the dialog closes and the list shows the new hike in its place, with a green note (screen 8). The hiker is emailed the confirmation.
+6. When the hike is registered, the dialog closes and the list shows the new hike in its place, with a blue note (screen 8). The hiker is emailed the confirmation.
 
 ## Screens
 
@@ -102,10 +103,10 @@ The sheet has the same steps and rules as desktop screens 3 to 7. With many pass
 | Start from a popular hike | Optional. One card per popular hike, with the destination, the route and the passage points. Pressing a card fills the form; the card stays marked as chosen. |
 | Departure | Required. Day and time. |
 | Expected return | Required. Day and time, after the departure. |
-| Route | Required. A text description, e.g. "via the Chiaretto lake". |
+| Route | Required. A text description, e.g. "via the Chiaretto lake", up to 500 characters. A counter under the field, on the right, shows the characters used (*0 / 500* when empty). |
 | Start | Required. Filled with the hut (*Rifugio Alpe Lunga · 2.450 m*); the hiker can change it. Free text (a name), on one line. Always first: it cannot be moved. |
 | Passage points | Optional. Free text, one per line, in order, with no fixed limit. The hiker adds them with *Add a passage point*, moves them by dragging the handle and removes them with the remove button. See [Many passage points](#many-passage-points). |
-| Destination | Required. Free text (a name). Read only in its place: always last. |
+| Destination | Required. Free text (a name). Always last: it cannot be moved. |
 
 ### Many passage points
 
@@ -126,14 +127,17 @@ On a phone the sheet scrolls and the list grows with it.
 |---|---|
 | Page subtitle | Your registered hikes, by departure date. |
 | *Good to know* | Register your hike before you set off, with the time you leave and the time you expect to be back. · You can register more than one hike, but two hikes cannot overlap in time. · Every registered hike is confirmed by email. · This helps the hut, but it does not replace rescue services. |
-| No hikes | **No registered hikes.** Hikes you register will appear here, with the times you expect to leave and to be back. Button: *Register a hike*. |
+| No hikes | **No registered hikes** Hikes you register will appear here, with the times you expect to leave and to be back. Button: *Register a hike*. |
 | Dialog | **Register a hike.** "Tell the hut where you are going and when you plan to be back. Nothing is saved until Register hike." Buttons: *Close*, *Register hike*. |
 | Footer of the dialog | "Nothing is saved yet." After a refusal: "Nothing has been saved." |
 | Route | "Drag a passage point to move it. The start and the destination keep their place." |
 | Departure in the past | Under the departure, in red: "The departure cannot be in the past." Nothing is saved ("Nothing has been saved."). |
-| Missing information | Under the field: "Enter a starting point." · "Describe your route." · "Enter a destination." · "The return must be after the departure." The empty field keeps its placeholder (*Describe the route, e.g. via the Chiaretto lake*, *e.g. Lago Chiaretto*, *Choose a day*). |
+| Missing information | Under the field: "Enter a starting point." · "Choose the departure day and time." · "Choose the return day and time." · "Describe your route." · "Enter a destination." · "The return must be after the departure." The empty field keeps its placeholder (*Describe the route, e.g. via the Chiaretto lake*, *e.g. Pian del Re* for the start, *e.g. Lago Chiaretto*, *Choose a day*). |
 | Overlap | Red note: "These times overlap your hike to *Lago Chiaretto* (*Thu 15 Jul, 08:00 – 16:30*). Choose other times. Nothing has been saved." Every choice is kept. |
-| Registered | Green note on the list: "Your hike to *Passo Alpe Lunga* is registered. We emailed the confirmation to *giulia.rossi@example.com*." |
+| Registered | Blue (information) note on the list: "Your hike to *Passo Alpe Lunga* is registered. We emailed the confirmation to *giulia.rossi@example.com*." |
+| Saving | While the hike is being registered the button says *Registering…* and the fields are disabled. |
+| Server or network error | Red note: "Something went wrong on our side. Try again in a minute. Nothing has been saved." Every choice is kept. |
+| Year | A day in the current year is shown without the year (*Sat 17 Jul*). A day in another year shows it (*Sat 17 Jul 2027*). |
 | Not logged in | The login page (login mockup, screen 4). |
 
 ## Left out on purpose
