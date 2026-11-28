@@ -55,13 +55,6 @@
   overflow-wrap: anywhere;
 }
 
-.start {
-  margin: 0;
-  color: var(--stone);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
 .route {
   margin: 0;
   color: var(--stone);
@@ -91,30 +84,140 @@
   white-space: nowrap;
 }
 
-.points {
+/* The planned route: the start, the passage points and the destination one under the other, joined by a line. */
+.planned {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plannedTitle {
   margin: 0;
   font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+.points,
+.passages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.point,
+.toggleRow {
+  position: relative;
+  padding-left: 24px;
+}
+
+.point {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  min-height: 26px;
+  padding-top: 3px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--pine);
+}
+
+/* The line that joins each point to the next one, behind the icons. */
+.point::before,
+.toggleRow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7px;
+  width: 2px;
+  background: var(--pine);
+}
+
+.points > .point:first-child::before {
+  top: 12px;
+}
+
+.points > .point:last-child::before {
+  bottom: auto;
+  height: 12px;
+}
+
+.icon {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  z-index: 1;
+}
+
+.name {
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
-.points img {
-  flex: none;
-  margin-top: 1px;
+.role {
+  color: var(--stone);
 }
 
-.hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.toggleRow {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--mist);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--moss-soft);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--pine);
+  outline-offset: 2px;
+}
+
+/* The chevron of the asset points right: down while closed, up while open. */
+.chevron {
+  flex: none;
+  transform: rotate(90deg);
+}
+
+.chevron.up {
+  transform: rotate(-90deg);
+}
+
+.passages {
+  padding-top: 6px;
+}
+
+.passages[hidden] {
+  display: none;
+}
+
+/* Inside the open list the line belongs to the row of the toggle. */
+.passages .point::before {
+  content: none;
+}
+
+.passages .point {
+  margin-left: -24px;
 }
 
 @media (max-width: 991.98px) {

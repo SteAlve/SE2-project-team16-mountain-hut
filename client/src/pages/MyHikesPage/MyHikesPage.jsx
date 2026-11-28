@@ -72,7 +72,7 @@ export function MyHikesPage() {
 
           {list.hikes?.length === 0 && (
             <section className={styles.empty}>
-              <h2 className={styles.emptyTitle}>No registered hikes.</h2>
+              <h2 className={styles.emptyTitle}>No registered hikes</h2>
               <p className={styles.hint}>
                 Hikes you register will appear here, with the times you expect to leave and to be back.
               </p>
@@ -85,7 +85,7 @@ export function MyHikesPage() {
           {list.hikes?.length > 0 && (
             <ul className={styles.list} aria-label="Your hikes">
               {list.hikes.map((hike) => (
-                <HikeCard key={hike.id} hike={hike} />
+                <HikeCard key={hike.id} hike={hike} open={hike.id === list.newHikeId} />
               ))}
             </ul>
           )}

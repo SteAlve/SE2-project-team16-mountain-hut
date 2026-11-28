@@ -112,7 +112,7 @@ export function RegisterHikeDialog({ form, onClose, onSave }) {
           <div className={styles.side}>
             <RouteEditor
               start={values.start}
-            startError={errors.start}
+              startError={errors.start}
               points={form.points}
               destination={values.destination}
               destinationError={errors.destination}
@@ -120,7 +120,7 @@ export function RegisterHikeDialog({ form, onClose, onSave }) {
               disabled={isPending}
               route={form.route}
               onStartChange={(text) => form.set('start', text)}
-            onDestinationChange={(text) => form.set('destination', text)}
+              onDestinationChange={(text) => form.set('destination', text)}
               onPointChange={form.changePoint}
               onRemove={form.removePoint}
               onAdd={form.addPoint}

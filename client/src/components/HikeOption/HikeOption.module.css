@@ -44,7 +44,6 @@
 }
 
 .passage {
-  margin-top: auto;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
@@ -60,9 +59,5 @@
 @media (max-width: 991.98px) {
   .option {
     height: auto;
-  }
-
-  .passage {
-    margin-top: 0;
   }
 }

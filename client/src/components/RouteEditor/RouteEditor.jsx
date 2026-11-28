@@ -1,13 +1,13 @@
 /**
  * "Your route" of the "Register a hike" dialog (Figma "Route point", MH-20, mockup docs/mockups/register-a-hike,
  * screens 3-6 and 9): the points of the hike one under the other, joined by a line, like a route.
- *   Start         the hut until the hiker changes it (a field), always first
+ *   Start         required, the hut until the hiker changes it (a field), always first
  *   passage points  free text, in order; a handle moves a point (by dragging, or with the up and down keys) and a
  *                   button removes it. With many, the list keeps its height and scrolls inside; the start,
  *                   "Add a passage point" and the destination stay in view
  *   Destination   required, always last
- * It only draws its props: `start` and `destination` are the texts of the two fields; `points` is [{ id, text }], `route` is what hooks/useRouteDrag returns (the ref of the list,
- * the point being dragged and the props of each handle).
+ * It only draws its props: `start` and `destination` are the texts of the two fields; `points` is [{ id, text }];
+ * `route` is what hooks/useRouteDrag returns (the ref of the list, the point being dragged and the props of each handle).
  */
 import { useId } from 'react';
 import addIcon from '../../assets/hike/add.svg';
@@ -54,7 +54,7 @@ export function RouteEditor({
           className={`${styles.textInput} ${startError ? styles.invalid : ''}`}
           value={start}
           maxLength={START_MAX}
-          placeholder="e.g. Rifugio Alpe Lunga"
+          placeholder="e.g. Pian del Re"
           required
           disabled={disabled}
           aria-invalid={startError ? true : undefined}

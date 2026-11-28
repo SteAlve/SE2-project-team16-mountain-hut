@@ -38,7 +38,9 @@
   min-width: 0;
 }
 
+/* The time picker of the home page (TimeField), drawn as a box of the same height. */
 .time {
+  display: flex;
   flex: none;
   width: 140px;
 }

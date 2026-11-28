@@ -1,13 +1,16 @@
 /**
  * COMPONENT: keyboard-accessible time picker for the public slot search.
  * From and To describe a search range, not a new meal slot. Minutes use five-minute steps.
+ * `variant="box"` draws the trigger as a field of a form (the time of a hike, MH-20): a bordered box with the clock and
+ * the time, or "–:–" while empty, red with `invalid`; `describedBy` adds the id of its error message.
  */
 import { useId, useRef, useState } from 'react';
 import { Button } from '../Button/Button.jsx';
 import styles from './TimeField.module.css';
 
 const pad = (value) => String(value).padStart(2, '0');
-export function TimeField({ label, value, onChange, after }) {
+export function TimeField({ label, value, onChange, after, variant = 'search', invalid = false, describedBy, disabled = false }) {
+  const box = variant === 'box';
   const descriptionId = useId();
   const dialog = useRef(null);
   const trigger = useRef(null);
@@ -32,33 +35,48 @@ export function TimeField({ label, value, onChange, after }) {
     });
   };
   return (
-    <div className={styles.field}>
+    <div className={`${styles.field} ${box ? styles.boxField : ''}`}>
       <button
         ref={trigger}
         type="button"
-        className={styles.trigger}
-        aria-label={label}
-        aria-describedby={descriptionId}
+        className={box ? `${styles.box} ${invalid ? styles.invalid : ''}` : styles.trigger}
+        aria-label={box ? `${label}, time` : label}
+        aria-describedby={[descriptionId, describedBy].filter(Boolean).join(' ')}
         aria-haspopup="dialog"
+        aria-invalid={invalid || undefined}
+        disabled={disabled}
         onClick={open}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />
           <path d="M12 7v5.5l3.5 2" />
         </svg>
-        <span className={styles.text}>
-          <span>{label}</span>
-          <strong>{value || 'Choose'}</strong>
-        </span>
-        <span className={styles.caret} aria-hidden="true">▾</span>
+        {box ? (
+          <span className={value ? styles.boxValue : styles.boxPlaceholder}>{value || '–:–'}</span>
+        ) : (
+          <>
+            <span className={styles.text}>
+              <span>{label}</span>
+              <strong>{value || 'Choose'}</strong>
+            </span>
+            <span className={styles.caret} aria-hidden="true">▾</span>
+          </>
+        )}
       </button>
       <span id={descriptionId} className={styles.description}>
         {value ? `Selected time ${value}` : 'Choose a time'}
       </span>
-      <dialog ref={dialog} className={styles.dialog} aria-label={`Choose ${label.toLowerCase()} time`} onClick={(event) => {
-        const bounds = event.currentTarget.getBoundingClientRect();
-        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
-      }}>
+      <dialog
+        ref={dialog}
+        className={styles.dialog}
+        aria-label={`Choose ${label.toLowerCase()} time`}
+        // Esc closes only this picker: React would pass the cancel on to a dialog around it (Register a hike).
+        onCancel={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
+        }}
+      >
         <h2>{label}</h2>
         <div className={styles.wheels}>
           <label>
